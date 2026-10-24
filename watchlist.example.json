@@ -1,0 +1,6 @@
+{
+  "us_equities_etfs": ["SPY", "QQQ", "NVDA", "MSFT"],
+  "commodity_etf_proxies": ["GLD", "SLV", "USO", "UNG", "CPER"],
+  "fx_reference_pairs": ["EURUSD", "EURGBP", "EURJPY", "EURTRY"],
+  "crypto_symbols": []
+}

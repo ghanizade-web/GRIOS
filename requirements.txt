@@ -1,0 +1,7 @@
+openbb-core==2.0.0
+openbb-cboe==2.0.0
+openbb-ecb==2.0.0
+openbb-us-eia==2.0.0
+openbb-fred==2.0.0
+httpx>=0.28,<1
+python-dotenv>=1.0,<2
