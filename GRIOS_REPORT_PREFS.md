@@ -20,6 +20,11 @@ The owner's broader operating blueprint is recorded in [`GRIOS_OPERATING_MANUAL_
 - Separate an investable, evidence-supported opportunity from an early hypothesis worth monitoring. Highlight when a theme may already be priced in, when the bottleneck lies elsewhere, and who bears the downside.
 - Prefer primary evidence for confirmation: company filings and investor releases, grid/operator and utility plans, regulator and government data, signed power/fuel/supply contracts, procurement orders, project permits, inventory/production data, and credible sector statistics. Use research/news commentary to discover ideas and competing interpretations, then cross-check important claims independently.
 
+## Forex explanation standard
+- Always explain pair direction in plain Persian. For NZD/USD, a rise means the New Zealand dollar is strengthening against the US dollar; a fall means it is weakening.
+- Explain the cause: what changed in the relative outlook for the two economies or central banks, how that affects expected interest-rate differences or risk demand, and why it could move the pair.
+- Separate confirmed decisions from market expectations and inference. Include the opposing scenario, the next dated catalyst, and what would invalidate the view. If evidence is insufficient, say so instead of implying a trade signal.
+
 ## Research sources to consider
 - Idea discovery and investment theses: [Capitalist Exploits](https://capitalistexploits.at/), [CAPEX Insider](https://capexinsider.com/), [Real Vision](https://www.realvision.com/your-future), and [Seeking Alpha](https://seekingalpha.com/), plus comparable global research/commentary sources when relevant and accessible.
 - These are leads and viewpoints, not automatic confirmation. Note paywalls, author incentives, publication dates, and whether claims are independently verified. Do not imply access to subscriber-only material when unavailable.
