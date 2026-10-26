@@ -25,6 +25,16 @@ The owner's broader operating blueprint is recorded in [`GRIOS_OPERATING_MANUAL_
 - Explain the cause: what changed in the relative outlook for the two economies or central banks, how that affects expected interest-rate differences or risk demand, and why it could move the pair.
 - Separate confirmed decisions from market expectations and inference. Include the opposing scenario, the next dated catalyst, and what would invalidate the view. If evidence is insufficient, say so instead of implying a trade signal.
 
+## Adapted workflow from day-trader-skill
+
+- Reference: [Jakeschincariol/day-trader-skill](https://github.com/Jakeschincariol/day-trader-skill), reviewed 2026-10-26. Its 11 Claude-oriented modules cover a US-equity chart scanner, news monitor, entry/exit planning, historical replay, risk/budget checks, broker tickets, alerts, SEC earnings facts, and delayed House-trade disclosures.
+- Adapt only the research methods for GRIOS reports: scan a stated US-stock universe for rule-matching setups; pair chart context with a verified, dated catalyst and opposing evidence; use SEC/company filings for earnings facts; disclose scan coverage, timestamp, source freshness, partial results and missing data; keep dated ideas for later outcome review.
+- A scanner match is a watchlist candidate, never a buy signal. Historical replay is evidence only when the rule, sample, timeframe, costs and out-of-sample limitations are disclosed; simulation frequencies are not forecasts or calibrated probabilities. Congressional disclosures are delayed public records, not proof of current institutional accumulation or superior returns.
+- The reference implementation is US-equity-focused and partly relies on Yahoo endpoints that its README calls unofficial and potentially delayed or rate-limited. It does not provide native FX, crypto or commodity analysis. Do not claim its scripts are installed, run or integrated into GRIOS unless verified; adapt methods only to valid market-specific data.
+- Keep GRIOS research-only: do not import its broker, order-ticket, personalized position-sizing, or automated entry/exit workflow into reports. No order execution, personal allocation, guaranteed outcome, or unsupported entry/target/stop.
+
+
+
 ## Research sources to consider
 - Idea discovery and investment theses: [Capitalist Exploits](https://capitalistexploits.at/), [CAPEX Insider](https://capexinsider.com/), [Real Vision](https://www.realvision.com/your-future), and [Seeking Alpha](https://seekingalpha.com/), plus comparable global research/commentary sources when relevant and accessible.
 - These are leads and viewpoints, not automatic confirmation. Note paywalls, author incentives, publication dates, and whether claims are independently verified. Do not imply access to subscriber-only material when unavailable.
