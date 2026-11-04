@@ -256,3 +256,26 @@ def test_report_period_ingestion_can_persist_snapshot(tmp_path):
     )
     assert restored["holdings_count"] == 2
     assert restored["applied_filings"][1]["effect"] == "SUPPLEMENTED_PRIOR_SNAPSHOT"
+
+
+
+def test_report_period_ingestion_can_publish_to_data_hub():
+    class FakeDataHub:
+        def __init__(self):
+            self.published = None
+
+        def publish_snapshot(self, report, source_revision=None):
+            self.published = (report, source_revision)
+            return {"status": "accepted", "snapshot_id": "a" * 64}
+
+    client = FakeQuarterClient()
+    data_hub = FakeDataHub()
+    result = ingest_13f_report_period(
+        client, "123456", "2026-09-30",
+        retrieved_at="2026-11-03T12:00:00Z",
+        data_hub_client=data_hub,
+        source_revision="grios-main-sha",
+    )
+    assert result["data_hub_publish"]["status"] == "accepted"
+    assert data_hub.published[1] == "grios-main-sha"
+    assert data_hub.published[0]["ingestion_status"] == "RECONCILED_PUBLIC_SNAPSHOT"

@@ -22,7 +22,7 @@ Every filing source must be HTTPS SEC.gov. A snapshot cannot be persisted unless
 
 ## Limitations
 
-This registry is local SQLite only. It does not synchronize to Supabase/Data Hub, schedule ingestion, or calculate smart-money scores. Backups and access controls for the SQLite file are the operator's responsibility.
+The SQLite registry is the local research store. A validated, versioned payload can also be sent through the authenticated Data Hub client to the separate Supabase 13F tables. The Data Hub keeps filing and position records append-only; it does not replace the local source artifact. Scheduling and smart-money scoring remain out of scope.
 
 ## Evidence classification
 
