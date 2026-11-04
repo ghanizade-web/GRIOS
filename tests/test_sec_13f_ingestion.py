@@ -1,6 +1,8 @@
 import pytest
 
-from sec_13f_ingestion import ingest_13f_filing, parse_13f_cover_page
+from sec_13f_ingestion import (
+    ingest_13f_filing, ingest_13f_report_period, parse_13f_cover_page,
+)
 from sec_edgar_client import SecFiling
 
 
@@ -151,3 +153,88 @@ def test_ingestion_can_opt_into_historical_submissions():
         include_historical=True,
     )
     assert client.historical_requested is True
+
+
+
+NEW_HOLDINGS_COVER = """<?xml version="1.0"?>
+<edgarSubmission>
+  <formData><coverPage>
+    <reportCalendarOrQuarter>2026-09-30</reportCalendarOrQuarter>
+    <isAmendment>true</isAmendment>
+    <amendmentNo>1</amendmentNo>
+    <amendmentType>NEW HOLDINGS</amendmentType>
+    <filingManager><name>Example Adviser LLC</name></filingManager>
+  </coverPage></formData>
+</edgarSubmission>"""
+
+
+class FakeQuarterClient:
+    def __init__(self):
+        self.original = SecFiling(
+            cik="0000123456",
+            accession_number="0000123456-26-000001",
+            form="13F-HR",
+            filing_date="2026-11-01",
+            report_date="2026-09-30",
+            primary_document="primary_doc.xml",
+            primary_document_url="https://www.sec.gov/Archives/edgar/data/123456/000012345626000001/primary_doc.xml",
+        )
+        self.amendment = SecFiling(
+            cik="0000123456",
+            accession_number="0000123456-26-000002",
+            form="13F-HR/A",
+            filing_date="2026-11-02",
+            report_date="2026-09-30",
+            primary_document="amendment.xml",
+            primary_document_url="https://www.sec.gov/Archives/edgar/data/123456/000012345626000002/amendment.xml",
+        )
+        self.docs = {
+            self.original.primary_document_url: ORIGINAL_COVER.encode(),
+            self.amendment.primary_document_url: NEW_HOLDINGS_COVER.encode(),
+            "https://www.sec.gov/Archives/edgar/data/123456/000012345626000001/infotable.xml": TABLE,
+            "https://www.sec.gov/Archives/edgar/data/123456/000012345626000002/infotable.xml": TABLE.replace(b"123456789", b"987654321"),
+        }
+        self.historical_requested = False
+
+    def discover_13f_filings(self, cik, include_historical=False):
+        self.historical_requested = include_historical
+        return [self.original, self.amendment]
+
+    def download_document(self, url):
+        return self.docs[url]
+
+    def find_information_table_document(self, cik, accession):
+        compact = accession.replace("-", "")
+        return {
+            "name": "infotable.xml",
+            "url": f"https://www.sec.gov/Archives/edgar/data/123456/{compact}/infotable.xml",
+        }
+
+
+def test_ingest_and_reconcile_complete_report_period_chain():
+    client = FakeQuarterClient()
+    result = ingest_13f_report_period(
+        client, "123456", "2026-09-30",
+        retrieved_at="2026-11-03T12:00:00Z",
+    )
+    assert client.historical_requested is True
+    assert result["ingestion_status"] == "RECONCILED_PUBLIC_SNAPSHOT"
+    assert result["ingestion_scope"] == "REPORT_PERIOD"
+    assert result["discovered_filing_count"] == 2
+    assert result["holdings_count"] == 2
+    assert result["filing_accessions"] == [
+        "0000123456-26-000001", "0000123456-26-000002"
+    ]
+    assert result["applied_filings"][1]["effect"] == "SUPPLEMENTED_PRIOR_SNAPSHOT"
+
+
+def test_report_period_ingestion_rejects_missing_public_filing_chain():
+    class EmptyClient(FakeQuarterClient):
+        def discover_13f_filings(self, cik, include_historical=False):
+            return []
+
+    with pytest.raises(ValueError, match="No public 13F"):
+        ingest_13f_report_period(
+            EmptyClient(), "123456", "2026-09-30",
+            retrieved_at="2026-11-03T12:00:00Z",
+        )
