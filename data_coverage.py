@@ -189,7 +189,7 @@ def publish_market_series(
     token = os.getenv("GRIOS_DATA_HUB_TOKEN", "").strip()
     if not endpoint or not token:
         return {"status": "NOT_CONFIGURED", "accepted": 0, "error": None}
-    if not endpoint.startswith(("https://", "http://")):
+    if not endpoint.startswith("https://"):
         return {"status": "CONFIG_ERROR", "accepted": 0, "error": "INVALID_ENDPOINT"}
     rows = [serialize_market_series(item) for item in series]
     if not rows:
