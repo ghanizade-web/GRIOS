@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass\nfrom datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
