@@ -41,7 +41,7 @@ If OpenBB feeds are not configured yet, explicitly run the crypto-only path:
 python scanner.py --skip-openbb
 ```
 
-The report is printed and written to `reports/latest.txt`; a dated report and `reports/crypto-audit-<timestamp>.json` are also generated. `data/opportunities.sqlite3` is the local journal. These are runtime outputs and should not be committed as source. Copy the text into Telegram manually. When Data Hub credentials are configured, the scanner attempts authenticated ingestion and includes the publisher status and accepted count in the report. A successful local scan alone does not prove that Worker ingestion or readback succeeded.
+The report is printed and written to `reports/latest.txt`; a dated report and `reports/crypto-audit-<timestamp>.json` are also generated. `data/opportunities.sqlite3` is the local journal. These are runtime outputs and should not be committed as source. The `telegram_publisher.py` entrypoint can deliver `reports/latest.txt` to a Telegram channel using the Bot API. It chunks long reports, disables link previews, retries rate limits and transient failures, and never prints credentials. Configure `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` as GitHub Actions secrets in the private `market-pulse` repository; add the bot as a channel administrator with permission to post. The scheduled workflow runs daily at 12:00 UTC and still supports manual dispatch. If both Telegram secrets are absent, delivery is explicitly skipped while scanning and Data Hub ingestion continue. When Data Hub credentials are configured, the scanner attempts authenticated ingestion and includes the publisher status and accepted count in the report. A successful local scan alone does not prove that Worker ingestion or readback succeeded.
 
 The crypto audit records the runtime GRIOS Git commit under `source_revision.git_commit_sha`. Run the focused test suite with `python -m py_compile scanner.py` and `python -m pytest -q`.
 
@@ -57,4 +57,4 @@ When a required field is missing, it is omitted and coverage falls; no zero or n
 2. Dated issuer/commodity catalysts, SEC/company fundamentals, EIA stocks and CFTC positioning.
 3. Market-specific quality gates and explainable G-Score calibration using point-in-time historical data.
 4. Evaluation of false positives, delisted assets, survivorship bias, look-ahead bias, fees and slippage.
-5. Only after credentials, licensing and delivery are configured: optional Telegram bot publishing. Order execution stays out of scope.
+5. Licensed market data, dated catalysts, SEC/13F and CFTC positioning integrations, plus point-in-time calibration.\n6. Telegram publishing is implemented but requires the channel bot token and destination to be configured as repository secrets. Order execution stays out of scope.
