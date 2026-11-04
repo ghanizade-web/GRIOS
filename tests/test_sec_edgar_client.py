@@ -125,12 +125,24 @@ class FakeBinaryResponse:
     def raise_for_status(self):
         return None
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def iter_bytes(self):
+        midpoint = max(1, len(self.content) // 2)
+        yield self.content[:midpoint]
+        if self.content[midpoint:]:
+            yield self.content[midpoint:]
+
 
 class FakeBinaryClient:
     def __init__(self, response):
         self.response = response
 
-    def get(self, url, **kwargs):
+    def stream(self, method, url, **kwargs):
         return self.response
 
 
