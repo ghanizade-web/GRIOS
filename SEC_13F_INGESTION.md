@@ -4,7 +4,7 @@
 
 `sec_13f_ingestion.py` connects the SEC EDGAR discovery client to the 13F parser:
 
-1. Finds a requested 13F-HR / 13F-HR/A accession in the SEC submissions recent list.
+1. Finds a requested 13F-HR / 13F-HR/A accession in the SEC submissions recent list or, when enabled, historical archives.
 2. Downloads the primary filing document and the uniquely identified Information Table XML.
 3. Extracts report period, filing-manager name and amendment metadata from the cover page.
 4. Cross-checks the cover-page report period against SEC submissions metadata.
@@ -18,11 +18,14 @@ The cover page supplies `isAmendment`, `amendmentNo` and `amendmentType`. For 13
 
 ## API
 
-`ingest_13f_filing(client, cik, accession_number, retrieved_at=...)` returns a normalized filing record with `ingestion_status=PARSED`, Information Table source URL and cover-page source URL.
+`ingest_13f_filing(client, cik, accession_number, retrieved_at=..., include_historical=False)` returns a normalized filing record with `ingestion_status=PARSED`, Information Table source URL and cover-page source URL.
+
+`ingest_13f_report_period(client, cik, report_period, retrieved_at=..., include_historical=True)` discovers all public 13F-HR / 13F-HR/A filings for the selected quarter, downloads and parses each, then invokes `reconcile_13f_filing_chain` to produce one reconstructed public snapshot. The default enables historical submissions so that older original filings are not silently omitted. Missing originals, duplicate amendment numbers, inconsistent periods and invalid filing order raise errors.
 
 ## Limitations
 
-- This is a single-filing operation. It does not yet paginate historical `filings.files` submissions, batch all amendments for a report period, schedule discovery, persist records, or publish to the Data Hub.
+- Report-period ingestion is an on-demand batch operation; it is not scheduled and does not persist records or publish to the Data Hub.
+- Only public submissions returned by SEC EDGAR are considered. Confidential treatment and any unavailable filing documents are outside the discovered public snapshot.
 - SEC requests are mocked in tests; no live SEC download is performed in CI.
 - The SEC filing's reported positions are not transaction records and do not prove beneficial ownership or proprietary manager capital.
 - The caller must provide a descriptive SEC User-Agent containing a contact email and respect SEC fair-access guidance.
