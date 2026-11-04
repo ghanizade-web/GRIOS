@@ -158,6 +158,31 @@ def test_provider_audit_rejects_invalid_rows(row, expected):
     assert valid == {}
 
 
+def test_provider_audit_rejects_gram_ticker_with_wrong_coingecko_asset_id():
+    row = cg_row(
+        symbol="gram",
+        name="Gram (prev. Toncoin)",
+        id="unrelated-gram",
+    )
+    audit, valid = scanner.audit_crypto_provider(
+        "CoinGecko", [row], ["GRAM"], 30
+    )
+    assert valid == {}
+    assert audit["symbols"]["GRAM"]["status"] == "IDENTITY_MISMATCH"
+    assert audit["symbols"]["GRAM"]["provider_identity_checks"]["asset_id_matches"] is False
+
+
+def test_provider_audit_rejects_gram_ticker_with_wrong_coinmarketcap_asset_id():
+    row = cmc_row(symbol="GRAM", name="Gram (prev. Toncoin)")
+    row.update({"id": 999999, "slug": "gram"})
+    audit, valid = scanner.audit_crypto_provider(
+        "CoinMarketCap", [row], ["GRAM"], 30
+    )
+    assert valid == {}
+    assert audit["symbols"]["GRAM"]["status"] == "IDENTITY_MISMATCH"
+    assert audit["symbols"]["GRAM"]["provider_identity_checks"]["asset_id_matches"] is False
+
+
 def test_provider_audit_marks_duplicate_ticker_ambiguous():
     audit, valid = scanner.audit_crypto_provider(
         "CoinGecko",
