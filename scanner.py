@@ -1658,7 +1658,7 @@ def main() -> int:
 
     parser.add_argument("--skip-openbb", action="store_true")
 
-    parser.add_argument("--crypto-audit-baseline-sha", default="d9dcd180b50c20a965bcc9d460b3c4a7e2decba1")
+    parser.add_argument("--crypto-audit-baseline-sha", default="49b30e65914bac3df4383f17bbda9a9d7d8ccca4")
 
     args = parser.parse_args()
 
