@@ -1,16 +1,33 @@
 from unittest.mock import Mock, call
 
-import pandas as pd
-
 import scanner
 
 
 class FrameResult:
     def __init__(self, rows):
-        self.frame = pd.DataFrame(rows)
+        self.frame = FakeFrame(rows)
 
     def to_dataframe(self):
         return self.frame
+
+
+class FakeFrame:
+    def __init__(self, rows):
+        self.rows = rows
+        self.empty = not rows
+
+    def reset_index(self):
+        return self
+
+    def notna(self):
+        return self
+
+    def where(self, *args, **kwargs):
+        return self
+
+    def to_dict(self, orient):
+        assert orient == "records"
+        return self.rows
 
 
 def test_fetch_energy_uses_eia_henry_hub_daily_spot_series():
