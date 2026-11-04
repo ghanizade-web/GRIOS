@@ -73,6 +73,11 @@ def _parse_entry(node: ET.Element) -> dict[str, Any]:
     if not CUSIP_PATTERN.fullmatch(cusip):
         raise ValueError(f"Invalid CUSIP format: {cusip!r}")
     reported_value = _nonnegative_int(_first(node, "value"), "value")
+    figi = _first(node, "figi", required=False)
+    if figi:
+        figi = figi.upper()
+        if not re.fullmatch(r"[A-Z0-9]{12}", figi):
+            raise ValueError(f"Invalid FIGI format: {figi!r}")
     amount_nodes = _children(node, "shrsOrPrnAmt")
     if not amount_nodes:
         raise ValueError("Missing required 13F XML field: shrsOrPrnAmt")
@@ -101,6 +106,7 @@ def _parse_entry(node: ET.Element) -> dict[str, Any]:
         "issuer": issuer,
         "title_of_class": title_class,
         "cusip": cusip,
+        "figi": figi,
         "reported_value_raw": reported_value,
         "amount": amount,
         "amount_type": amount_type,
