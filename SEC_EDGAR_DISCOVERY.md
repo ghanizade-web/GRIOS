@@ -20,7 +20,9 @@ Supply a descriptive `User-Agent` string containing a monitored contact email. D
 - Historical pagination is opt-in. It reads SEC `filings.files` references sequentially and has a configurable `max_historical_files` safety cap (default 1,000); a cap breach raises an error rather than silently truncating history.
 - It does not download or parse the filing XML, parse cover-page amendment metadata, or automatically invoke the 13F parser/reconciler.
 - It does not yet publish observations to the GRIOS Data Hub.
-- The caller must apply SEC fair-access limits and should cache responses. No live SEC requests are executed by unit tests.
+- Every SEC JSON/index lookup and XML download is paced by the client. The default minimum interval is 0.11 seconds between request starts (about 9 requests/second), below the SEC's 10 requests/second fair-access ceiling. Callers can tune `min_request_interval`; setting it to zero disables pacing and should be reserved for controlled tests.
+- Pacing is per `SecEdgarClient` instance. Use one shared instance for a batch; creating multiple clients does not provide a process-wide or organization-wide rate limit. Cache responses at the workflow/application layer where appropriate.
+- No live SEC requests are executed by unit tests.
 
 ## Official references
 
