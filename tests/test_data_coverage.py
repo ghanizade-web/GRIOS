@@ -136,3 +136,50 @@ def test_data_hub_publish_reports_worker_http_error_code_without_credentials():
     assert result["status"] == "FAILED"
     assert result["error"] == "HTTP_401:UNAUTHORIZED"
     assert "never-log-this" not in json.dumps(result)
+
+
+def test_direct_supabase_ingestion_is_preferred_and_includes_required_columns():
+    captured = {}
+    class FakeResponse:
+        status = 201
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["headers"] = dict(request.header_items())
+        captured["rows"] = json.loads(request.data.decode())
+        return FakeResponse()
+    with patch.dict("os.environ", {
+        "SUPABASE_URL": "https://project.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": "test-key",
+        "GRIOS_DATA_HUB_URL": "https://worker.example",
+        "GRIOS_DATA_HUB_TOKEN": "worker-token",
+    }):
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            result = publish_market_series([Item("BTC", "crypto")], "revision-123")
+    assert result["status"] == "DIRECT_SUPABASE"
+    assert result["accepted"] == 1
+    assert "/rest/v1/grios_market_observations?" in captured["url"]
+    assert captured["headers"]["Apikey"] == "test-key"
+    assert captured["rows"][0]["run_id"]
+    assert captured["rows"][0]["source_revision"] == "revision-123"
+    assert "test-key" not in json.dumps(result)
+    assert "worker-token" not in json.dumps(result)
+
+
+def test_direct_supabase_failure_is_sanitized():
+    from urllib.error import HTTPError
+    from io import BytesIO
+    def fail_urlopen(request, timeout):
+        raise HTTPError(request.full_url, 403, "Forbidden", hdrs=None, fp=BytesIO(b"private response"))
+    with patch.dict("os.environ", {
+        "SUPABASE_URL": "https://project.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": "test-key",
+    }):
+        with patch("urllib.request.urlopen", side_effect=fail_urlopen):
+            result = publish_market_series([Item("BTC", "crypto")])
+    assert result["status"] == "FAILED"
+    assert result["error"] == "SUPABASE_HTTP_403"
+    assert "test-key" not in json.dumps(result)
+    assert "private response" not in json.dumps(result)
+
