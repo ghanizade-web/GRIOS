@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 
 HOLDINGS_FORMS = {"13F-HR", "13F-HR/A"}
 AMENDMENT_TYPES = {"RESTATEMENT", "NEW HOLDINGS"}
+DOLLAR_VALUE_RULE_EFFECTIVE_DATE = "2023-01-03"
 CUSIP_PATTERN = re.compile(r"^[A-Z0-9*@#]{9}$")
 
 
@@ -71,7 +72,7 @@ def _parse_entry(node: ET.Element) -> dict[str, Any]:
     cusip = (_first(node, "cusip") or "").upper()
     if not CUSIP_PATTERN.fullmatch(cusip):
         raise ValueError(f"Invalid CUSIP format: {cusip!r}")
-    value_thousands = _nonnegative_int(_first(node, "value"), "value")
+    reported_value = _nonnegative_int(_first(node, "value"), "value")
     amount_nodes = _children(node, "shrsOrPrnAmt")
     if not amount_nodes:
         raise ValueError("Missing required 13F XML field: shrsOrPrnAmt")
@@ -100,7 +101,7 @@ def _parse_entry(node: ET.Element) -> dict[str, Any]:
         "issuer": issuer,
         "title_of_class": title_class,
         "cusip": cusip,
-        "value_usd_thousands": value_thousands,
+        "reported_value_raw": reported_value,
         "amount": amount,
         "amount_type": amount_type,
         "investment_discretion": discretion,
@@ -164,6 +165,12 @@ def parse_13f_information_table(
     if not entries:
         raise ValueError("13F information table contains no infoTable entries.")
     holdings = [_parse_entry(entry) for entry in entries]
+    reported_value_unit = "USD" if filed[:10] >= DOLLAR_VALUE_RULE_EFFECTIVE_DATE else "USD_THOUSANDS"
+    for holding in holdings:
+        raw_value = holding.pop("reported_value_raw")
+        holding["reported_value"] = raw_value
+        holding["reported_value_unit"] = reported_value_unit
+        holding["value_usd"] = raw_value if reported_value_unit == "USD" else raw_value * 1000
     digest = hashlib.sha256(
         f"{accession}|{period}|{form}|{source}".encode()
     ).hexdigest()
@@ -183,7 +190,9 @@ def parse_13f_information_table(
         "holdings": holdings,
         "interpretation": {
             "position_snapshot_only": True,
-            "reported_value_unit": "USD_THOUSANDS",
+            "reported_value_unit": reported_value_unit,
+            "normalized_value_unit": "USD",
+            "value_rule_effective_date": DOLLAR_VALUE_RULE_EFFECTIVE_DATE,
             "does_not_prove_trade_date": True,
             "does_not_prove_manager_proprietary_ownership": True,
             "does_not_represent_real_time_flow": True,
@@ -212,10 +221,10 @@ def compare_13f_snapshots(
                 item["investment_discretion"], item.get("other_manager"),
             )
             aggregate = result.setdefault(key, {
-                "issuer": item["issuer"], "amount": 0, "value_usd_thousands": 0,
+                "issuer": item["issuer"], "amount": 0, "value_usd": 0,
             })
             aggregate["amount"] += item["amount"]
-            aggregate["value_usd_thousands"] += item["value_usd_thousands"]
+            aggregate["value_usd"] += item["value_usd"]
         return result
 
     old = index(prior)
@@ -227,8 +236,8 @@ def compare_13f_snapshots(
         after = new.get(key)
         old_amount = before["amount"] if before else 0
         new_amount = after["amount"] if after else 0
-        old_value = before["value_usd_thousands"] if before else 0
-        new_value = after["value_usd_thousands"] if after else 0
+        old_value = before["value_usd"] if before else 0
+        new_value = after["value_usd"] if after else 0
         changes.append({
             "cusip": key[0],
             "put_call": key[1],
@@ -238,8 +247,8 @@ def compare_13f_snapshots(
             "prior_amount": old_amount,
             "current_amount": new_amount,
             "amount_change": new_amount - old_amount,
-            "prior_value_usd_thousands": old_value,
-            "current_value_usd_thousands": new_value,
+            "prior_value_usd": old_value,
+            "current_value_usd": new_value,
             "value_change_usd_thousands": new_value - old_value,
             "status": "NEWLY_REPORTED" if before is None else (
                 "NO_LONGER_REPORTED" if after is None else "CONTINUED"
@@ -321,11 +330,11 @@ def reconcile_13f_filing_chain(filings: list[dict[str, Any]]) -> dict[str, Any]:
                 "investment_discretion": item["investment_discretion"],
                 "other_manager": item.get("other_manager"),
                 "amount": 0,
-                "value_usd_thousands": 0,
+                "value_usd": 0,
                 "voting_authority": {"sole": 0, "shared": 0, "none": 0},
             })
             row["amount"] += item["amount"]
-            row["value_usd_thousands"] += item["value_usd_thousands"]
+            row["value_usd"] += item["value_usd"]
             for field in ("sole", "shared", "none"):
                 row["voting_authority"][field] += item["voting_authority"][field]
         return result
@@ -352,7 +361,7 @@ def reconcile_13f_filing_chain(filings: list[dict[str, Any]]) -> dict[str, Any]:
                 else:
                     existing = positions[key]
                     existing["amount"] += row["amount"]
-                    existing["value_usd_thousands"] += row["value_usd_thousands"]
+                    existing["value_usd"] += row["value_usd"]
                     for field in ("sole", "shared", "none"):
                         existing["voting_authority"][field] += row["voting_authority"][field]
             effect = "SUPPLEMENTED_PRIOR_SNAPSHOT"
