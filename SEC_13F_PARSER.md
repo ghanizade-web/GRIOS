@@ -18,7 +18,7 @@ The caller supplies the XML attachment and filing metadata:
 
 ## Normalized fields
 
-Each reported position includes issuer, title of class, CUSIP, raw reported value and its filing-date-dependent unit, normalized `value_usd`, share/principal amount and type, investment discretion, other manager, optional put/call designation, and voting authority.
+Each reported position includes issuer, title of class, CUSIP, optional FIGI, raw reported value and its filing-date-dependent unit, normalized `value_usd`, share/principal amount and type, investment discretion, other manager, optional put/call designation, and voting authority.
 
 ### Reported-value normalization
 
