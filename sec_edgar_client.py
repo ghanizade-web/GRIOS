@@ -108,9 +108,9 @@ class SecEdgarClient:
     def download_document(self, url: str, *, max_bytes: int = 10_000_000) -> bytes:
         """Stream one SEC filing document with a strict host and size limit."""
         _sec_url(url)
-        self._pace_request()
         if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0:
             raise ValueError("max_bytes must be a positive integer.")
+        self._pace_request()
 
         def consume(response: Any) -> bytes:
             response.raise_for_status()
