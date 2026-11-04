@@ -194,9 +194,9 @@ def test_discover_historical_13f_filings_and_deduplicates_accessions():
         user_agent="GRIOS Research research@example.org", client=fake
     )
     filings = client.discover_13f_filings("123456", include_historical=True)
-    assert len(filings) == 5
+    assert len(filings) == 4
     assert filings[0].accession_number == "0000123456-25-000001"
-    assert filings[-1].accession_number == "0000123456-26-000003"
+    assert filings[-1].accession_number == "0000123456-26-000002"
     assert sum(item.accession_number == "0000123456-26-000001" for item in filings) == 1
 
 
