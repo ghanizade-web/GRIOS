@@ -74,7 +74,7 @@ class FakePipelineClient:
         self.cover = cover
         self.downloads = []
 
-    def discover_13f_filings(self, cik):
+    def discover_13f_filings(self, cik, include_historical=False):
         return [self.filing]
 
     def download_document(self, url):
@@ -131,3 +131,23 @@ def test_parse_amendment_cover_page_accepts_yes_marker():
     cover = AMENDMENT_COVER.replace("<isAmendment>true</isAmendment>", "<isAmendment>Y</isAmendment>")
     result = parse_13f_cover_page(cover, form_type="13F-HR/A")
     assert result["is_amendment"] is True
+
+
+
+def test_ingestion_can_opt_into_historical_submissions():
+    class HistoricalClient(FakePipelineClient):
+        def __init__(self):
+            super().__init__()
+            self.historical_requested = False
+
+        def discover_13f_filings(self, cik, include_historical=False):
+            self.historical_requested = include_historical
+            return [self.filing]
+
+    client = HistoricalClient()
+    ingest_13f_filing(
+        client, "123456", "0000123456-26-000001",
+        retrieved_at="2026-11-02T12:00:00Z",
+        include_historical=True,
+    )
+    assert client.historical_requested is True
