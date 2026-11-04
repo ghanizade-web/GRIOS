@@ -167,6 +167,42 @@ def _normalize_report(report: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def prepare_13f_data_hub_payload(
+    report: dict[str, Any],
+    *,
+    source_revision: str | None = None,
+) -> dict[str, Any]:
+    """Build the validated, versioned payload accepted by the GRIOS Data Hub."""
+    item = _normalize_report(report)
+    if source_revision is not None and (
+        not isinstance(source_revision, str) or len(source_revision) > 160
+    ):
+        raise ValueError("source_revision must be text of at most 160 characters.")
+    holdings = []
+    for holding in item["holdings"]:
+        row_identity = {
+            key: holding[key] for key in (
+                "cusip", "put_call", "amount_type",
+                "investment_discretion", "other_manager",
+            )
+        }
+        holdings.append({
+            **holding,
+            "row_id": _stable_id("grios-sec-13f-position-v1", row_identity),
+        })
+    snapshot = {
+        "snapshot_id": item["snapshot_id"],
+        "filer_cik": item["filer_cik"],
+        "report_period": item["report_period"],
+        "latest_filed_at": item["latest_filed_at"],
+        "holdings_count": item["holdings_count"],
+        "source_revision": source_revision,
+        "applied_filings": item["filings"],
+        "holdings": holdings,
+    }
+    return {"schema_version": "1.0", "snapshot": snapshot}
+
+
 def initialize_13f_registry(database: str | Path) -> None:
     path = Path(database)
     path.parent.mkdir(parents=True, exist_ok=True)
