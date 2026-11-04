@@ -122,3 +122,19 @@ def test_watchlist_batch_requires_data_hub_configuration(tmp_path):
             summary_path=tmp_path / "summary.json",
             environ={"SEC_USER_AGENT": ENV["SEC_USER_AGENT"]},
         )
+
+
+def test_committed_watchlist_contains_verified_unique_institutional_filers():
+    entries = watchlist_module.load_watchlist(
+        "config/sec_13f_watchlist.json"
+    )
+    assert {item["cik"] for item in entries} == {
+        "0001364742",
+        "0001067983",
+        "0000315066",
+        "0000093751",
+    }
+    assert all(
+        item["reference_url"].startswith("https://www.sec.gov/")
+        for item in entries
+    )
