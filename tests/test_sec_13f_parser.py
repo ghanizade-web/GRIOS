@@ -1,6 +1,9 @@
 import pytest
 
-from sec_13f_parser import compare_13f_snapshots, parse_13f_information_table
+from sec_13f_parser import (
+    compare_13f_snapshots, parse_13f_information_table,
+    reconcile_13f_filing_chain,
+)
 
 
 XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -111,3 +114,55 @@ def test_compare_aggregates_repeated_rows_and_handles_put_call_null():
     )
     assert ordinary["current_amount"] == 2000000
     assert ordinary["amount_change"] == 1000000
+
+
+def make_amendment(number, amendment_type, report=None):
+    amendment = parse(
+        form_type="13F-HR/A",
+        accession_number=f"0000123456-26-{number:06d}",
+        filed_at=f"2026-11-{number + 2:02d}T12:00:00Z",
+        source_url=f"https://www.sec.gov/Archives/edgar/data/123456/000012345626{number:06d}/amendment.xml",
+        amendment_number=number,
+        amendment_type=amendment_type,
+    )
+    if report is not None:
+        amendment["holdings"] = report
+        amendment["holdings_count"] = len(report)
+    return amendment
+
+
+def test_new_holdings_amendment_supplements_original_snapshot():
+    original = parse()
+    added = dict(original["holdings"][0])
+    added["cusip"] = "987654321"
+    amendment = make_amendment(1, "NEW HOLDINGS", [added])
+    result = reconcile_13f_filing_chain([amendment, original])
+    assert result["holdings_count"] == 3
+    assert result["applied_filings"][1]["effect"] == "SUPPLEMENTED_PRIOR_SNAPSHOT"
+
+
+def test_restatement_replaces_original_snapshot():
+    original = parse()
+    replacement = make_amendment(1, "RESTATEMENT", [dict(original["holdings"][1])])
+    result = reconcile_13f_filing_chain([original, replacement])
+    assert result["holdings_count"] == 1
+    assert result["holdings"][0]["cusip"] == "123456780"
+    assert result["applied_filings"][1]["effect"] == "REPLACED_PRIOR_SNAPSHOT"
+
+
+def test_amendment_metadata_is_required_and_order_is_validated():
+    with pytest.raises(ValueError, match="requires amendment_number"):
+        parse(form_type="13F-HR/A")
+    original = parse()
+    first = make_amendment(1, "NEW HOLDINGS")
+    second = make_amendment(1, "RESTATEMENT")
+    with pytest.raises(ValueError, match="Duplicate amendment number"):
+        reconcile_13f_filing_chain([original, first, second])
+
+
+def test_amendment_chain_requires_same_filer_and_period():
+    original = parse()
+    amendment = make_amendment(1, "NEW HOLDINGS")
+    amendment["report_period"] = "2026-06-30"
+    with pytest.raises(ValueError, match="same report period"):
+        reconcile_13f_filing_chain([original, amendment])

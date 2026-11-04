@@ -10,6 +10,7 @@ The caller supplies the XML attachment and filing metadata:
 - accession number
 - filer CIK and filer name
 - form type (13F-HR or 13F-HR/A)
+- for 13F-HR/A: amendment number (1–99) and amendment type (`RESTATEMENT` or `NEW HOLDINGS`)
 - filing timestamp and report-period end date
 - SEC.gov source URL and retrieval timestamp
 
@@ -18,6 +19,17 @@ The caller supplies the XML attachment and filing metadata:
 ## Normalized fields
 
 Each reported position includes issuer, title of class, CUSIP, reported value in USD thousands, share/principal amount and type, investment discretion, other manager, optional put/call designation, and voting authority.
+
+## Amendment reconciliation
+
+`reconcile_13f_filing_chain` requires exactly one original 13F-HR and validates that all amendments share the same filer CIK and report period. Amendments are applied in amendment-number order, with filing timestamps required to be strictly increasing.
+
+- `RESTATEMENT`: replaces the previously reconstructed public snapshot with the complete corrected holdings table.
+- `NEW HOLDINGS`: supplements the currently reconstructed public snapshot with additional reported entries.
+
+The SEC explains that a restatement resubmits the entire corrected filing and supersedes the original, while a new-holdings amendment adds only omitted/new entries and supplements the public filing. Multiple amendments may be filed. See SEC Form 13F FAQs 58b–58e: https://www.sec.gov/rules-regulations/staff-guidance/frequently-asked-questions-about-form-13f
+
+The reconciler preserves source filing metadata in its applied-filings ledger. It does not infer trades or beneficial ownership.
 
 ## Snapshot comparison
 
@@ -31,7 +43,7 @@ A new or no-longer-reported position must not be labeled as a confirmed purchase
 - The filing does not establish the exact trade date.
 - A manager's filing does not by itself establish that the manager invested proprietary balance-sheet capital.
 - The parser does not resolve beneficial ownership or infer client-versus-proprietary capital.
-- Amendments are preserved as separate filing identifiers; amendment/restatement precedence and corrected snapshot reconstruction require a dedicated filing-level reconciliation layer.
+- Amendment metadata is required for 13F-HR/A. The filing-chain reconciler applies RESTATEMENT as replacement and NEW HOLDINGS as supplementation, based on the SEC's stated filing semantics.
 - The parser does not currently ingest the SEC bulk 13F dataset, submissions API, issuer master, or Data Hub.
 
 ## Official SEC references

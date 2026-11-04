@@ -121,6 +121,8 @@ def parse_13f_information_table(
     report_period: str,
     source_url: str,
     retrieved_at: str,
+    amendment_number: int | None = None,
+    amendment_type: str | None = None,
 ) -> dict[str, Any]:
     """Parse a single SEC 13F-HR information-table XML document.
 
@@ -136,6 +138,15 @@ def parse_13f_information_table(
     form = form_type.strip().upper()
     if form not in HOLDINGS_FORMS:
         raise ValueError("Only 13F-HR and 13F-HR/A holdings reports are supported; 13F-NT is not a holdings table.")
+    if form == "13F-HR":
+        if amendment_number is not None or amendment_type is not None:
+            raise ValueError("Original 13F-HR filings cannot carry amendment metadata.")
+    else:
+        if isinstance(amendment_number, bool) or not isinstance(amendment_number, int) or not 1 <= amendment_number <= 99:
+            raise ValueError("13F-HR/A requires amendment_number between 1 and 99.")
+        amendment_type = (amendment_type or "").strip().upper()
+        if amendment_type not in AMENDMENT_TYPES:
+            raise ValueError("13F-HR/A requires amendment_type RESTATEMENT or NEW HOLDINGS.")
     filed = _iso(filed_at, "filed_at")
     retrieved = _iso(retrieved_at, "retrieved_at")
     period = _date(report_period, "report_period")
@@ -162,6 +173,8 @@ def parse_13f_information_table(
         "filer_cik": cik.zfill(10),
         "filer_name": filer_name.strip(),
         "form_type": form,
+        "amendment_number": amendment_number,
+        "amendment_type": amendment_type,
         "filed_at": filed,
         "report_period": period,
         "source_url": source,
@@ -243,5 +256,132 @@ def compare_13f_snapshots(
             "sales, transaction dates, beneficial ownership, or proprietary capital. "
             "They may reflect valuation changes, reporting scope, amendments, "
             "manager discretion, options, or other filing effects."
+        ),
+    }
+
+
+def reconcile_13f_filing_chain(filings: list[dict[str, Any]]) -> dict[str, Any]:
+    """Reconstruct a quarter's public holdings from an original 13F and amendments.
+
+    RESTATEMENT replaces the full prior public snapshot. NEW HOLDINGS supplements
+    the then-current public snapshot. Filing order is validated using amendment
+    sequence and filing timestamps; no trade or ownership inference is made.
+    """
+    if not filings:
+        raise ValueError("At least one 13F filing is required.")
+    first = filings[0]
+    cik = first.get("filer_cik")
+    period = _date(first.get("report_period"), "report_period")
+    for filing in filings:
+        if filing.get("filer_cik") != cik:
+            raise ValueError("All filings must belong to the same filer CIK.")
+        if _date(filing.get("report_period"), "report_period") != period:
+            raise ValueError("All filings must have the same report period.")
+        _iso(filing.get("filed_at"), "filed_at")
+        if filing.get("form_type") not in HOLDINGS_FORMS:
+            raise ValueError("Unsupported form type in filing chain.")
+
+    originals = [f for f in filings if f["form_type"] == "13F-HR"]
+    amendments = [f for f in filings if f["form_type"] == "13F-HR/A"]
+    if len(originals) != 1:
+        raise ValueError("Exactly one original 13F-HR filing is required.")
+    original = originals[0]
+    if original.get("amendment_number") is not None or original.get("amendment_type") is not None:
+        raise ValueError("Original filing contains amendment metadata.")
+    if any(f.get("amendment_number") is None or f.get("amendment_type") not in AMENDMENT_TYPES for f in amendments):
+        raise ValueError("Every 13F-HR/A filing requires valid amendment metadata.")
+    amendments.sort(key=lambda f: f["amendment_number"])
+    numbers = [f["amendment_number"] for f in amendments]
+    if len(numbers) != len(set(numbers)):
+        raise ValueError("Duplicate amendment number in filing chain.")
+    ordered = [original] + amendments
+    previous_filed = _iso(original["filed_at"], "filed_at")
+    for amendment in amendments:
+        filed = _iso(amendment["filed_at"], "filed_at")
+        if filed <= previous_filed:
+            raise ValueError("Amendments must be filed after the preceding filing in amendment-number order.")
+        previous_filed = filed
+
+    def key_for(item: dict[str, Any]) -> tuple[str, str | None, str, str, str | None]:
+        return (
+            item["cusip"], item.get("put_call"), item["amount_type"],
+            item["investment_discretion"], item.get("other_manager"),
+        )
+
+    def aggregate(items: list[dict[str, Any]]) -> dict[tuple[str, str | None, str, str, str | None], dict[str, Any]]:
+        result: dict[tuple[str, str | None, str, str, str | None], dict[str, Any]] = {}
+        for item in items:
+            key = key_for(item)
+            row = result.setdefault(key, {
+                "issuer": item["issuer"],
+                "title_of_class": item["title_of_class"],
+                "cusip": item["cusip"],
+                "put_call": item.get("put_call"),
+                "amount_type": item["amount_type"],
+                "investment_discretion": item["investment_discretion"],
+                "other_manager": item.get("other_manager"),
+                "amount": 0,
+                "value_usd_thousands": 0,
+                "voting_authority": {"sole": 0, "shared": 0, "none": 0},
+            })
+            row["amount"] += item["amount"]
+            row["value_usd_thousands"] += item["value_usd_thousands"]
+            for field in ("sole", "shared", "none"):
+                row["voting_authority"][field] += item["voting_authority"][field]
+        return result
+
+    positions = aggregate(original["holdings"])
+    applied = [{
+        "accession_number": original["accession_number"],
+        "form_type": original["form_type"],
+        "amendment_number": None,
+        "amendment_type": "ORIGINAL",
+        "filed_at": original["filed_at"],
+        "source_url": original["source_url"],
+        "effect": "BASE_SNAPSHOT",
+    }]
+    for amendment in amendments:
+        incoming = aggregate(amendment["holdings"])
+        if amendment["amendment_type"] == "RESTATEMENT":
+            positions = incoming
+            effect = "REPLACED_PRIOR_SNAPSHOT"
+        else:
+            for key, row in incoming.items():
+                if key not in positions:
+                    positions[key] = row
+                else:
+                    existing = positions[key]
+                    existing["amount"] += row["amount"]
+                    existing["value_usd_thousands"] += row["value_usd_thousands"]
+                    for field in ("sole", "shared", "none"):
+                        existing["voting_authority"][field] += row["voting_authority"][field]
+            effect = "SUPPLEMENTED_PRIOR_SNAPSHOT"
+        applied.append({
+            "accession_number": amendment["accession_number"],
+            "form_type": amendment["form_type"],
+            "amendment_number": amendment["amendment_number"],
+            "amendment_type": amendment["amendment_type"],
+            "filed_at": amendment["filed_at"],
+            "source_url": amendment["source_url"],
+            "effect": effect,
+        })
+
+    final_positions = sorted(
+        positions.values(),
+        key=lambda row: (row["cusip"], row["put_call"] or "", row["amount_type"],
+                         row["investment_discretion"], row["other_manager"] or ""),
+    )
+    return {
+        "filer_cik": cik,
+        "report_period": period,
+        "latest_filed_at": previous_filed,
+        "applied_filings": applied,
+        "holdings_count": len(final_positions),
+        "holdings": final_positions,
+        "interpretation": (
+            "Reconstructed public reported holdings only. Amendment handling follows "
+            "the declared RESTATEMENT (replace) and NEW HOLDINGS (supplement) types. "
+            "This is not a transaction ledger and does not establish trade dates, "
+            "beneficial ownership, proprietary manager capital, or real-time flows."
         ),
     }
