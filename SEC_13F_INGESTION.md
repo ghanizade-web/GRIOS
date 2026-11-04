@@ -10,7 +10,7 @@
 4. Cross-checks the cover-page report period against SEC submissions metadata.
 5. Parses and normalizes positions using the existing 13F parser, preserving both SEC source URLs.
 
-The SEC client now supports bounded document downloads. Each document is limited to 10 MB by default at the caller level; the method permits a stricter explicit maximum.
+The SEC client now supports bounded document downloads. Each document is limited to 10 MB by default; callers may set a stricter explicit maximum. The parser also preserves the optional FIGI identifier introduced in the SEC Form 13F XML specification.
 
 ## Amendment metadata
 
@@ -31,3 +31,4 @@ The cover page supplies `isAmendment`, `amendmentNo` and `amendmentType`. For 13
 
 - SEC developer resources: https://www.sec.gov/about/developer-resources
 - SEC Form 13F FAQs: https://www.sec.gov/rules-regulations/staff-guidance/frequently-asked-questions-about-form-13f
+- SEC XML Technical Specifications (Form 13F, Version 2.0): https://www.sec.gov/submit-filings/technical-specifications
