@@ -7,6 +7,7 @@ import os
 import re
 import sqlite3
 import statistics
+import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -1085,11 +1086,33 @@ def fetch_fx_reference(
                 )
                 continue
 
-            response = obb.ecb.exchange_rates(
-                provider="ecb",
-                symbol=pair,
-                start_date=start,
-            )
+            # ECB's public endpoint can intermittently time out for an
+            # individual currency pair. Retry only timeout failures once;
+            # do not retry provider/schema errors or weaken data validation.
+            retry_count = 1
+            for attempt in range(retry_count + 1):
+                try:
+                    response = obb.ecb.exchange_rates(
+                        provider="ecb",
+                        symbol=pair,
+                        start_date=start,
+                    )
+                    break
+                except Exception as request_exc:
+                    timeout_error = any(
+                        isinstance(item, TimeoutError)
+                        or "timeout" in type(item).__name__.casefold()
+                        or "timeout" in str(item).casefold()
+                        for item in (
+                            request_exc,
+                            request_exc.__cause__,
+                            request_exc.__context__,
+                        )
+                        if item is not None
+                    )
+                    if not timeout_error or attempt >= retry_count:
+                        raise
+                    time.sleep(0.5)
 
             points = []
 
