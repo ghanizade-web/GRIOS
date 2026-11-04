@@ -105,7 +105,7 @@ def build_data_coverage_report(
         else:
             missing = sorted(set(requested) - set(received_symbols))
             coverage_pct = round((len(set(requested) & set(received_symbols)) / len(requested)) * 100, 1) if requested else None
-            status = "NOT_CONFIGURED" if not requested else ("COMPLETE" if not missing else ("NONE" if not received_symbols else "PARTIAL"))
+            status = "NOT_REQUESTED" if not requested else ("COMPLETE" if not missing else ("NONE" if not received_symbols else "PARTIAL"))
 
         fresh_symbols = []
         stale_symbols = []
@@ -152,7 +152,7 @@ def build_data_coverage_report(
         "schema_version": "1.0",
         "generated_at": now.astimezone(timezone.utc).isoformat(),
         "overall_status": (
-            "DEGRADED" if any(item["status"] in {"NONE", "PARTIAL", "PARTIAL_STALE", "STALE", "NOT_CONFIGURED"} for item in feeds.values())
+            "DEGRADED" if any(item["status"] in {"NONE", "PARTIAL", "PARTIAL_STALE", "STALE", "} for item in feeds.values())
             else "DISCOVERY" if any(item["status"] == "DISCOVERY_MODE" for item in feeds.values())
             else "COVERED"
         ),
