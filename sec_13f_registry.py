@@ -31,9 +31,9 @@ def _sec_url(value: Any, field: str) -> str:
     return value
 
 
-def _nonnegative_number(value: Any, field: str) -> int | float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
-        raise ValueError(f"{field} must be a non-negative number.")
+def _nonnegative_integer(value: Any, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{field} must be a non-negative integer.")
     return value
 
 
@@ -68,24 +68,49 @@ def _normalize_report(report: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("holdings_count does not match the holdings array.")
 
     normalized_filings = []
+    seen_accessions = set()
+    previous_filed = None
     for filing in filings:
         if not isinstance(filing, dict):
             raise ValueError("Each applied filing must be an object.")
         accession = filing.get("accession_number")
         if not isinstance(accession, str) or not re.fullmatch(r"\d{10}-\d{2}-\d{6}", accession):
             raise ValueError("Invalid accession_number in applied filing ledger.")
+        if accession in seen_accessions:
+            raise ValueError("Duplicate accession_number in applied filing ledger.")
+        seen_accessions.add(accession)
+        form_type = filing.get("form_type")
+        amendment_number = filing.get("amendment_number")
+        amendment_type = filing.get("amendment_type")
+        if form_type == "13F-HR":
+            if amendment_number is not None or amendment_type != "ORIGINAL":
+                raise ValueError("Original 13F-HR filing has invalid amendment metadata.")
+        elif form_type == "13F-HR/A":
+            if isinstance(amendment_number, bool) or not isinstance(amendment_number, int) or not 1 <= amendment_number <= 99:
+                raise ValueError("13F-HR/A requires amendment_number between 1 and 99.")
+            if amendment_type not in {"RESTATEMENT", "NEW HOLDINGS"}:
+                raise ValueError("13F-HR/A requires a valid amendment_type.")
+        else:
+            raise ValueError("Unsupported form_type in applied filing ledger.")
+        filed_at = _utc(filing.get("filed_at"), "filing.filed_at")
+        if previous_filed and filed_at < previous_filed:
+            raise ValueError("Applied filing timestamps must be chronological.")
+        previous_filed = filed_at
+        effect = filing.get("effect")
+        if effect not in {"BASE_SNAPSHOT", "REPLACED_PRIOR_SNAPSHOT", "SUPPLEMENTED_PRIOR_SNAPSHOT"}:
+            raise ValueError("Unsupported amendment reconciliation effect.")
         normalized_filings.append({
             "accession_number": accession,
-            "form_type": filing.get("form_type"),
-            "amendment_number": filing.get("amendment_number"),
-            "amendment_type": filing.get("amendment_type"),
-            "filed_at": _utc(filing.get("filed_at"), "filing.filed_at"),
+            "form_type": form_type,
+            "amendment_number": amendment_number,
+            "amendment_type": amendment_type,
+            "filed_at": filed_at,
             "source_url": _sec_url(filing.get("source_url"), "filing.source_url"),
             "cover_page_source_url": (
                 _sec_url(filing["cover_page_source_url"], "filing.cover_page_source_url")
                 if filing.get("cover_page_source_url") else None
             ),
-            "effect": filing.get("effect"),
+            "effect": effect,
         })
 
     normalized_holdings = []
@@ -95,20 +120,25 @@ def _normalize_report(report: dict[str, Any]) -> dict[str, Any]:
         cusip = holding.get("cusip")
         if not isinstance(cusip, str) or not re.fullmatch(r"[A-Z0-9*@#]{9}", cusip):
             raise ValueError("Invalid CUSIP in holdings.")
-        amount = _nonnegative_number(holding.get("amount"), "holding.amount")
-        value_usd = _nonnegative_number(holding.get("value_usd"), "holding.value_usd")
+        amount = _nonnegative_integer(holding.get("amount"), "holding.amount")
+        value_usd = _nonnegative_integer(holding.get("value_usd"), "holding.value_usd")
+        figi = holding.get("figi")
+        if figi is not None and (
+            not isinstance(figi, str) or not re.fullmatch(r"[A-Z0-9]{12}", figi)
+        ):
+            raise ValueError("holding.figi must be a 12-character FIGI or null.")
         voting = holding.get("voting_authority")
         if not isinstance(voting, dict):
             raise ValueError("holding.voting_authority must be an object.")
         voting = {
-            key: _nonnegative_number(voting.get(key), f"voting_authority.{key}")
+            key: _nonnegative_integer(voting.get(key), f"voting_authority.{key}")
             for key in ("sole", "shared", "none")
         }
         normalized_holdings.append({
             "issuer": str(holding.get("issuer") or "").strip(),
             "title_of_class": str(holding.get("title_of_class") or "").strip(),
             "cusip": cusip,
-            "figi": holding.get("figi"),
+            "figi": figi,
             "put_call": holding.get("put_call"),
             "amount_type": holding.get("amount_type"),
             "investment_discretion": holding.get("investment_discretion"),
@@ -123,6 +153,7 @@ def _normalize_report(report: dict[str, Any]) -> dict[str, Any]:
         "report_period": period,
         "latest_filed_at": latest_filed,
         "accessions": [item["accession_number"] for item in normalized_filings],
+        "holdings_hash": _stable_id("grios-sec-13f-holdings-v1", normalized_holdings),
     }
     snapshot_id = _stable_id("grios-sec-13f-snapshot-v1", identity)
     return {
