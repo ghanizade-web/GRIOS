@@ -186,3 +186,34 @@ test("rejects invalid SEC 13F lookup identifiers", async () => {
   assert.equal(res.status, 400);
   assert.equal((await res.json()).error, "INVALID_13F_LOOKUP");
 });
+
+
+test("status verifies both market and SEC 13F storage capabilities", async () => {
+  const originalFetch = globalThis.fetch;
+  const checked = [];
+  globalThis.fetch = async (url) => {
+    checked.push(String(url));
+    return new Response("[]", { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const req = new Request("https://hub.test/v1/status", { headers: auth });
+    const res = await handleRequest(req, env);
+    const body = await res.json();
+    assert.equal(res.status, 200);
+    assert.deepEqual(body.capabilities, ["market_observations", "sec_13f_snapshots"]);
+    assert.equal(checked.length, 2);
+    assert.ok(checked.some((url) => url.includes("grios_13f_snapshots")));
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("rejects non-monotonic amendment sequence", async () => {
+  const invalid = structuredClone(sec13fSnapshot);
+  invalid.applied_filings[1].amendment_number = 0;
+  const req = new Request("https://hub.test/v1/13f/snapshots", {
+    method: "POST",
+    headers: { ...auth, "content-type": "application/json" },
+    body: JSON.stringify({ schema_version: "1.0", snapshot: invalid }),
+  });
+  const res = await handleRequest(req, env);
+  assert.equal(res.status, 422);
+});
