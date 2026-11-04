@@ -264,12 +264,16 @@ def crypto_series(
     )
 
 
+
 def fetch_coingecko(
     api_key: str,
     symbols: list[str],
     max_age_minutes: int,
+    audit: dict[str, Any] | None = None,
 ) -> tuple[list[MarketSeries], str | None]:
     if not api_key:
+        if audit is not None:
+            audit.update({"provider": "CoinGecko", "status": "MISSING_API_KEY"})
         return [], "COINGECKO_API_KEY تنظیم نشده است."
 
     params = {
@@ -280,259 +284,438 @@ def fetch_coingecko(
         "sparkline": "false",
         "price_change_percentage": "24h,7d,30d",
     }
-
-    headers = {"x-cg-demo-api-key": api_key}
-
     try:
         response = httpx.get(
-            CG_URL, params=params, headers=headers, timeout=30
+            CG_URL,
+            params=params,
+            headers={"x-cg-demo-api-key": api_key},
+            timeout=30,
         )
         response.raise_for_status()
         payload = response.json()
-
         if not isinstance(payload, list):
+            if audit is not None:
+                audit.update({"provider": "CoinGecko", "status": "INVALID_RESPONSE"})
             return [], "CoinGecko پاسخ با ساختار مورد انتظار برنگرداند."
-
-        rows: list[MarketSeries] = []
-
-        for item in payload:
-            if not isinstance(item, dict):
-                continue
-
-            symbol = str(item.get("symbol") or "").upper()
-            name = str(item.get("name") or "")
-
-            if symbols and symbol not in symbols:
-                continue
-
-            checked = valid_crypto_row(
-                symbol,
-                name,
-                item.get("current_price"),
-                item.get("last_updated"),
-                max_age_minutes,
-            )
-
-            if not checked:
-                continue
-
-            price, stamp = checked
-
-            rows.append(crypto_series(
-                symbol=symbol,
-                name=name,
+        provider_audit, valid = audit_crypto_provider(
+            "CoinGecko", payload, symbols, max_age_minutes
+        )
+        rows = [
+            crypto_series(
+                symbol=item["symbol"],
+                name=item["name"],
                 provider="CoinGecko",
                 stamp=stamp,
                 price=price,
-                market_cap=item.get("market_cap"),
-                volume=item.get("total_volume"),
-                fdv=item.get("fully_diluted_valuation"),
-                change_24h=item.get("price_change_percentage_24h"),
-                change_7d=item.get("price_change_percentage_7d_in_currency"),
-                change_30d=item.get("price_change_percentage_30d_in_currency"),
-                slug=str(item.get("id") or ""),
-            ))
-
-        return rows, None if rows else (
-            "CoinGecko داده معتبر و تازه‌ای برای Watchlist برنگرداند."
-        )
-
-    except (httpx.HTTPError, ValueError, TypeError):
-        return [], (
-            "اتصال CoinGecko ناموفق بود؛ جزئیات محرمانه در گزارش ثبت نشد."
-        )
+                market_cap=item["market_cap"],
+                volume=item["volume"],
+                fdv=item["fdv"],
+                change_24h=item["change_24h"],
+                change_7d=item["change_7d"],
+                change_30d=item["change_30d"],
+                slug=item["slug"],
+            )
+            for item, price, stamp in valid.values()
+        ]
+        if audit is not None:
+            audit.update(provider_audit)
+        return rows, None if rows else "CoinGecko داده معتبر و تازه‌ای برای Watchlist برنگرداند."
+    except (httpx.HTTPError, ValueError, TypeError) as exc:
+        if audit is not None:
+            audit.update({
+                "provider": "CoinGecko",
+                "status": "PROVIDER_ERROR",
+                "error_type": type(exc).__name__,
+            })
+        return [], "اتصال CoinGecko ناموفق بود؛ جزئیات محرمانه در گزارش ثبت نشد."
 
 
 def fetch_coinmarketcap(
     api_key: str,
     symbols: list[str],
     max_age_minutes: int,
+    audit: dict[str, Any] | None = None,
 ) -> tuple[list[MarketSeries], str | None]:
     if not api_key:
+        if audit is not None:
+            audit.update({"provider": "CoinMarketCap", "status": "MISSING_API_KEY"})
         return [], "COINMARKETCAP_API_KEY تنظیم نشده است."
 
-    params = {
-        "start": 1,
-        "limit": 500,
-        "convert": "USD",
-    }
-
-    headers = {
-        "X-CMC_PRO_API_KEY": api_key,
-        "Accept": "application/json",
-    }
-
+    params = {"start": 1, "limit": 500, "convert": "USD"}
     try:
         response = httpx.get(
-            CMC_URL, params=params, headers=headers, timeout=30
+            CMC_URL,
+            params=params,
+            headers={
+                "X-CMC_PRO_API_KEY": api_key,
+                "Accept": "application/json",
+            },
+            timeout=30,
         )
         response.raise_for_status()
         payload = response.json()
-
-        items = payload.get("data", []) if isinstance(payload, dict) else []
-        if not isinstance(items, list):
+        if not isinstance(payload, dict):
+            if audit is not None:
+                audit.update({"provider": "CoinMarketCap", "status": "INVALID_RESPONSE"})
             return [], "CoinMarketCap پاسخ با ساختار مورد انتظار برنگرداند."
-
-        rows: list[MarketSeries] = []
-
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-
-            symbol = str(item.get("symbol") or "").upper()
-            name = str(item.get("name") or "")
-
-            if symbols and symbol not in symbols:
-                continue
-
-            quote = item.get("quote")
-            if isinstance(quote, list):
-                quote = quote[0] if quote else {}
-
-            if not isinstance(quote, dict):
-                continue
-
-            usd = quote.get("USD")
-            if isinstance(usd, list):
-                usd = usd[0] if usd else {}
-
-            if not isinstance(usd, dict):
-                continue
-
-            stamp_value = usd.get("last_updated") or item.get("last_updated")
-
-            checked = valid_crypto_row(
-                symbol,
-                name,
-                usd.get("price"),
-                stamp_value,
-                max_age_minutes,
-            )
-
-            if not checked:
-                continue
-
-            price, stamp = checked
-
-            rows.append(crypto_series(
-                symbol=symbol,
-                name=name,
+        status = payload.get("status")
+        if isinstance(status, dict) and status.get("error_code") not in (None, 0):
+            if audit is not None:
+                audit.update({
+                    "provider": "CoinMarketCap",
+                    "status": "PROVIDER_ERROR",
+                    "provider_error_code": status.get("error_code"),
+                })
+            return [], "CoinMarketCap درخواست را با خطا رد کرد."
+        items = payload.get("data", [])
+        if not isinstance(items, list):
+            if audit is not None:
+                audit.update({"provider": "CoinMarketCap", "status": "INVALID_RESPONSE"})
+            return [], "CoinMarketCap پاسخ با ساختار مورد انتظار برنگرداند."
+        provider_audit, valid = audit_crypto_provider(
+            "CoinMarketCap", items, symbols, max_age_minutes
+        )
+        rows = [
+            crypto_series(
+                symbol=item["symbol"],
+                name=item["name"],
                 provider="CoinMarketCap",
                 stamp=stamp,
                 price=price,
-                market_cap=usd.get("market_cap"),
-                volume=usd.get("volume_24h"),
-                fdv=usd.get("fully_diluted_market_cap"),
-                change_24h=usd.get("percent_change_24h"),
-                change_7d=usd.get("percent_change_7d"),
-                change_30d=usd.get("percent_change_30d"),
-                slug=str(item.get("slug") or ""),
-            ))
+                market_cap=item["market_cap"],
+                volume=item["volume"],
+                fdv=item["fdv"],
+                change_24h=item["change_24h"],
+                change_7d=item["change_7d"],
+                change_30d=item["change_30d"],
+                slug=item["slug"],
+            )
+            for item, price, stamp in valid.values()
+        ]
+        if audit is not None:
+            audit.update(provider_audit)
+        return rows, None if rows else "CoinMarketCap داده معتبر و تازه‌ای برای Watchlist برنگرداند."
+    except (httpx.HTTPError, ValueError, TypeError) as exc:
+        if audit is not None:
+            audit.update({
+                "provider": "CoinMarketCap",
+                "status": "PROVIDER_ERROR",
+                "error_type": type(exc).__name__,
+            })
+        return [], "اتصال CoinMarketCap ناموفق بود؛ جزئیات محرمانه در گزارش ثبت نشد."
 
-        return rows, None if rows else (
-            "CoinMarketCap داده معتبر و تازه‌ای برای Watchlist برنگرداند."
-        )
 
-    except (httpx.HTTPError, ValueError, TypeError):
-        return [], (
-            "اتصال CoinMarketCap ناموفق بود؛ جزئیات محرمانه در گزارش ثبت نشد."
-        )
+def save_crypto_audit(
+    audit: dict[str, Any],
+    output_dir: Path,
+    timestamp: str,
+    baseline_sha: str,
+    mode: str,
+    max_age_minutes: int,
+) -> Path:
+    document = {
+        "schema_version": "1.0",
+        "engine": "GRIOS Crypto Universe Audit",
+        "baseline": {"file": "scanner.py", "git_blob_sha": baseline_sha},
+        "generated_at": iso(),
+        "run": {
+            "timestamp": timestamp,
+            "mode": mode,
+            "max_age_minutes": max_age_minutes,
+        },
+        "audit": audit,
+    }
+    target = output_dir / f"crypto-audit-{timestamp}.json"
+    temporary = target.with_suffix(".json.tmp")
+    temporary.write_text(
+        json.dumps(document, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    temporary.replace(target)
+    return target
+
+
+
+def audit_crypto_provider(
+    provider: str,
+    raw_items: list[Any],
+    symbols: list[str],
+    max_age_minutes: int,
+    error_type: str | None = None,
+) -> tuple[dict[str, Any], dict[str, tuple[dict[str, Any], float, datetime]]]:
+    """Validate provider rows and retain only sanitized audit metadata."""
+    requested = {str(x).strip().upper() for x in symbols if str(x).strip()}
+    audit: dict[str, Any] = {
+        "provider": provider,
+        "requested_symbols": sorted(requested),
+        "requested_count": len(requested),
+        "returned_rows": len(raw_items),
+        "status": "OK",
+        "symbols": {},
+    }
+    valid: dict[str, tuple[dict[str, Any], float, datetime]] = {}
+    grouped: dict[str, list[dict[str, Any]]] = {}
+
+    if error_type:
+        audit.update({"status": "PROVIDER_ERROR", "error_type": error_type})
+        return audit, valid
+
+    for item in raw_items:
+        if not isinstance(item, dict):
+            audit["invalid_rows"] = audit.get("invalid_rows", 0) + 1
+            continue
+        symbol = str(item.get("symbol") or "").strip().upper()
+        if not symbol or (requested and symbol not in requested):
+            continue
+        grouped.setdefault(symbol, []).append(item)
+
+    all_symbols = sorted(set(grouped) | requested)
+    now = now_utc()
+
+    for symbol in all_symbols:
+        records = grouped.get(symbol, [])
+        if not records:
+            audit["symbols"][symbol] = {"status": "NOT_RETURNED"}
+            continue
+        if len(records) != 1:
+            audit["symbols"][symbol] = {
+                "status": "AMBIGUOUS_SYMBOL",
+                "record_count": len(records),
+                "reason": "Multiple provider records share the requested symbol.",
+            }
+            continue
+
+        item = records[0]
+        name = str(item.get("name") or "").strip()
+        if provider == "CoinGecko":
+            price_raw = item.get("current_price")
+            stamp_raw = item.get("last_updated")
+            market_cap = item.get("market_cap")
+            volume = item.get("total_volume")
+            fdv = item.get("fully_diluted_valuation")
+            change_24h = item.get("price_change_percentage_24h")
+            change_7d = item.get("price_change_percentage_7d_in_currency")
+            change_30d = item.get("price_change_percentage_30d_in_currency")
+            asset_id = str(item.get("id") or "")
+        else:
+            quote = item.get("quote")
+            if isinstance(quote, list):
+                quote = quote[0] if quote else {}
+            if not isinstance(quote, dict):
+                quote = {}
+            usd = quote.get("USD")
+            if isinstance(usd, list):
+                usd = usd[0] if usd else {}
+            if not isinstance(usd, dict):
+                usd = {}
+            price_raw = usd.get("price")
+            stamp_raw = usd.get("last_updated") or item.get("last_updated")
+            market_cap = usd.get("market_cap")
+            volume = usd.get("volume_24h")
+            fdv = usd.get("fully_diluted_market_cap")
+            change_24h = usd.get("percent_change_24h")
+            change_7d = usd.get("percent_change_7d")
+            change_30d = usd.get("percent_change_30d")
+            asset_id = str(item.get("slug") or "")
+
+        if not name:
+            audit["symbols"][symbol] = {"status": "INVALID_NAME"}
+            continue
+        price = as_float(price_raw)
+        if price is None or price <= 0:
+            audit["symbols"][symbol] = {"status": "INVALID_PRICE"}
+            continue
+        stamp = parse_timestamp(stamp_raw)
+        if stamp is None:
+            audit["symbols"][symbol] = {"status": "INVALID_TIMESTAMP"}
+            continue
+        age = now - stamp
+        if age < timedelta(0):
+            audit["symbols"][symbol] = {"status": "FUTURE_TIMESTAMP"}
+            continue
+        if age > timedelta(minutes=max_age_minutes):
+            audit["symbols"][symbol] = {"status": "STALE"}
+            continue
+
+        audit["symbols"][symbol] = {
+            "status": "VALID",
+            "name": name,
+            "provider_asset_id": asset_id,
+            "observed_at": stamp.isoformat(timespec="seconds"),
+        }
+        valid[symbol] = ({
+            "symbol": symbol,
+            "name": name,
+            "provider": provider,
+            "stamp": stamp,
+            "price": price,
+            "market_cap": market_cap,
+            "volume": volume,
+            "fdv": fdv,
+            "change_24h": change_24h,
+            "change_7d": change_7d,
+            "change_30d": change_30d,
+            "slug": asset_id,
+        }, price, stamp)
+
+    if any(v["status"] == "AMBIGUOUS_SYMBOL" for v in audit["symbols"].values()):
+        audit["status"] = "AMBIGUOUS_SYMBOLS_PRESENT"
+    elif not valid:
+        audit["status"] = "NO_VALID_ROWS"
+    audit["valid_count"] = len(valid)
+    return audit, valid
 
 
 def reconcile_crypto(
     rows: list[MarketSeries],
+    audit: dict[str, Any] | None = None,
 ) -> tuple[list[MarketSeries], list[str]]:
-    groups: dict[tuple[str, str], list[MarketSeries]] = {}
-
+    """Reconcile by ticker, explicitly blocking identity and source conflicts."""
+    grouped: dict[str, list[MarketSeries]] = {}
     for row in rows:
-        identity = (row.symbol, normalized_name(row.name))
-        groups.setdefault(identity, []).append(row)
+        grouped.setdefault(row.symbol.strip().upper(), []).append(row)
 
     accepted: list[MarketSeries] = []
     conflicts: list[str] = []
+    outcomes: dict[str, dict[str, Any]] = {}
 
-    for (symbol, _), group in groups.items():
-        providers = {item.provider for item in group}
+    for symbol, group in sorted(grouped.items()):
+        names = {normalized_name(item.name) for item in group}
+        providers: dict[str, list[MarketSeries]] = {}
+        for item in group:
+            providers.setdefault(item.provider.strip(), []).append(item)
 
-        if len(providers) < 2:
-            accepted.extend(group)
+        if len(names) != 1 or "" in names:
+            outcomes[symbol] = {"status": "IDENTITY_MISMATCH"}
+            conflicts.append(f"{symbol}: هویت نام دارایی بین منابع سازگار نبود؛ حذف شد.")
             continue
 
-        prices = [
-            item.observations[-1]["close"]
-            for item in group if item.observations
-        ]
-
-        if len(prices) < 2:
-            accepted.extend(group)
+        if any(len(items) > 1 for items in providers.values()):
+            outcomes[symbol] = {"status": "AMBIGUOUS_SYMBOL"}
+            conflicts.append(f"{symbol}: نماد تکراری در یک یا چند منبع؛ حذف شد.")
             continue
 
-        median = statistics.median(prices)
-        deviation = (
-            (max(prices) - min(prices)) / median * 100
-            if median else 999
-        )
-
-        if deviation > 2.0:
-            conflicts.append(
-                f"{symbol}: اختلاف قیمت منابع {deviation:.2f}% بود؛ حذف شد."
-            )
+        prices = [price_now(item) for item in group]
+        if any(price is None or price <= 0 for price in prices):
+            outcomes[symbol] = {"status": "INVALID_PRICE"}
+            conflicts.append(f"{symbol}: قیمت نامعتبر در تطبیق منابع؛ حذف شد.")
             continue
 
-        chosen = max(group, key=lambda item: item.observed_at or "")
-        chosen.key = (
-            f"crypto:asset:{symbol}:{normalized_name(chosen.name)}"
-        )
-        chosen.provider = " + ".join(sorted(providers))
-        chosen.caveat = (
-            (chosen.caveat or "")
-            + f" Cross-source price deviation: {deviation:.2f}%."
-        )
+        deviation = 0.0
+        if len(group) >= 2:
+            median = statistics.median(prices)
+            deviation = ((max(prices) - min(prices)) / median * 100) if median else 999.0
+            if deviation > 2.0:
+                outcomes[symbol] = {
+                    "status": "SOURCE_CONFLICT",
+                    "price_deviation_pct": round(deviation, 4),
+                }
+                conflicts.append(f"{symbol}: اختلاف قیمت منابع {deviation:.2f}% بود؛ حذف شد.")
+                continue
 
+        chosen = max(
+            group,
+            key=lambda item: parse_timestamp(item.observed_at) or datetime.min.replace(tzinfo=timezone.utc),
+        )
+        provider_names = sorted(providers)
+        chosen.key = f"crypto:asset:{symbol}:{next(iter(names))}"
+        chosen.provider = " + ".join(provider_names)
+        chosen.extra["provider_count"] = len(provider_names)
+        chosen.extra["identity_status"] = "UNCONFIRMED_NAME_MATCH"
+        chosen.extra["source_price_deviation_pct"] = round(deviation, 4)
+        chosen.extra["universe_status"] = "CROSS_SOURCE" if len(provider_names) >= 2 else "SINGLE_SOURCE"
+        outcomes[symbol] = {
+            "status": "ACCEPTED_CROSS_SOURCE" if len(provider_names) >= 2 else "ACCEPTED_SINGLE_SOURCE",
+            "providers": provider_names,
+            "price_deviation_pct": round(deviation, 4),
+            "identity_status": "UNCONFIRMED_NAME_MATCH",
+        }
         accepted.append(chosen)
 
+    if audit is not None:
+        audit["reconciliation"] = outcomes
+        audit["reconciliation_summary"] = {
+            "input_rows": len(rows),
+            "accepted_rows": len(accepted),
+            "rejected_symbols": len(outcomes) - len(accepted),
+        }
     return accepted, conflicts
 
 
 def fetch_crypto(
     symbols: list[str],
     max_age_minutes: int,
+    audit: dict[str, Any] | None = None,
 ) -> tuple[list[MarketSeries], list[str]]:
-    cg, cg_error = fetch_coingecko(
-        os.getenv("COINGECKO_API_KEY", "").strip(),
-        symbols,
-        max_age_minutes,
-    )
+    provider_audits: dict[str, Any] = {}
+    provider_rows: dict[str, list[MarketSeries]] = {}
+    provider_errors: list[str] = []
 
-    cmc, cmc_error = fetch_coinmarketcap(
-        os.getenv("COINMARKETCAP_API_KEY", "").strip(),
-        symbols,
-        max_age_minutes,
-    )
+    for provider, fetcher, env_key in (
+        ("CoinGecko", fetch_coingecko, "COINGECKO_API_KEY"),
+        ("CoinMarketCap", fetch_coinmarketcap, "COINMARKETCAP_API_KEY"),
+    ):
+        local_audit: dict[str, Any] = {}
+        rows, error = fetcher(
+            os.getenv(env_key, "").strip(),
+            symbols,
+            max_age_minutes,
+            audit=local_audit,
+        )
+        provider_audits[provider] = local_audit
+        provider_rows[provider] = rows
+        if error:
+            provider_errors.append(error)
 
-    combined, conflicts = reconcile_crypto(cg + cmc)
+    blocked: set[str] = set()
+    for provider_audit in provider_audits.values():
+        for symbol, item in provider_audit.get("symbols", {}).items():
+            if item.get("status") == "AMBIGUOUS_SYMBOL":
+                blocked.add(symbol)
 
-    errors = [e for e in (cg_error, cmc_error) if e]
-    errors.extend(conflicts)
+    combined_rows = [
+        row
+        for provider, rows in provider_rows.items()
+        for row in rows
+        if row.symbol.upper() not in blocked
+    ]
+
+    reconciliation_audit: dict[str, Any] = {}
+    combined, conflicts = reconcile_crypto(combined_rows, audit=reconciliation_audit)
+    errors = provider_errors + conflicts
+
+    if audit is not None:
+        audit.update({
+            "providers": provider_audits,
+            **reconciliation_audit,
+            "summary": {
+                "requested_symbols": len(symbols),
+                "coingecko_valid_rows": len(provider_rows.get("CoinGecko", [])),
+                "coinmarketcap_valid_rows": len(provider_rows.get("CoinMarketCap", [])),
+                "ambiguous_symbols_blocked": sorted(blocked),
+                "reconciled_rows": len(combined),
+                "conflict_count": len(conflicts),
+            },
+        })
 
     if not combined and not errors:
         errors.append("هیچ داده معتبر کریپتو دریافت نشد.")
-
     return combined, errors
 
 
 def filter_crypto_universe(
     rows: list[MarketSeries],
     config: dict[str, Any],
+    audit: dict[str, Any] | None = None,
 ) -> tuple[list[MarketSeries], dict[str, Any]]:
     eligible: list[MarketSeries] = []
     excluded: dict[str, int] = {}
+    asset_audit: dict[str, Any] = {}
 
     min_market_cap = config["min_market_cap_usd"]
     min_volume = config["min_volume_24h_usd"]
     min_turnover = config["min_turnover_ratio"]
     max_fdv_ratio = config["max_fdv_market_cap_ratio"]
-
     excluded_symbols = set(config["excluded_symbols"])
     excluded_terms = config["excluded_name_terms"]
     require_two_sources = config["require_two_sources"]
@@ -542,69 +725,64 @@ def filter_crypto_universe(
 
     for series in rows:
         extra = series.extra
-
         market_cap = as_float(extra.get("market_cap"))
         volume = as_float(extra.get("volume_24h"))
         fdv = as_float(extra.get("fdv"))
+        reason: str | None = None
 
         if series.symbol.upper() in excluded_symbols:
-            reject("excluded_symbol")
-            continue
+            reason = "excluded_symbol"
+        elif any(term in series.name.casefold() for term in excluded_terms):
+            reason = "excluded_name_pattern"
+        elif market_cap is None or market_cap <= 0:
+            reason = "missing_market_cap"
+        elif market_cap < min_market_cap:
+            reason = "market_cap_below_minimum"
+        elif volume is None or volume <= 0:
+            reason = "missing_volume"
+        elif volume < min_volume:
+            reason = "volume_below_minimum"
 
-        name = series.name.casefold()
-        if any(term in name for term in excluded_terms):
-            reject("excluded_name_pattern")
-            continue
+        turnover = volume / market_cap if volume is not None and market_cap else None
+        if reason is None and turnover is not None and turnover < min_turnover:
+            reason = "turnover_below_minimum"
 
-        if market_cap is None or market_cap <= 0:
-            reject("missing_market_cap")
-            continue
+        fdv_ratio = fdv / market_cap if fdv is not None and fdv > 0 and market_cap else None
+        if reason is None and fdv_ratio is not None and fdv_ratio > max_fdv_ratio:
+            reason = "fdv_dilution_risk"
 
-        if market_cap < min_market_cap:
-            reject("market_cap_below_minimum")
-            continue
-
-        if volume is None or volume <= 0:
-            reject("missing_volume")
-            continue
-
-        if volume < min_volume:
-            reject("volume_below_minimum")
-            continue
-
-        turnover = volume / market_cap
-        if turnover < min_turnover:
-            reject("turnover_below_minimum")
-            continue
-
-        fdv_ratio = None
-
-        if fdv is not None and fdv > 0:
-            fdv_ratio = fdv / market_cap
-
-            if fdv_ratio > max_fdv_ratio:
-                reject("fdv_dilution_risk")
-                continue
-
-        providers = {
-            item.strip()
-            for item in series.provider.split("+")
-            if item.strip()
-        }
-
+        providers = {part.strip() for part in series.provider.split("+") if part.strip()}
         provider_count = len(providers)
+        if reason is None and require_two_sources and provider_count < 2:
+            reason = "single_source"
 
-        if require_two_sources and provider_count < 2:
-            reject("single_source")
+        if reason:
+            reject(reason)
+            asset_audit[series.symbol] = {
+                "accepted": False,
+                "status": "REJECTED",
+                "reason": reason,
+                "market_cap_usd": market_cap,
+                "volume_24h_usd": volume,
+                "turnover_ratio": turnover,
+                "fdv_market_cap_ratio": fdv_ratio,
+                "provider_count": provider_count,
+            }
             continue
 
         extra["provider_count"] = provider_count
         extra["volume_market_cap_ratio"] = turnover
         extra["fdv_market_cap_ratio"] = fdv_ratio
-        extra["universe_status"] = (
-            "CROSS_SOURCE" if provider_count >= 2 else "SINGLE_SOURCE"
-        )
-
+        extra["universe_status"] = "CROSS_SOURCE" if provider_count >= 2 else "SINGLE_SOURCE"
+        asset_audit[series.symbol] = {
+            "accepted": True,
+            "status": "ELIGIBLE",
+            "market_cap_usd": market_cap,
+            "volume_24h_usd": volume,
+            "turnover_ratio": turnover,
+            "fdv_market_cap_ratio": fdv_ratio,
+            "provider_count": provider_count,
+        }
         eligible.append(series)
 
     stats = {
@@ -613,7 +791,20 @@ def filter_crypto_universe(
         "excluded_count": len(rows) - len(eligible),
         "excluded_reasons": excluded,
     }
-
+    if audit is not None:
+        audit["universe_filter"] = {
+            "rules": {
+                "min_market_cap_usd": min_market_cap,
+                "min_volume_24h_usd": min_volume,
+                "min_turnover_ratio": min_turnover,
+                "max_fdv_market_cap_ratio": max_fdv_ratio,
+                "require_two_sources": require_two_sources,
+                "excluded_symbols": sorted(excluded_symbols),
+                "excluded_name_terms": list(excluded_terms),
+            },
+            "summary": stats,
+            "assets": asset_audit,
+        }
     return eligible, stats
 
 
@@ -1467,7 +1658,14 @@ def main() -> int:
 
     parser.add_argument("--skip-openbb", action="store_true")
 
+    parser.add_argument("--crypto-audit-baseline-sha", default="d9dcd180b50c20a965bcc9d460b3c4a7e2decba1")
+
     args = parser.parse_args()
+
+    max_crypto_age = int(os.getenv("MAX_CRYPTO_AGE_MINUTES", "30"))
+    crypto_audit: dict[str, Any] = {
+        "baseline_sha": args.crypto_audit_baseline_sha,
+    }
 
     watchlist = load_watchlist(Path(args.watchlist))
     crypto_config = watchlist["crypto_universe"]
@@ -1481,12 +1679,14 @@ def main() -> int:
 
     raw_crypto, crypto_errors = fetch_crypto(
         crypto_symbols,
-        int(os.getenv("MAX_CRYPTO_AGE_MINUTES", "30")),
+        max_crypto_age,
+        audit=crypto_audit,
     )
 
     crypto, universe_stats = filter_crypto_universe(
         raw_crypto,
         crypto_config,
+        audit=crypto_audit,
     )
 
     excluded_text = ", ".join(
@@ -1574,6 +1774,15 @@ def main() -> int:
 
     stamp = now_utc().strftime("%Y%m%dT%H%M%SZ")
 
+    audit_path = save_crypto_audit(
+        crypto_audit,
+        output_dir,
+        stamp,
+        args.crypto_audit_baseline_sha,
+        crypto_mode,
+        max_crypto_age,
+    )
+
     report_path = output_dir / f"grios-{stamp}.txt"
 
     report_path.write_text(report + "\n", encoding="utf-8")
@@ -1591,6 +1800,7 @@ def main() -> int:
 
     print(report)
     print(f"\nSaved: {report_path}")
+    print(f"Crypto audit: {audit_path}")
 
     return 0
 
