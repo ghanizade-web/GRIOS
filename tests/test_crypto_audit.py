@@ -348,3 +348,55 @@ def test_main_uses_declared_source_commit_argument():
     assert "crypto_audit_source_commit_sha" in attributes
     assert "crypto_audit_baseline_sha" not in attributes
 
+def test_main_persists_runtime_commit_sha_in_audit(tmp_path, monkeypatch):
+    watchlist = tmp_path / "watchlist.json"
+    watchlist.write_text(
+        json.dumps({
+            "crypto_symbols": ["BTC"],
+            "crypto_universe": {"mode": "watchlist"},
+        }),
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "reports"
+    database = tmp_path / "journal.sqlite3"
+    monkeypatch.setenv("GRIOS_SOURCE_COMMIT_SHA", "runtime-commit-123")
+    monkeypatch.setenv("MAX_CRYPTO_AGE_MINUTES", "30")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "scanner.py",
+            "--watchlist",
+            str(watchlist),
+            "--out",
+            str(output_dir),
+            "--db",
+            str(database),
+            "--skip-openbb",
+        ],
+    )
+    monkeypatch.setattr(scanner, "fetch_crypto", lambda symbols, max_age, audit=None: ([], []))
+    monkeypatch.setattr(
+        scanner,
+        "filter_crypto_universe",
+        lambda rows, cfg, audit=None: (
+            [],
+            {
+                "input_count": 0,
+                "eligible_count": 0,
+                "excluded_count": 0,
+                "excluded_reasons": {},
+            },
+        ),
+    )
+    monkeypatch.setattr(scanner, "telegram_report", lambda *args, **kwargs: "test report")
+
+    assert scanner.main() == 0
+
+    audit_files = list(output_dir.glob("crypto-audit-*.json"))
+    assert len(audit_files) == 1
+    payload = json.loads(audit_files[0].read_text(encoding="utf-8"))
+    assert payload["source_revision"]["git_commit_sha"] == "runtime-commit-123"
+    assert "baseline_sha" not in payload["audit"]
+    assert (output_dir / "latest.txt").read_text(encoding="utf-8").strip() == "test report"
+
