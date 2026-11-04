@@ -1,10 +1,10 @@
 # GRIOS Opportunity Scanner — MVP
 
-Small, research-only Python scanner using OpenBB Python V5 connectors plus the existing GRIOS crypto Data Hub. It writes a Persian, Telegram-friendly text report and records snapshots/idea outcomes in local SQLite. It does not send Telegram messages, place orders, or claim validated alpha.
+Small, research-only Python scanner using direct CoinGecko and CoinMarketCap REST adapters for crypto, plus OpenBB provider connectors for listed equities/ETFs, ECB FX reference data, EIA energy series, and FRED macro context. The current scanner does **not** call the GRIOS Cloudflare Data Hub; Data Hub integration remains a separate target-architecture item. It writes a Persian, Telegram-friendly text report, a machine-readable crypto audit JSON, and local SQLite snapshots/idea outcomes. The scanner itself does not send Telegram messages or place orders, and it does not claim validated alpha.
 
 ## Actual MVP coverage
 
-- **Crypto spot:** reads the existing GRIOS `/v1/markets/latest` snapshot. Requires a configured Data Hub URL and observations within the configured freshness limit. Provider timestamps and missing fields are retained. OpenBB V5's maintained provider list does not include CoinGecko/CMC spot connectors.
+- **Crypto spot:** queries CoinGecko markets (up to 250 rows) and CoinMarketCap quotes (up to 500 rows) directly, using `COINGECKO_API_KEY` and `COINMARKETCAP_API_KEY`. Requested symbols are checked against provider responses; provider timestamps, missing symbols, invalid/stale observations, duplicate ticker ambiguity, identity-name mismatch, and cross-source price deviations are recorded in `crypto-audit-<timestamp>.json`. The 2% cross-source price-deviation threshold is a data-quality gate, not a trading rule. The current adapters request the top market-cap pages only; they do not yet make per-symbol fallback requests for missing assets.
 - **US shares/ETFs:** OpenBB V5 Cboe daily history for a user-edited watchlist. It is a research history feed, not an executable quote. The provider's coverage and terms control actual freshness.
 - **Commodity proxies:** the same Cboe equity connector can be used for listed ETF proxies such as GLD/SLV/USO/UNG/CPER. These are not underlying spot prices or futures; roll/tracking/issuer risks remain.
 - **Oil and gas:** OpenBB EIA series for Brent spot and Henry Hub spot. They are published data, not a real-time futures feed. The MVP does not rank them as complete supply/demand theses because inventory, forward curve and dated catalysts are not joined to the price score.
@@ -27,7 +27,7 @@ cp .env.example .env
 cp watchlist.example.json watchlist.json
 ```
 
-Edit `.env` and `watchlist.json`. `GRIOS_DATA_HUB_URL` is the deployed Worker base URL (for example `https://your-worker.example`); do not enter the API key in the URL. Set `EIA_API_KEY` for EIA and `FRED_API_KEY` for macro series. Both keys are free to request from their agencies. The script loads these secrets from local `.env`; `.env` is gitignored.
+Edit `.env` and `watchlist.json`. Set `COINGECKO_API_KEY` and `COINMARKETCAP_API_KEY` for the direct crypto adapters, `EIA_API_KEY` for EIA, and `FRED_API_KEY` for macro series. Keep all credentials in `.env` or the CI secret store; never place them in URLs, source files, audit JSON, or logs. The script loads local environment variables via `python-dotenv`; `.env` is gitignored. In GitHub Actions, the `market-pulse` workflow supplies the required secrets to the scanner process.
 
 Generate a report:
 
@@ -41,7 +41,9 @@ If OpenBB feeds are not configured yet, explicitly run the crypto-only path:
 python scanner.py --skip-openbb
 ```
 
-The report is printed and written to `reports/latest.txt`; dated reports and `data/opportunities.sqlite3` are local, ignored runtime files. Copy the text into Telegram manually. No bot token is required.
+The report is printed and written to `reports/latest.txt`; a dated report and `reports/crypto-audit-<timestamp>.json` are also generated. `data/opportunities.sqlite3` is the local journal. These are runtime outputs and should not be committed as source. Copy the text into Telegram manually. The separate `market-pulse` GitHub Actions workflow can optionally send the report when explicitly enabled; Telegram credentials are not required for a local scan.
+
+The crypto audit records the runtime GRIOS Git commit under `source_revision.git_commit_sha`. Run the focused test suite with `python -m py_compile scanner.py` and `python -m pytest -q`.
 
 ## Scoring and journal
 
