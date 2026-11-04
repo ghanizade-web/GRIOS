@@ -687,6 +687,29 @@ def audit_crypto_provider(
             change_30d = usd.get("percent_change_30d")
             asset_id = str(item.get("slug") or "")
 
+        if symbol == "GRAM":
+            if provider == "CoinGecko":
+                identity_checks = {
+                    "asset_id_matches": str(item.get("id") or "").lower() == GRAM_PROVIDER_IDS["CoinGecko"],
+                    "symbol_matches": symbol == "GRAM",
+                    "name_matches": normalized_name(name) in {"gram", "gramprevtoncoin"},
+                }
+            elif provider == "CoinMarketCap":
+                identity_checks = {
+                    "asset_id_matches": str(item.get("id") or "") == GRAM_PROVIDER_IDS["CoinMarketCap"],
+                    "slug_matches": str(item.get("slug") or "").lower() in {"gram", "gramprevtoncoin"},
+                    "symbol_matches": symbol == "GRAM",
+                    "name_matches": normalized_name(name) in {"gram", "gramprevtoncoin"},
+                }
+            else:
+                identity_checks = {"supported_provider": False}
+            if not all(identity_checks.values()):
+                audit["symbols"][symbol] = {
+                    "status": "IDENTITY_MISMATCH",
+                    "provider_identity_checks": identity_checks,
+                }
+                continue
+
         if not name:
             audit["symbols"][symbol] = {"status": "INVALID_NAME"}
             continue
@@ -833,7 +856,7 @@ def fetch_crypto(
         )
         provider_audits[provider] = local_audit
         provider_rows[provider] = rows
-        if "GRAM" in {str(value).strip().upper() for value in symbols} and local_audit.get("symbols", {}).get("GRAM", {}).get("status") == "NOT_RETURNED":
+        if "GRAM" in {str(value).strip().upper() for value in symbols} and local_audit.get("symbols", {}).get("GRAM", {}).get("status") in {"NOT_RETURNED", "IDENTITY_MISMATCH"}:
             fallback_audit: dict[str, Any] = {}
             fallback_rows, fallback_error = fetch_gram_by_provider_id(
                 provider,
