@@ -148,7 +148,8 @@ export async function handleRequest(request, env) {
   try {
     if (url.pathname === "/v1/status" && request.method === "GET") {
       await supabaseRequest(env, "grios_market_observations?select=id&limit=1");
-      return response({ status: "ok", service: "grios-data-hub", schema_version: SCHEMA_VERSION, database: "reachable", checked_at: new Date().toISOString() });
+      await supabaseRequest(env, "grios_13f_snapshots?select=snapshot_id&limit=1");
+      return response({ status: "ok", service: "grios-data-hub", schema_version: SCHEMA_VERSION, database: "reachable", capabilities: ["market_observations", "sec_13f_snapshots"], checked_at: new Date().toISOString() });
     }
 
     if (url.pathname === "/v1/ingest" && request.method === "POST") {
