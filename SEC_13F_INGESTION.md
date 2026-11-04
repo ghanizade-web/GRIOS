@@ -20,11 +20,11 @@ The cover page supplies `isAmendment`, `amendmentNo` and `amendmentType`. For 13
 
 `ingest_13f_filing(client, cik, accession_number, retrieved_at=..., include_historical=False)` returns a normalized filing record with `ingestion_status=PARSED`, Information Table source URL and cover-page source URL.
 
-`ingest_13f_report_period(client, cik, report_period, retrieved_at=..., include_historical=True)` discovers all public 13F-HR / 13F-HR/A filings for the selected quarter, downloads and parses each, then invokes `reconcile_13f_filing_chain` to produce one reconstructed public snapshot. The default enables historical submissions so that older original filings are not silently omitted. Missing originals, duplicate amendment numbers, inconsistent periods and invalid filing order raise errors.
+`ingest_13f_report_period(client, cik, report_period, retrieved_at=..., include_historical=True, database=None)` discovers all public 13F-HR / 13F-HR/A filings for the selected quarter, downloads and parses each, then invokes `reconcile_13f_filing_chain` to produce one reconstructed public snapshot. The default enables historical submissions so that older original filings are not silently omitted. Missing originals, duplicate amendment numbers, inconsistent periods and invalid filing order raise errors. If `database` is supplied, the reconciled snapshot is also persisted through `sec_13f_registry.persist_13f_snapshot`.
 
 ## Limitations
 
-- Report-period ingestion is an on-demand batch operation; it is not scheduled and does not persist records or publish to the Data Hub.
+- Report-period ingestion is an on-demand batch operation. Persistence is optional and uses the local SQLite SEC 13F Snapshot Registry; no records are published to the Data Hub.
 - Only public submissions returned by SEC EDGAR are considered. Confidential treatment and any unavailable filing documents are outside the discovered public snapshot.
 - SEC requests are mocked in tests; no live SEC download is performed in CI.
 - The SEC filing's reported positions are not transaction records and do not prove beneficial ownership or proprietary manager capital.
