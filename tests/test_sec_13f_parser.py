@@ -93,3 +93,20 @@ def test_compare_requires_same_filer_and_chronological_periods():
     later["filer_cik"] = "0000000001"
     with pytest.raises(ValueError, match="different CIKs"):
         compare_13f_snapshots(prior, later)
+
+def test_compare_aggregates_repeated_rows_and_handles_put_call_null():
+    prior = parse()
+    current = parse(
+        accession_number="0000123456-26-000002",
+        report_period="2026-12-31",
+        filed_at="2027-02-01T12:00:00Z",
+        source_url="https://www.sec.gov/Archives/edgar/data/123456/000012345626000002/example.xml",
+    )
+    current["holdings"].append(dict(current["holdings"][0]))
+    comparison = compare_13f_snapshots(prior, current)
+    ordinary = next(
+        row for row in comparison["changes"]
+        if row["cusip"] == "123456789" and row["put_call"] is None
+    )
+    assert ordinary["current_amount"] == 2000000
+    assert ordinary["amount_change"] == 1000000
