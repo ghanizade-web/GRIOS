@@ -4,6 +4,7 @@ from sec_13f_ingestion import (
     ingest_13f_filing, ingest_13f_report_period, parse_13f_cover_page,
 )
 from sec_edgar_client import SecFiling
+from sec_13f_registry import get_13f_snapshot
 
 
 ORIGINAL_COVER = """<?xml version="1.0"?>
@@ -238,3 +239,20 @@ def test_report_period_ingestion_rejects_missing_public_filing_chain():
             EmptyClient(), "123456", "2026-09-30",
             retrieved_at="2026-11-03T12:00:00Z",
         )
+
+
+
+def test_report_period_ingestion_can_persist_snapshot(tmp_path):
+    database = tmp_path / "13f.sqlite3"
+    client = FakeQuarterClient()
+    result = ingest_13f_report_period(
+        client, "123456", "2026-09-30",
+        retrieved_at="2026-11-03T12:00:00Z",
+        database=str(database),
+    )
+    assert result["persistence"]["snapshot_inserted"] is True
+    restored = get_13f_snapshot(
+        database, filer_cik="0000123456", report_period="2026-09-30"
+    )
+    assert restored["holdings_count"] == 2
+    assert restored["applied_filings"][1]["effect"] == "SUPPLEMENTED_PRIOR_SNAPSHOT"
