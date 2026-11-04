@@ -87,7 +87,7 @@ class SecEdgarClient:
     def download_document(self, url: str, *, max_bytes: int = 10_000_000) -> bytes:
         """Download one SEC filing document with a strict host and size limit."""
         _sec_url(url)
-        if isinstance(max_bytes, bool) or max_bytes <= 0:
+        if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0:
             raise ValueError("max_bytes must be a positive integer.")
         if self._client is None:
             with httpx.Client(timeout=self.timeout, headers=self.headers) as client:
