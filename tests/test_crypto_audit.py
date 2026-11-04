@@ -346,7 +346,7 @@ def test_gram_fallback_rejects_wrong_provider_asset_identity():
         rows, error = scanner.fetch_gram_by_provider_id("CoinGecko", "secret", 30, audit)
     assert rows == []
     assert error
-    assert audit["symbols"]["TON"]["status"] == "IDENTITY_MISMATCH"
+    assert audit["symbols"]["GRAM"]["status"] == "IDENTITY_MISMATCH"
     evidence = audit["identity_evidence"][0]
     assert evidence["provider_asset_id"] == "not-ton"
     assert evidence["checks"]["asset_id_matches"] is False
@@ -365,7 +365,7 @@ def test_gram_fallback_marks_duplicate_asset_rows_ambiguous():
         rows, error = scanner.fetch_gram_by_provider_id("CoinGecko", "secret", 30, audit)
     assert rows == []
     assert error
-    assert audit["symbols"]["TON"]["status"] == "AMBIGUOUS_SYMBOL"
+    assert audit["symbols"]["GRAM"]["status"] == "AMBIGUOUS_SYMBOL"
 
 
 def test_gram_fallback_rejects_stale_quote():
@@ -378,7 +378,7 @@ def test_gram_fallback_rejects_stale_quote():
         rows, error = scanner.fetch_gram_by_provider_id("CoinGecko", "secret", 30, audit)
     assert rows == []
     assert error
-    assert audit["symbols"]["TON"]["status"] == "STALE"
+    assert audit["symbols"]["GRAM"]["status"] == "STALE"
 
 
 def test_gram_fallback_provider_outage_is_sanitized():
@@ -392,7 +392,7 @@ def test_gram_fallback_provider_outage_is_sanitized():
 
 
 def test_gram_coinmarketcap_fallback_uses_numeric_asset_id():
-    record = cmc_row(symbol="TON", name="Gram (prev. Toncoin)", price=5.2)
+    record = cmc_row(symbol="GRAM", name="Gram (prev. Toncoin)", price=5.2)
     record.update({"id": 11419, "slug": "gram"})
     response = Mock()
     response.json.return_value = {"status": {"error_code": 0}, "data": {"11419": record}}
