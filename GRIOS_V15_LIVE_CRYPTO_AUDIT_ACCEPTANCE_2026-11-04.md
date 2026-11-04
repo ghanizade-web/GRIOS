@@ -137,3 +137,39 @@ This correction repairs audit metadata argument wiring. It does not alter `marke
 - PR #8 merge commit: `53763c52f65d265447a483065618aefffffc6da1`.
 
 The current test suite contains 24 tests and the main-branch push validation is green. A fresh manual live scanner dispatch on the final GRIOS commit has not yet been performed; prior live provider evidence remains tied to the earlier runtime revision recorded in Section 1.
+
+
+## 11. Final live acceptance — 2026-11-04
+
+A fresh end-to-end run was completed against the final GRIOS `main` revision.
+
+- Workflow run: [market-pulse run #41903098841](https://github.com/ghanizade-web/market-pulse/actions/runs/41903098841)
+- Trigger: `push` on the narrowly scoped workflow-file validation trigger; attempt 1.
+- GRIOS source commit captured by the runner: `eb62cc96b42629046bdadf402ea16355a6f0eb0f`.
+- Overall workflow and scanner job: **success**.
+- Python dependency installation: success.
+- CoinGecko, CoinMarketCap, FRED, and EIA credentials: configured (values were not logged).
+- Scanner report and crypto audit JSON: generated and uploaded as artifact `grios-daily-report-7` (artifact ID `13358143465`).
+- Telegram delivery step: **skipped**, as intended for this validation run.
+
+### Live crypto audit results
+
+- CoinGecko: 13 of 14 requested symbols returned valid records.
+- CoinMarketCap: 13 of 14 requested symbols returned valid records.
+- TON: `NOT_RETURNED` by both providers in their requested top-market pages.
+- Reconciliation: 13 accepted cross-source assets, zero rejected symbols, zero price conflicts.
+- Maximum observed cross-source price deviation: 0.1766%, below the 2% data-quality threshold.
+- Identity remains `UNCONFIRMED_NAME_MATCH`; matching ticker/name labels are not equivalent to cryptographic asset-contract verification.
+- Universe filter: 13 eligible, 0 excluded.
+
+### Live non-crypto data limitation
+
+The EIA API key was configured, but the Henry Hub spot series returned `OpenBBError` in this run. The report correctly marks this series unavailable rather than substituting an unverified value. This is a provider/adapter investigation item, not a successful EIA validation.
+
+### Acceptance decision
+
+**Crypto audit live acceptance: PASS for the 13 returned watchlist assets.**
+
+**Whole-market data acceptance: CONDITIONAL.** TON fallback is not implemented, Henry Hub EIA remains unavailable, and the existing scanner still lacks crypto OHLCV history, order-book spread, verified institutional flow, catalyst integration, and calibrated backtesting. The current score remains a preliminary screening heuristic, not a probability of profit or trade recommendation.
+
+The artifact is available from the workflow run page above. No secrets or credentials are included in the artifact by design.
