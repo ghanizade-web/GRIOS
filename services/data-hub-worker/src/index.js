@@ -36,14 +36,14 @@ function validObservation(row) {
 
 
 function validIsoDate(value) {
-  if (typeof value !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(value + "T00:00:00Z");
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
 function validIsoTimestamp(value) {
   return typeof value === "string"
-    && /(?:Z|[+-]\\d{2}:\\d{2})$/i.test(value)
+    && /(?:Z|[+-]\d{2}:\d{2})$/i.test(value)
     && Number.isFinite(Date.parse(value));
 }
 
@@ -60,7 +60,7 @@ function validSecUrl(value) {
 function valid13fSnapshot(snapshot) {
   if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return false;
   if (!/^[0-9a-f]{64}$/.test(snapshot.snapshot_id || "")) return false;
-  if (!/^\\d{10}$/.test(snapshot.filer_cik || "")) return false;
+  if (!/^\d{10}$/.test(snapshot.filer_cik || "")) return false;
   if (!validIsoDate(snapshot.report_period) || !validIsoTimestamp(snapshot.latest_filed_at)) return false;
   if (!Number.isSafeInteger(snapshot.holdings_count) || snapshot.holdings_count < 0 || snapshot.holdings_count > MAX_13F_HOLDINGS) return false;
   if (!Array.isArray(snapshot.applied_filings) || snapshot.applied_filings.length < 1 || snapshot.applied_filings.length > MAX_13F_FILINGS) return false;
@@ -73,7 +73,7 @@ function valid13fSnapshot(snapshot) {
   let previousFiledAt = null;
   for (const filing of snapshot.applied_filings) {
     if (!filing || typeof filing !== "object" || Array.isArray(filing)) return false;
-    if (!/^\\d{10}-\\d{2}-\\d{6}$/.test(filing.accession_number || "") || accessions.has(filing.accession_number)) return false;
+    if (!/^\d{10}-\d{2}-\d{6}$/.test(filing.accession_number || "") || accessions.has(filing.accession_number)) return false;
     accessions.add(filing.accession_number);
     if (!validIsoTimestamp(filing.filed_at) || (previousFiledAt && Date.parse(filing.filed_at) < Date.parse(previousFiledAt))) return false;
     previousFiledAt = filing.filed_at;
@@ -212,7 +212,7 @@ export async function handleRequest(request, env) {
     if (url.pathname === "/v1/13f/latest" && request.method === "GET") {
       const cik = url.searchParams.get("cik") || "";
       const reportPeriod = url.searchParams.get("report_period") || "";
-      if (!/^\\d{10}$/.test(cik) || !validIsoDate(reportPeriod)) {
+      if (!/^\d{10}$/.test(cik) || !validIsoDate(reportPeriod)) {
         return response({ error: "INVALID_13F_LOOKUP" }, 400);
       }
       const result = await supabaseRequest(env, "rpc/get_grios_latest_13f_snapshot", {
