@@ -678,3 +678,39 @@ The system must determine:
 Track structural change, verify capital allocation, identify economic bottlenecks, and detect investable opportunities before the broader market fully recognizes them.
 
 **We Track Capital Before The Crowd.**
+
+
+---
+
+## 21. Initial Executable Registry — v1
+
+The repository now includes `megatrend_registry.py`, a local SQLite implementation of the initial megatrend record and scoring contract.
+
+Implemented functions:
+
+- `normalize_megatrend(record)` — validates and normalizes a megatrend snapshot.
+- `initialize_registry(database)` — creates the local append-only snapshot store.
+- `add_megatrend(database, record)` — stores a deterministic, idempotent snapshot.
+- `list_megatrends(database, ...)` — retrieves snapshots with optional filters.
+
+Implementation controls:
+
+1. The eight score components use the weights defined in Section 13.
+2. Each component accepts a value from 0 to 100 or null.
+3. A composite score is withheld unless every component is supplied and at least one source evidence record is attached.
+4. Missing score inputs are not silently converted to zero, 50, or another neutral value.
+5. Structural score, confidence, evidence tier, verification status, and lifecycle stage remain separate fields.
+6. Evidence records require absolute HTTPS source URLs and timezone-aware publication and retrieval timestamps.
+7. Snapshot records are append-only and idempotent; changed evidence or scores create a new historical snapshot.
+8. Score classifications follow the thresholds in Section 13.
+
+Current limitations:
+
+- This is a local SQLite registry, not a live data feed.
+- It does not crawl corporate, government, regulatory, ETF, or industry sources.
+- It does not automatically identify public-market beneficiaries or calculate valuation.
+- It does not publish records to Supabase or the GRIOS Data Hub.
+- It does not generate trade signals or authorize capital allocation.
+- Data ingestion, source monitoring, human review, and report publication remain separate integration tasks.
+
+The implementation must not be described as operational live megatrend monitoring until source ingestion, validation, persistence, and end-to-end reporting have been independently tested.
