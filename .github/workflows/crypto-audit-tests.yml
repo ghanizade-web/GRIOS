@@ -3,12 +3,14 @@ name: GRIOS Crypto Audit Tests
 on:
   push:
     branches:
+      - main
       - v15-crypto-audit-integration
   pull_request:
     branches:
       - main
     paths:
       - "scanner.py"
+      - "README.md"
       - "tests/**"
       - ".github/workflows/crypto-audit-tests.yml"
 
