@@ -78,7 +78,8 @@ def test_compare_snapshots_reports_position_change_not_trade():
     )
     current["holdings"][0]["amount"] += 100
     comparison = compare_13f_snapshots(prior, current)
-    assert comparison["changes"][0]["amount_change"] == 100
+    changed = next(row for row in comparison["changes"] if row["cusip"] == "123456789")
+    assert changed["amount_change"] == 100
     assert "not proof of purchases" in comparison["interpretation"]
 
 
