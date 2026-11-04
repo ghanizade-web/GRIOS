@@ -11,13 +11,13 @@ Supply a descriptive `User-Agent` string containing a monitored contact email. D
 ## API
 
 - `normalize_cik(...)` and `normalize_accession(...)` validate SEC identifiers.
-- `SecEdgarClient.discover_13f_filings(...)` filters the submissions `recent` arrays to 13F-HR / 13F-HR/A and returns accession, filing date, report date and primary-document URL.
+- `SecEdgarClient.discover_13f_filings(...)` filters the submissions `recent` arrays to 13F-HR / 13F-HR/A and returns accession, filing date, report date and primary-document URL. Set `include_historical=True` to fetch SEC `filings.files` JSON archives, apply filing-date range filters and deduplicate accessions across recent and historical sets.
 - `get_filing_index(...)` reads the SEC filing `index.json`.
 - `find_information_table_document(...)` returns one uniquely identifiable XML attachment containing `infotable` or `informationtable` in its filename.
 
 ## Limitations
 
-- The current client reads only the `filings.recent` arrays. Older filing history referenced by `filings.files` is not yet paginated.
+- Historical pagination is opt-in. It reads SEC `filings.files` references sequentially and has a configurable `max_historical_files` safety cap (default 1,000); a cap breach raises an error rather than silently truncating history.
 - It does not download or parse the filing XML, parse cover-page amendment metadata, or automatically invoke the 13F parser/reconciler.
 - It does not yet publish observations to the GRIOS Data Hub.
 - The caller must apply SEC fair-access limits and should cache responses. No live SEC requests are executed by unit tests.
