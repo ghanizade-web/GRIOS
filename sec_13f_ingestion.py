@@ -48,9 +48,9 @@ def parse_13f_cover_page(xml_content: str | bytes, *, form_type: str) -> dict[st
     if not manager_name:
         manager_name = _text(root, "name", required=True)
 
-    is_amendment = (_text(root, "isAmendment") or "").casefold()
+    is_amendment = (_text(root, "isAmendment") or "").strip().casefold()
     if form == "13F-HR":
-        if is_amendment in {"true", "1", "yes"}:
+        if is_amendment in {"true", "1", "yes", "y"}:
             raise ValueError("13F-HR cover page cannot declare an amendment.")
         return {
             "filer_name": manager_name,
@@ -60,7 +60,7 @@ def parse_13f_cover_page(xml_content: str | bytes, *, form_type: str) -> dict[st
             "amendment_type": None,
         }
 
-    if is_amendment not in {"true", "1", "yes"}:
+    if is_amendment not in {"true", "1", "yes", "y"}:
         raise ValueError("13F-HR/A cover page must declare isAmendment=true.")
     raw_number = _text(root, "amendmentNo", required=True)
     if not re.fullmatch(r"\d{1,2}", raw_number):
