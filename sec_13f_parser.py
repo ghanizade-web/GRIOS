@@ -153,12 +153,6 @@ def parse_13f_information_table(
     if not entries:
         raise ValueError("13F information table contains no infoTable entries.")
     holdings = [_parse_entry(entry) for entry in entries]
-    seen = set()
-    for holding in holdings:
-        key = (holding["cusip"], holding["put_call"], holding["amount_type"])
-        if key in seen:
-            raise ValueError(f"Duplicate position key in filing: {key}")
-        seen.add(key)
     digest = hashlib.sha256(
         f"{accession}|{period}|{form}|{source}".encode()
     ).hexdigest()
@@ -197,19 +191,25 @@ def compare_13f_snapshots(
     if current_period <= prior_period:
         raise ValueError("Current report_period must be later than prior report_period.")
 
-    def index(snapshot: dict[str, Any]) -> dict[tuple[str, str | None, str], dict[str, Any]]:
-        result = {}
+    def index(snapshot: dict[str, Any]) -> dict[tuple[str, str | None, str, str, str | None], dict[str, Any]]:
+        result: dict[tuple[str, str | None, str, str, str | None], dict[str, Any]] = {}
         for item in snapshot.get("holdings", []):
-            key = (item["cusip"], item.get("put_call"), item["amount_type"])
-            if key in result:
-                raise ValueError(f"Duplicate position key: {key}")
-            result[key] = item
+            key = (
+                item["cusip"], item.get("put_call"), item["amount_type"],
+                item["investment_discretion"], item.get("other_manager"),
+            )
+            aggregate = result.setdefault(key, {
+                "issuer": item["issuer"], "amount": 0, "value_usd_thousands": 0,
+            })
+            aggregate["amount"] += item["amount"]
+            aggregate["value_usd_thousands"] += item["value_usd_thousands"]
         return result
 
     old = index(prior)
     new = index(current)
     changes = []
-    for key in sorted(set(old) | set(new)):
+    keys = sorted(set(old) | set(new), key=lambda k: (k[0], k[1] or "", k[2], k[3], k[4] or ""))
+    for key in keys:
         before = old.get(key)
         after = new.get(key)
         old_amount = before["amount"] if before else 0
@@ -220,6 +220,8 @@ def compare_13f_snapshots(
             "cusip": key[0],
             "put_call": key[1],
             "amount_type": key[2],
+            "investment_discretion": key[3],
+            "other_manager": key[4],
             "prior_amount": old_amount,
             "current_amount": new_amount,
             "amount_change": new_amount - old_amount,
