@@ -66,7 +66,6 @@ class SecEdgarClient:
         self.headers = {
             "User-Agent": agent,
             "Accept-Encoding": "gzip, deflate",
-            "Host": "data.sec.gov",
         }
         self.timeout = timeout
         self._client = client
@@ -83,6 +82,43 @@ class SecEdgarClient:
         if not isinstance(payload, dict):
             raise ValueError("SEC response must be a JSON object.")
         return payload
+
+
+    def download_document(self, url: str, *, max_bytes: int = 10_000_000) -> bytes:
+        """Stream one SEC filing document with a strict host and size limit."""
+        _sec_url(url)
+        if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0:
+            raise ValueError("max_bytes must be a positive integer.")
+
+        def consume(response: Any) -> bytes:
+            response.raise_for_status()
+            declared = response.headers.get("content-length") if hasattr(response, "headers") else None
+            if declared and declared.isdigit() and int(declared) > max_bytes:
+                raise ValueError("SEC document exceeds configured download size limit.")
+            chunks = []
+            total = 0
+            iterator = response.iter_bytes() if hasattr(response, "iter_bytes") else [response.content]
+            for chunk in iterator:
+                total += len(chunk)
+                if total > max_bytes:
+                    raise ValueError("SEC document exceeds configured download size limit.")
+                chunks.append(chunk)
+            content = b"".join(chunks)
+            if not content:
+                raise ValueError("SEC document response is empty.")
+            return content
+
+        if self._client is None:
+            with httpx.Client(timeout=self.timeout, headers=self.headers) as client:
+                with client.stream("GET", url) as response:
+                    return consume(response)
+        if hasattr(self._client, "stream"):
+            with self._client.stream(
+                "GET", url, headers=self.headers, timeout=self.timeout
+            ) as response:
+                return consume(response)
+        response = self._client.get(url, headers=self.headers, timeout=self.timeout)
+        return consume(response)
 
     def get_submissions(self, cik: str | int) -> dict[str, Any]:
         normalized = normalize_cik(cik)

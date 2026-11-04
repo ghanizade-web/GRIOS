@@ -73,6 +73,11 @@ def _parse_entry(node: ET.Element) -> dict[str, Any]:
     if not CUSIP_PATTERN.fullmatch(cusip):
         raise ValueError(f"Invalid CUSIP format: {cusip!r}")
     reported_value = _nonnegative_int(_first(node, "value"), "value")
+    figi = _first(node, "figi", required=False)
+    if figi:
+        figi = figi.upper()
+        if not re.fullmatch(r"[A-Z0-9]{12}", figi):
+            raise ValueError(f"Invalid FIGI format: {figi!r}")
     amount_nodes = _children(node, "shrsOrPrnAmt")
     if not amount_nodes:
         raise ValueError("Missing required 13F XML field: shrsOrPrnAmt")
@@ -101,6 +106,7 @@ def _parse_entry(node: ET.Element) -> dict[str, Any]:
         "issuer": issuer,
         "title_of_class": title_class,
         "cusip": cusip,
+        "figi": figi,
         "reported_value_raw": reported_value,
         "amount": amount,
         "amount_type": amount_type,
@@ -221,8 +227,10 @@ def compare_13f_snapshots(
                 item["investment_discretion"], item.get("other_manager"),
             )
             aggregate = result.setdefault(key, {
-                "issuer": item["issuer"], "amount": 0, "value_usd": 0,
+                "issuer": item["issuer"], "figi": item.get("figi"),
+                "amount": 0, "value_usd": 0,
             })
+            aggregate["figi"] = aggregate.get("figi") or item.get("figi")
             aggregate["amount"] += item["amount"]
             aggregate["value_usd"] += item["value_usd"]
         return result
@@ -240,6 +248,7 @@ def compare_13f_snapshots(
         new_value = after["value_usd"] if after else 0
         changes.append({
             "cusip": key[0],
+            "figi": (after or before).get("figi"),
             "put_call": key[1],
             "amount_type": key[2],
             "investment_discretion": key[3],
@@ -324,6 +333,7 @@ def reconcile_13f_filing_chain(filings: list[dict[str, Any]]) -> dict[str, Any]:
                 "issuer": item["issuer"],
                 "title_of_class": item["title_of_class"],
                 "cusip": item["cusip"],
+                "figi": item.get("figi"),
                 "put_call": item.get("put_call"),
                 "amount_type": item["amount_type"],
                 "investment_discretion": item["investment_discretion"],
@@ -332,6 +342,7 @@ def reconcile_13f_filing_chain(filings: list[dict[str, Any]]) -> dict[str, Any]:
                 "value_usd": 0,
                 "voting_authority": {"sole": 0, "shared": 0, "none": 0},
             })
+            row["figi"] = row.get("figi") or item.get("figi")
             row["amount"] += item["amount"]
             row["value_usd"] += item["value_usd"]
             for field in ("sole", "shared", "none"):

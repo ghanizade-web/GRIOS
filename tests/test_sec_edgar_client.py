@@ -112,3 +112,54 @@ def test_ambiguous_information_table_documents_are_rejected():
     client = SecEdgarClient(user_agent="GRIOS Research research@example.org", client=fake)
     with pytest.raises(ValueError, match="exactly one"):
         client.find_information_table_document("123456", "0000123456-26-000001")
+
+
+
+class FakeBinaryResponse:
+    def __init__(self, content, content_length=None):
+        self.content = content
+        self.headers = {}
+        if content_length is not None:
+            self.headers["content-length"] = str(content_length)
+
+    def raise_for_status(self):
+        return None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def iter_bytes(self):
+        midpoint = max(1, len(self.content) // 2)
+        yield self.content[:midpoint]
+        if self.content[midpoint:]:
+            yield self.content[midpoint:]
+
+
+class FakeBinaryClient:
+    def __init__(self, response):
+        self.response = response
+
+    def stream(self, method, url, **kwargs):
+        return self.response
+
+
+def test_download_document_accepts_sec_https_and_enforces_size_limit():
+    url = "https://www.sec.gov/Archives/edgar/data/123456/filing.xml"
+    client = SecEdgarClient(
+        user_agent="GRIOS Research research@example.org",
+        client=FakeBinaryClient(FakeBinaryResponse(b"<xml/>")),
+    )
+    assert client.download_document(url) == b"<xml/>"
+    with pytest.raises(ValueError, match="size limit"):
+        client.download_document(url, max_bytes=3)
+
+
+def test_download_document_rejects_non_sec_and_non_https_urls():
+    client = SecEdgarClient(user_agent="GRIOS Research research@example.org")
+    with pytest.raises(ValueError, match="HTTPS SEC.gov"):
+        client.download_document("https://example.com/filing.xml")
+    with pytest.raises(ValueError, match="HTTPS SEC.gov"):
+        client.download_document("http://www.sec.gov/filing.xml")

@@ -12,6 +12,7 @@ XML = """<?xml version="1.0" encoding="UTF-8"?>
     <nameOfIssuer>Example Corporation</nameOfIssuer>
     <titleOfClass>COM</titleOfClass>
     <cusip>123456789</cusip>
+    <figi>BBG000B9XRY4</figi>
     <value>125000</value>
     <shrsOrPrnAmt><sshPrnamt>1000000</sshPrnamt><sshPrnamtType>SH</sshPrnamtType></shrsOrPrnAmt>
     <investmentDiscretion>SOLE</investmentDiscretion>
@@ -52,6 +53,7 @@ def test_parse_namespace_and_reported_fields():
     assert result["holdings_count"] == 2
     assert result["filer_cik"] == "0000123456"
     assert result["holdings"][0]["value_usd"] == 125000
+    assert result["holdings"][0]["figi"] == "BBG000B9XRY4"
     assert result["holdings"][0]["reported_value_unit"] == "USD"
     assert result["interpretation"]["normalized_value_unit"] == "USD"
     assert result["holdings"][1]["put_call"] == "Call"
@@ -87,6 +89,7 @@ def test_compare_snapshots_reports_position_change_not_trade():
     changed = next(row for row in comparison["changes"] if row["cusip"] == "123456789")
     assert changed["amount_change"] == 100
     assert changed["value_change_usd"] == 250
+    assert changed["figi"] == "BBG000B9XRY4"
     assert "not proof of purchases" in comparison["interpretation"]
 
 
@@ -142,6 +145,8 @@ def test_new_holdings_amendment_supplements_original_snapshot():
     amendment = make_amendment(1, "NEW HOLDINGS", [added])
     result = reconcile_13f_filing_chain([amendment, original])
     assert result["holdings_count"] == 3
+    original_position = next(row for row in result["holdings"] if row["cusip"] == "123456789")
+    assert original_position["figi"] == "BBG000B9XRY4"
     assert result["applied_filings"][1]["effect"] == "SUPPLEMENTED_PRIOR_SNAPSHOT"
 
 
@@ -197,3 +202,9 @@ def test_filing_date_controls_value_unit_for_pre_rule_quarter():
     )
     assert pre_rule_quarter["interpretation"]["reported_value_unit"] == "USD"
     assert pre_rule_quarter["holdings"][0]["value_usd"] == 125000
+
+
+def test_optional_figi_is_validated_when_present():
+    invalid = XML.replace("<figi>BBG000B9XRY4</figi>", "<figi>BAD</figi>")
+    with pytest.raises(ValueError, match="Invalid FIGI"):
+        parse_13f_information_table(invalid, **BASE)
