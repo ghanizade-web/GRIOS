@@ -27,6 +27,24 @@ DEFAULT_CRYPTO_SYMBOLS = [
     "TRX", "LINK", "AVAX", "LTC", "BCH", "DOT", "TON",
 ]
 
+CRYPTO_UNIVERSE_DEFAULTS = {
+    "mode": "watchlist",
+    "min_market_cap_usd": 250_000_000,
+    "min_volume_24h_usd": 10_000_000,
+    "min_turnover_ratio": 0.01,
+    "max_fdv_market_cap_ratio": 3.0,
+    "require_two_sources": False,
+    "excluded_symbols": [
+        "USDT", "USDC", "USDS", "DAI", "USDE",
+        "FDUSD", "TUSD", "USDD", "PYUSD", "FRAX",
+        "WBTC", "WETH", "STETH", "WSTETH",
+    ],
+    "excluded_name_terms": [
+        "stablecoin", "wrapped", "bridged", "leveraged",
+        "3x long", "3x short", "2x long", "2x short",
+    ],
+}
+
 
 @dataclass
 class MarketSeries:
@@ -81,20 +99,75 @@ def as_date(value: Any) -> str | None:
     return str(value)[:10]
 
 
-def load_watchlist(path: Path) -> dict[str, list[str]]:
+def load_watchlist(path: Path) -> dict[str, Any]:
     keys = (
         "us_equities_etfs",
         "commodity_etf_proxies",
         "fx_reference_pairs",
         "crypto_symbols",
     )
-    if not path.exists():
-        return {key: [] for key in keys}
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return {
-        key: [str(v).strip().upper() for v in data.get(key, []) if str(v).strip()]
+
+    if path.exists():
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("Watchlist root must be a JSON object.")
+    else:
+        data = {}
+
+    result: dict[str, Any] = {
+        key: [
+            str(v).strip().upper()
+            for v in data.get(key, [])
+            if str(v).strip()
+        ]
         for key in keys
     }
+
+    config = data.get("crypto_universe", {})
+    if not isinstance(config, dict):
+        raise ValueError("crypto_universe must be a JSON object.")
+
+    universe = {**CRYPTO_UNIVERSE_DEFAULTS, **config}
+
+    mode = str(universe.get("mode", "watchlist")).lower()
+    if mode not in {"watchlist", "discovery"}:
+        raise ValueError("crypto_universe.mode must be watchlist or discovery.")
+
+    universe["mode"] = mode
+
+    for key in (
+        "min_market_cap_usd",
+        "min_volume_24h_usd",
+        "min_turnover_ratio",
+        "max_fdv_market_cap_ratio",
+    ):
+        value = as_float(universe.get(key))
+        if value is None or value < 0:
+            raise ValueError(f"Invalid crypto_universe setting: {key}")
+        universe[key] = value
+
+    universe["require_two_sources"] = bool(
+        universe.get("require_two_sources", False)
+    )
+
+    universe["excluded_symbols"] = [
+        str(x).strip().upper()
+        for x in universe.get("excluded_symbols", [])
+        if str(x).strip()
+    ]
+
+    universe["excluded_name_terms"] = [
+        str(x).strip().casefold()
+        for x in universe.get("excluded_name_terms", [])
+        if str(x).strip()
+    ]
+
+    # An empty Watchlist must never mean "scan everything".
+    if mode == "watchlist" and not result["crypto_symbols"]:
+        result["crypto_symbols"] = DEFAULT_CRYPTO_SYMBOLS.copy()
+
+    result["crypto_universe"] = universe
+    return result
 
 
 def get_openbb() -> Any:
@@ -102,10 +175,12 @@ def get_openbb() -> Any:
 
     eia_key = os.getenv("EIA_API_KEY", "").strip()
     fred_key = os.getenv("FRED_API_KEY", "").strip()
+
     if eia_key:
         obb.user.credentials.eia_api_key = eia_key
     if fred_key:
         obb.user.credentials.fred_api_key = fred_key
+
     return obb
 
 
@@ -130,11 +205,17 @@ def valid_crypto_row(
 ) -> tuple[float, datetime] | None:
     parsed_price = as_float(price)
     parsed_stamp = parse_timestamp(stamp)
-    if not symbol or not name or parsed_price is None or parsed_price <= 0 or parsed_stamp is None:
+
+    if (
+        not symbol or not name or parsed_price is None
+        or parsed_price <= 0 or parsed_stamp is None
+    ):
         return None
+
     age = now_utc() - parsed_stamp
     if age < timedelta(0) or age > timedelta(minutes=max_age_minutes):
         return None
+
     return parsed_price, parsed_stamp
 
 
@@ -154,6 +235,7 @@ def crypto_series(
     slug: str = "",
 ) -> MarketSeries:
     identity = slug.strip().lower() or normalized_name(name)
+
     return MarketSeries(
         key=f"crypto:asset:{symbol.upper()}:{identity}",
         symbol=symbol.upper(),
@@ -161,7 +243,7 @@ def crypto_series(
         asset_class="crypto",
         instrument="spot token",
         provider=provider,
-        feed_class="aggregated crypto spot; provider timestamp checked",
+        feed_class="Aggregated crypto spot; provider timestamp checked",
         currency="USD",
         observations=[{"date": stamp.date().isoformat(), "close": price}],
         observed_at=stamp.isoformat(timespec="seconds"),
@@ -198,6 +280,7 @@ def fetch_coingecko(
         "sparkline": "false",
         "price_change_percentage": "24h,7d,30d",
     }
+
     headers = {"x-cg-demo-api-key": api_key}
 
     try:
@@ -206,16 +289,19 @@ def fetch_coingecko(
         )
         response.raise_for_status()
         payload = response.json()
+
         if not isinstance(payload, list):
             return [], "CoinGecko پاسخ با ساختار مورد انتظار برنگرداند."
 
         rows: list[MarketSeries] = []
+
         for item in payload:
             if not isinstance(item, dict):
                 continue
 
             symbol = str(item.get("symbol") or "").upper()
             name = str(item.get("name") or "")
+
             if symbols and symbol not in symbols:
                 continue
 
@@ -226,10 +312,12 @@ def fetch_coingecko(
                 item.get("last_updated"),
                 max_age_minutes,
             )
+
             if not checked:
                 continue
 
             price, stamp = checked
+
             rows.append(crypto_series(
                 symbol=symbol,
                 name=name,
@@ -244,10 +332,15 @@ def fetch_coingecko(
                 change_30d=item.get("price_change_percentage_30d_in_currency"),
                 slug=str(item.get("id") or ""),
             ))
-        return rows, None if rows else "CoinGecko داده معتبر و تازه‌ای برای Watchlist برنگرداند."
+
+        return rows, None if rows else (
+            "CoinGecko داده معتبر و تازه‌ای برای Watchlist برنگرداند."
+        )
 
     except (httpx.HTTPError, ValueError, TypeError):
-        return [], "اتصال CoinGecko ناموفق بود؛ نوع خطا در گزارش ثبت شد، نه اطلاعات محرمانه."
+        return [], (
+            "اتصال CoinGecko ناموفق بود؛ جزئیات محرمانه در گزارش ثبت نشد."
+        )
 
 
 def fetch_coinmarketcap(
@@ -263,6 +356,7 @@ def fetch_coinmarketcap(
         "limit": 500,
         "convert": "USD",
     }
+
     headers = {
         "X-CMC_PRO_API_KEY": api_key,
         "Accept": "application/json",
@@ -274,32 +368,39 @@ def fetch_coinmarketcap(
         )
         response.raise_for_status()
         payload = response.json()
+
         items = payload.get("data", []) if isinstance(payload, dict) else []
         if not isinstance(items, list):
             return [], "CoinMarketCap پاسخ با ساختار مورد انتظار برنگرداند."
 
         rows: list[MarketSeries] = []
+
         for item in items:
             if not isinstance(item, dict):
                 continue
 
             symbol = str(item.get("symbol") or "").upper()
             name = str(item.get("name") or "")
+
             if symbols and symbol not in symbols:
                 continue
 
             quote = item.get("quote")
             if isinstance(quote, list):
                 quote = quote[0] if quote else {}
+
             if not isinstance(quote, dict):
                 continue
+
             usd = quote.get("USD")
             if isinstance(usd, list):
                 usd = usd[0] if usd else {}
+
             if not isinstance(usd, dict):
                 continue
 
             stamp_value = usd.get("last_updated") or item.get("last_updated")
+
             checked = valid_crypto_row(
                 symbol,
                 name,
@@ -307,10 +408,12 @@ def fetch_coinmarketcap(
                 stamp_value,
                 max_age_minutes,
             )
+
             if not checked:
                 continue
 
             price, stamp = checked
+
             rows.append(crypto_series(
                 symbol=symbol,
                 name=name,
@@ -325,16 +428,22 @@ def fetch_coinmarketcap(
                 change_30d=usd.get("percent_change_30d"),
                 slug=str(item.get("slug") or ""),
             ))
-        return rows, None if rows else "CoinMarketCap داده معتبر و تازه‌ای برای Watchlist برنگرداند."
+
+        return rows, None if rows else (
+            "CoinMarketCap داده معتبر و تازه‌ای برای Watchlist برنگرداند."
+        )
 
     except (httpx.HTTPError, ValueError, TypeError):
-        return [], "اتصال CoinMarketCap ناموفق بود؛ نوع خطا در گزارش ثبت شد، نه اطلاعات محرمانه."
+        return [], (
+            "اتصال CoinMarketCap ناموفق بود؛ جزئیات محرمانه در گزارش ثبت نشد."
+        )
 
 
 def reconcile_crypto(
     rows: list[MarketSeries],
 ) -> tuple[list[MarketSeries], list[str]]:
     groups: dict[tuple[str, str], list[MarketSeries]] = {}
+
     for row in rows:
         identity = (row.symbol, normalized_name(row.name))
         groups.setdefault(identity, []).append(row)
@@ -344,31 +453,42 @@ def reconcile_crypto(
 
     for (symbol, _), group in groups.items():
         providers = {item.provider for item in group}
+
         if len(providers) < 2:
             accepted.extend(group)
             continue
 
-        prices = [item.observations[-1]["close"] for item in group if item.observations]
+        prices = [
+            item.observations[-1]["close"]
+            for item in group if item.observations
+        ]
+
         if len(prices) < 2:
             accepted.extend(group)
             continue
 
         median = statistics.median(prices)
-        deviation = ((max(prices) - min(prices)) / median * 100) if median else 999
+        deviation = (
+            (max(prices) - min(prices)) / median * 100
+            if median else 999
+        )
 
         if deviation > 2.0:
             conflicts.append(
-                f"{symbol}: اختلاف قیمت منابع {deviation:.2f}% بود؛ از رتبه‌بندی حذف شد."
+                f"{symbol}: اختلاف قیمت منابع {deviation:.2f}% بود؛ حذف شد."
             )
             continue
 
         chosen = max(group, key=lambda item: item.observed_at or "")
-        chosen.key = f"crypto:asset:{symbol}:{normalized_name(chosen.name)}"
+        chosen.key = (
+            f"crypto:asset:{symbol}:{normalized_name(chosen.name)}"
+        )
         chosen.provider = " + ".join(sorted(providers))
         chosen.caveat = (
             (chosen.caveat or "")
             + f" Cross-source price deviation: {deviation:.2f}%."
         )
+
         accepted.append(chosen)
 
     return accepted, conflicts
@@ -383,6 +503,7 @@ def fetch_crypto(
         symbols,
         max_age_minutes,
     )
+
     cmc, cmc_error = fetch_coinmarketcap(
         os.getenv("COINMARKETCAP_API_KEY", "").strip(),
         symbols,
@@ -390,12 +511,110 @@ def fetch_crypto(
     )
 
     combined, conflicts = reconcile_crypto(cg + cmc)
+
     errors = [e for e in (cg_error, cmc_error) if e]
     errors.extend(conflicts)
 
     if not combined and not errors:
         errors.append("هیچ داده معتبر کریپتو دریافت نشد.")
+
     return combined, errors
+
+
+def filter_crypto_universe(
+    rows: list[MarketSeries],
+    config: dict[str, Any],
+) -> tuple[list[MarketSeries], dict[str, Any]]:
+    eligible: list[MarketSeries] = []
+    excluded: dict[str, int] = {}
+
+    min_market_cap = config["min_market_cap_usd"]
+    min_volume = config["min_volume_24h_usd"]
+    min_turnover = config["min_turnover_ratio"]
+    max_fdv_ratio = config["max_fdv_market_cap_ratio"]
+
+    excluded_symbols = set(config["excluded_symbols"])
+    excluded_terms = config["excluded_name_terms"]
+    require_two_sources = config["require_two_sources"]
+
+    def reject(reason: str) -> None:
+        excluded[reason] = excluded.get(reason, 0) + 1
+
+    for series in rows:
+        extra = series.extra
+
+        market_cap = as_float(extra.get("market_cap"))
+        volume = as_float(extra.get("volume_24h"))
+        fdv = as_float(extra.get("fdv"))
+
+        if series.symbol.upper() in excluded_symbols:
+            reject("excluded_symbol")
+            continue
+
+        name = series.name.casefold()
+        if any(term in name for term in excluded_terms):
+            reject("excluded_name_pattern")
+            continue
+
+        if market_cap is None or market_cap <= 0:
+            reject("missing_market_cap")
+            continue
+
+        if market_cap < min_market_cap:
+            reject("market_cap_below_minimum")
+            continue
+
+        if volume is None or volume <= 0:
+            reject("missing_volume")
+            continue
+
+        if volume < min_volume:
+            reject("volume_below_minimum")
+            continue
+
+        turnover = volume / market_cap
+        if turnover < min_turnover:
+            reject("turnover_below_minimum")
+            continue
+
+        fdv_ratio = None
+
+        if fdv is not None and fdv > 0:
+            fdv_ratio = fdv / market_cap
+
+            if fdv_ratio > max_fdv_ratio:
+                reject("fdv_dilution_risk")
+                continue
+
+        providers = {
+            item.strip()
+            for item in series.provider.split("+")
+            if item.strip()
+        }
+
+        provider_count = len(providers)
+
+        if require_two_sources and provider_count < 2:
+            reject("single_source")
+            continue
+
+        extra["provider_count"] = provider_count
+        extra["volume_market_cap_ratio"] = turnover
+        extra["fdv_market_cap_ratio"] = fdv_ratio
+        extra["universe_status"] = (
+            "CROSS_SOURCE" if provider_count >= 2 else "SINGLE_SOURCE"
+        )
+
+        eligible.append(series)
+
+    stats = {
+        "input_count": len(rows),
+        "eligible_count": len(eligible),
+        "excluded_count": len(rows) - len(eligible),
+        "excluded_reasons": excluded,
+    }
+
+    return eligible, stats
 
 
 def fetch_equity(
@@ -405,6 +624,7 @@ def fetch_equity(
 ) -> tuple[list[MarketSeries], list[str]]:
     result: list[MarketSeries] = []
     errors: list[str] = []
+
     start = (date.today() - timedelta(days=220)).isoformat()
     end = date.today().isoformat()
 
@@ -416,16 +636,20 @@ def fetch_equity(
                 end_date=end,
                 provider="cboe",
             )
+
             points = []
+
             for row in dataframe_rows(response):
                 stamp = as_date(row.get("date") or row.get("index"))
                 close = as_float(row.get("close"))
+
                 if stamp and close and close > 0:
                     points.append({
                         "date": stamp,
                         "close": close,
                         "volume": as_float(row.get("volume")),
                     })
+
             points.sort(key=lambda p: p["date"])
 
             if not points:
@@ -445,13 +669,16 @@ def fetch_equity(
                 observed_at=iso(),
                 data_as_of=points[-1]["date"],
                 caveat=(
-                    "ETF proxy; not the underlying commodity spot or futures contract."
+                    "ETF proxy; not the underlying commodity spot or futures."
                     if proxy else
                     "Historical bars; not a live executable quote."
                 ),
             ))
+
         except Exception as exc:
-            errors.append(f"{symbol}: Cboe unavailable ({type(exc).__name__}).")
+            errors.append(
+                f"{symbol}: Cboe unavailable ({type(exc).__name__})."
+            )
 
     return result, errors
 
@@ -462,12 +689,15 @@ def fetch_fx_reference(
 ) -> tuple[list[MarketSeries], list[str]]:
     result: list[MarketSeries] = []
     errors: list[str] = []
+
     start = (date.today() - timedelta(days=220)).isoformat()
 
     for pair in pairs:
         try:
             if not pair.startswith("EUR"):
-                errors.append(f"{pair}: ECB در این اسکن فقط جفت‌های دارای EUR را پوشش می‌دهد.")
+                errors.append(
+                    f"{pair}: ECB در این اسکن فقط جفت‌های دارای EUR را پوشش می‌دهد."
+                )
                 continue
 
             response = obb.ecb.exchange_rates(
@@ -475,15 +705,25 @@ def fetch_fx_reference(
                 symbol=pair,
                 start_date=start,
             )
+
             points = []
+
             for row in dataframe_rows(response):
                 stamp = as_date(row.get("date") or row.get("index"))
                 raw_value = row.get("value")
+
                 if raw_value is None:
                     raw_value = row.get("close")
+
                 close = as_float(raw_value)
+
                 if stamp and close and close > 0:
-                    points.append({"date": stamp, "close": close, "volume": None})
+                    points.append({
+                        "date": stamp,
+                        "close": close,
+                        "volume": None,
+                    })
+
             points.sort(key=lambda p: p["date"])
 
             if not points:
@@ -504,8 +744,11 @@ def fetch_fx_reference(
                 data_as_of=points[-1]["date"],
                 caveat="Reference rate only; no bid/ask, spread or market depth.",
             ))
+
         except Exception as exc:
-            errors.append(f"{pair}: ECB unavailable ({type(exc).__name__}).")
+            errors.append(
+                f"{pair}: ECB unavailable ({type(exc).__name__})."
+            )
 
     return result, errors
 
@@ -519,6 +762,7 @@ def fetch_energy(
 
     result: list[MarketSeries] = []
     errors: list[str] = []
+
     calls = [
         (
             "Brent spot",
@@ -546,14 +790,23 @@ def fetch_energy(
     for title, key, fetch in calls:
         try:
             points = []
+
             for row in dataframe_rows(fetch()):
                 stamp = as_date(row.get("date") or row.get("index"))
                 raw_value = row.get("value")
+
                 if raw_value is None:
                     raw_value = row.get("close")
+
                 close = as_float(raw_value)
+
                 if stamp and close is not None and close > 0:
-                    points.append({"date": stamp, "close": close, "volume": None})
+                    points.append({
+                        "date": stamp,
+                        "close": close,
+                        "volume": None,
+                    })
+
             points.sort(key=lambda p: p["date"])
 
             if not points:
@@ -574,8 +827,11 @@ def fetch_energy(
                 data_as_of=points[-1]["date"],
                 caveat="Published spot series; not an executable futures quote.",
             ))
+
         except Exception as exc:
-            errors.append(f"{title}: EIA unavailable ({type(exc).__name__}).")
+            errors.append(
+                f"{title}: EIA unavailable ({type(exc).__name__})."
+            )
 
     return result, errors
 
@@ -593,8 +849,10 @@ def fetch_macro(
         "DTWEXBGS": ("US broad trade-weighted dollar index", "index"),
         "VIXCLS": ("Cboe VIX close", "index"),
     }
+
     result: list[MarketSeries] = []
     errors: list[str] = []
+
     start = (date.today() - timedelta(days=45)).isoformat()
 
     for symbol, (name, unit) in definitions.items():
@@ -604,15 +862,25 @@ def fetch_macro(
                 provider="fred",
                 start_date=start,
             )
+
             points = []
+
             for row in dataframe_rows(response):
                 stamp = as_date(row.get("date") or row.get("index"))
                 raw_value = row.get("value")
+
                 if raw_value is None:
                     raw_value = row.get(symbol)
+
                 value = as_float(raw_value)
+
                 if stamp and value is not None:
-                    points.append({"date": stamp, "close": value, "volume": None})
+                    points.append({
+                        "date": stamp,
+                        "close": value,
+                        "volume": None,
+                    })
+
             points.sort(key=lambda p: p["date"])
 
             if not points:
@@ -633,8 +901,11 @@ def fetch_macro(
                 data_as_of=points[-1]["date"],
                 caveat="Contextual macro data; not a standalone trade signal.",
             ))
+
         except Exception as exc:
-            errors.append(f"FRED {symbol}: unavailable ({type(exc).__name__}).")
+            errors.append(
+                f"FRED {symbol}: unavailable ({type(exc).__name__})."
+            )
 
     return result, errors
 
@@ -660,33 +931,50 @@ def market_score(series: MarketSeries) -> dict[str, Any]:
 
     if series.asset_class == "crypto":
         extra = series.extra
+
         changes = [
             extra.get("change_24h"),
             extra.get("change_7d"),
             extra.get("change_30d"),
         ]
+
         present = [float(v) for v in changes if v is not None]
         factors: list[tuple[float, float]] = []
+
+        if len(present) >= 2:
+            factors.append((
+                clamp(50 + statistics.mean(present) * 2),
+                0.40,
+            ))
+
+        if len(present) == 3:
+            positive = sum(v > 0 for v in present)
+            alignment = {3: 100, 2: 65, 1: 35, 0: 10}[positive]
+            factors.append((alignment, 0.30))
 
         market_cap = extra.get("market_cap")
         volume = extra.get("volume_24h")
         fdv = extra.get("fdv")
 
-        if len(present) >= 2:
-            factors.append((clamp(50 + statistics.mean(present) * 2), .40))
-        if len(present) == 3:
-            positive = sum(v > 0 for v in present)
-            alignment = {3: 100, 2: 65, 1: 35, 0: 10}[positive]
-            factors.append((alignment, .30))
         if market_cap and volume and market_cap > 0:
-            factors.append((clamp(volume / market_cap * 100 * 10), .20))
+            factors.append((
+                clamp(volume / market_cap * 100 * 10),
+                0.20,
+            ))
+
         if market_cap and fdv and market_cap > 0:
             ratio = fdv / market_cap
-            dilution = 90 if ratio <= 1.1 else 70 if ratio <= 1.5 else 45 if ratio <= 2.5 else 20
-            factors.append((dilution, .10))
+            dilution = (
+                90 if ratio <= 1.1 else
+                70 if ratio <= 1.5 else
+                45 if ratio <= 2.5 else
+                20
+            )
+            factors.append((dilution, 0.10))
 
         coverage = len(factors) / 4
-        if coverage < .75:
+
+        if coverage < 0.75:
             return {
                 "score": None,
                 "coverage": round(coverage * 100),
@@ -695,18 +983,19 @@ def market_score(series: MarketSeries) -> dict[str, Any]:
             }
 
         weight = sum(w for _, w in factors)
+
         return {
             "score": round(sum(s * w for s, w in factors) / weight),
             "coverage": round(coverage * 100),
             "decision": "WATCH_ONLY",
-            "why": "Preliminary momentum, alignment, turnover and FDV screen; not a calibrated trading signal.",
+            "why": (
+                "Preliminary momentum, alignment, turnover and FDV screen; "
+                "not a calibrated trading signal."
+            ),
         }
 
     points = series.observations
-    closes = [
-        as_float(p.get("close"))
-        for p in points
-    ]
+    closes = [as_float(p.get("close")) for p in points]
     closes = [v for v in closes if v is not None and v > 0]
 
     if len(closes) < 61:
@@ -720,6 +1009,7 @@ def market_score(series: MarketSeries) -> dict[str, Any]:
     last = closes[-1]
     sma20 = statistics.mean(closes[-20:])
     sma50 = statistics.mean(closes[-50:])
+
     mom20 = pct_change(last, closes[-21])
     mom60 = pct_change(last, closes[-61])
 
@@ -729,6 +1019,7 @@ def market_score(series: MarketSeries) -> dict[str, Any]:
         else 50 if last > sma20 or last > sma50
         else 20
     )
+
     momentum = clamp(50 + (mom20 or 0) * 2)
 
     returns = [
@@ -737,27 +1028,26 @@ def market_score(series: MarketSeries) -> dict[str, Any]:
         if closes[i - 1] > 0
     ]
 
-    annual_factor = (
-        math.sqrt(252)
-        if series.asset_class in {
-            "us_equity_etf", "commodity_proxy", "commodity_energy"
-        }
-        else math.sqrt(52)
-    )
+    annual_factor = math.sqrt(252)
+
     volatility = (
         statistics.stdev(returns[-20:]) * annual_factor * 100
         if len(returns) >= 20 else None
     )
+
     volatility_score = clamp(100 - (volatility or 0) * 1.5)
 
     last_volume = as_float(points[-1].get("volume"))
+
     previous_volumes = [
         as_float(p.get("volume"))
         for p in points[-21:-1]
     ]
+
     previous_volumes = [
         v for v in previous_volumes if v is not None and v > 0
     ]
+
     volume_ratio = (
         last_volume / statistics.mean(previous_volumes)
         if last_volume and previous_volumes else None
@@ -766,23 +1056,46 @@ def market_score(series: MarketSeries) -> dict[str, Any]:
     drawdown = pct_change(last, max(closes[-60:]))
 
     if series.asset_class in {"us_equity_etf", "commodity_proxy"}:
-        factors = [(trend, .35), (momentum, .25), (volatility_score, .20)]
-        if volume_ratio is not None:
-            factors.append((clamp(50 + (volume_ratio - 1) * 35), .20))
-    else:
-        factors = [(trend, .40), (momentum, .35), (volatility_score, .25)]
+        factors = [
+            (trend, 0.35),
+            (momentum, 0.25),
+            (volatility_score, 0.20),
+        ]
 
-    score = round(sum(s * w for s, w in factors) / sum(w for _, w in factors))
-    expected_factors = 4 if series.asset_class in {
-        "us_equity_etf", "commodity_proxy"
-    } else 3
-    coverage = round(len(factors) / expected_factors * 100)
+        if volume_ratio is not None:
+            factors.append((
+                clamp(50 + (volume_ratio - 1) * 35),
+                0.20,
+            ))
+    else:
+        factors = [
+            (trend, 0.40),
+            (momentum, 0.35),
+            (volatility_score, 0.25),
+        ]
+
+    score = round(
+        sum(s * w for s, w in factors)
+        / sum(w for _, w in factors)
+    )
+
+    expected_factors = (
+        4 if series.asset_class in {
+            "us_equity_etf", "commodity_proxy"
+        } else 3
+    )
+
+    coverage = min(100, round(len(factors) / expected_factors * 100))
 
     return {
         "score": score,
-        "coverage": min(100, coverage),
+        "coverage": coverage,
         "decision": "WATCH_ONLY" if score >= 55 else "NO_RANK",
-        "why": f"20-period return {mom20:.1f}%; technical heuristic only." if mom20 is not None else "Historical observations available.",
+        "why": (
+            f"20-period return {mom20:.1f}%; technical heuristic only."
+            if mom20 is not None else
+            "Historical observations available."
+        ),
         "latest_price": last,
         "momentum_20": mom20,
         "momentum_60": mom60,
@@ -815,11 +1128,17 @@ def stale(series: MarketSeries) -> bool:
 
     if series.asset_class == "crypto":
         stamp = parse_timestamp(series.observed_at)
+
         if stamp is None:
             return True
+
         delta = now_utc() - stamp
-        return delta < timedelta(0) or delta > timedelta(
-            minutes=int(os.getenv("MAX_CRYPTO_AGE_MINUTES", "30"))
+
+        return (
+            delta < timedelta(0)
+            or delta > timedelta(
+                minutes=int(os.getenv("MAX_CRYPTO_AGE_MINUTES", "30"))
+            )
         )
 
     return age > timedelta(days=limits.get(series.asset_class, 30))
@@ -827,8 +1146,10 @@ def stale(series: MarketSeries) -> bool:
 
 def ensure_db(path: Path) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
+
     db = sqlite3.connect(path)
     db.execute("PRAGMA foreign_keys = ON")
+
     db.execute("""
         CREATE TABLE IF NOT EXISTS ideas (
             id INTEGER PRIMARY KEY,
@@ -847,6 +1168,7 @@ def ensure_db(path: Path) -> sqlite3.Connection:
             UNIQUE(asset_key, data_as_of)
         )
     """)
+
     db.execute("""
         CREATE TABLE IF NOT EXISTS evaluations (
             id INTEGER PRIMARY KEY,
@@ -859,6 +1181,7 @@ def ensure_db(path: Path) -> sqlite3.Connection:
             UNIQUE(idea_id, checkpoint_days)
         )
     """)
+
     db.commit()
     return db
 
@@ -875,6 +1198,7 @@ def record_and_evaluate(
     scores: dict[str, dict[str, Any]],
 ) -> None:
     timestamp = iso()
+
     current = {
         s.key: (s, price_now(s))
         for s in series_list
@@ -887,8 +1211,10 @@ def record_and_evaluate(
 
         if stale(s):
             continue
+
         if score.get("decision") == "DATA_ONLY":
             continue
+
         if score.get("score") is None or price is None or not s.data_as_of:
             continue
 
@@ -898,9 +1224,17 @@ def record_and_evaluate(
              price,technical_score,factor_coverage_pct,decision,thesis,invalidation)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
-            s.key, s.symbol, s.asset_class, s.provider, s.data_as_of,
-            timestamp, price, score.get("score"), score.get("coverage", 0),
-            score.get("decision", "NO_RANK"), score.get("why", ""),
+            s.key,
+            s.symbol,
+            s.asset_class,
+            s.provider,
+            s.data_as_of,
+            timestamp,
+            price,
+            score.get("score"),
+            score.get("coverage", 0),
+            score.get("decision", "NO_RANK"),
+            score.get("why", ""),
             "Reassess when subsequent observations invalidate the recorded thesis.",
         ))
 
@@ -910,10 +1244,12 @@ def record_and_evaluate(
 
     for idea_id, key, origin, origin_price in pending:
         match = current.get(key)
+
         if not match or match[1] is None or not origin_price:
             continue
 
         series, current_price = match
+
         try:
             days = (
                 date.fromisoformat(series.data_as_of[:10])
@@ -926,19 +1262,25 @@ def record_and_evaluate(
             continue
 
         tolerances = {1: 1, 7: 2, 30: 4, 90: 10, 365: 21}
+
         for checkpoint, tolerance in tolerances.items():
             exists = db.execute(
                 "SELECT 1 FROM evaluations WHERE idea_id=? AND checkpoint_days=?",
                 (idea_id, checkpoint),
             ).fetchone()
+
             if not exists and checkpoint <= days <= checkpoint + tolerance:
                 db.execute("""
                     INSERT OR IGNORE INTO evaluations
                     (idea_id,checkpoint_days,evaluated_at,observed_at,price,return_pct)
                     VALUES(?,?,?,?,?,?)
                 """, (
-                    idea_id, checkpoint, timestamp, series.data_as_of,
-                    current_price, (current_price / origin_price - 1) * 100,
+                    idea_id,
+                    checkpoint,
+                    timestamp,
+                    series.data_as_of,
+                    current_price,
+                    (current_price / origin_price - 1) * 100,
                 ))
 
     db.commit()
@@ -948,8 +1290,10 @@ def telegram_report(
     series_list: list[MarketSeries],
     errors: list[str],
     scores: dict[str, dict[str, Any]],
+    universe_summary: str | None = None,
 ) -> str:
     tehran = now_utc().astimezone(ZoneInfo("Asia/Tehran"))
+
     lines = [
         f"🌐 GRIOS | رادار فرصت‌ها | {tehran.strftime('%Y-%m-%d %H:%M')} تهران"
     ]
@@ -971,68 +1315,116 @@ def telegram_report(
         )
     )
 
+    if universe_summary:
+        lines.append("🧪 " + universe_summary)
+
     ranked = []
+
     for s in series_list:
         score = scores.get(s.key, {})
+
         if stale(s):
             continue
-        if score.get("score") is not None and score.get("decision") == "WATCH_ONLY":
+
+        if (
+            score.get("score") is not None
+            and score.get("decision") == "WATCH_ONLY"
+        ):
             ranked.append((score["score"], s, score))
 
     ranked.sort(key=lambda x: x[0], reverse=True)
 
     if ranked:
-        lines.append("\n🔎 نامزدهای پایش — امتیاز آزمایشی، نه سیگنال معامله")
+        lines.append(
+            "\n🔎 نامزدهای پایش — امتیاز آزمایشی، نه سیگنال معامله"
+        )
+
         for index, (value, s, score) in enumerate(ranked[:7], 1):
             price = price_now(s)
+
             lines.append(
                 f"\n{index}. {s.symbol} | امتیاز {value}/100 "
                 f"| پوشش {score['coverage']}% | {s.asset_class}"
             )
+
             lines.append(
                 f"   آخرین قیمت: {price:g} {s.currency} "
                 f"| تاریخ داده: {s.data_as_of} | منبع: {s.provider}"
             )
+
             lines.append(f"   مبنا: {score['why']}")
 
             if s.asset_class == "crypto":
                 extra = s.extra
+
                 momentum = "/".join(
-                    "—" if extra.get(k) is None else f"{extra[k]:+.1f}%"
-                    for k in ("change_24h", "change_7d", "change_30d")
+                    "—" if extra.get(k) is None
+                    else f"{extra[k]:+.1f}%"
+                    for k in (
+                        "change_24h",
+                        "change_7d",
+                        "change_30d",
+                    )
                 )
+
                 lines.append(f"   بازده ۲۴س/۷ر/۳۰ر: {momentum}")
 
                 if extra.get("market_cap") and extra.get("volume_24h"):
-                    turnover = extra["volume_24h"] / extra["market_cap"] * 100
-                    lines.append(f"   گردش حجم/ارزش بازار: {turnover:.2f}%")
+                    turnover = (
+                        extra["volume_24h"] / extra["market_cap"] * 100
+                    )
+                    lines.append(
+                        f"   گردش حجم/ارزش بازار: {turnover:.2f}%"
+                    )
 
                 if extra.get("market_cap") and extra.get("fdv"):
                     ratio = extra["fdv"] / extra["market_cap"]
                     lines.append(f"   FDV/ارزش بازار: {ratio:.2f}x")
 
+                lines.append(
+                    f"   وضعیت منابع: {extra.get('universe_status', 'UNKNOWN')}"
+                )
+
             if s.caveat:
                 lines.append(f"   محدودیت داده: {s.caveat}")
 
     else:
-        lines.append("\n⏸️ داده تازه و کافی برای نامزد رتبه‌پذیر وجود ندارد.")
+        lines.append(
+            "\n⏸️ داده تازه و کافی برای نامزد رتبه‌پذیر وجود ندارد."
+        )
 
-    fx = [s for s in series_list if s.asset_class == "fx_reference" and not stale(s)]
+    fx = [
+        s for s in series_list
+        if s.asset_class == "fx_reference" and not stale(s)
+    ]
+
     if fx:
         lines.append(
             "\n💱 فارکس: فقط نرخ مرجع روزانه ECB؛ "
             "بدون bid/ask و spread، سیگنال خرید/فروش صادر نمی‌شود."
         )
 
-    macro = [s for s in series_list if s.asset_class == "macro" and not stale(s)]
+    macro = [
+        s for s in series_list
+        if s.asset_class == "macro" and not stale(s)
+    ]
+
     if macro:
         parts = [
             f"{s.symbol} {price_now(s):g}{s.currency} ({s.data_as_of})"
             for s in macro if price_now(s) is not None
         ]
+
         values = {s.symbol: price_now(s) for s in macro}
-        if values.get("DGS10") is not None and values.get("DGS2") is not None:
-            parts.append(f"10Y-2Y: {values['DGS10'] - values['DGS2']:+.2f}pp")
+
+        if (
+            values.get("DGS10") is not None
+            and values.get("DGS2") is not None
+        ):
+            parts.append(
+                f"10Y-2Y: {values['DGS10'] - values['DGS2']:+.2f}pp"
+            )
+
         lines.append("\n🧭 زمینه کلان FRED: " + " | ".join(parts))
 
     if errors:
@@ -1041,33 +1433,79 @@ def telegram_report(
 
     lines.append(
         "\n🧭 تصمیم CIO: فقط WATCH. این نسخه ابزار غربالگری اولیه است؛ "
-        "جریان نهادی تأییدشده، کاتالیزور بنیادی و نسبت ریسک/بازده کامل هنوز متصل نیست."
+        "جریان نهادی تأییدشده، کاتالیزور بنیادی و نسبت ریسک/بازده کامل "
+        "هنوز متصل نیست."
     )
+
     lines.append(
         "امتیازها کالیبره یا به‌صورت تاریخی اعتبارسنجی نشده‌اند؛ "
         "هیچ سفارش یا تخصیص سرمایه‌ای صادر نمی‌شود."
     )
 
-    return "\n".join(lines)[:3900]
+    return "\n".join(lines)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="GRIOS research-only multi-source market scanner"
     )
-    parser.add_argument("--watchlist", default=str(ROOT / "watchlist.json"))
-    parser.add_argument("--out", default=os.getenv("REPORT_DIR", "reports"))
-    parser.add_argument("--db", default=os.getenv("JOURNAL_PATH", "data/opportunities.sqlite3"))
+
+    parser.add_argument(
+        "--watchlist",
+        default=str(ROOT / "watchlist.json"),
+    )
+
+    parser.add_argument(
+        "--out",
+        default=os.getenv("REPORT_DIR", "reports"),
+    )
+
+    parser.add_argument(
+        "--db",
+        default=os.getenv("JOURNAL_PATH", "data/opportunities.sqlite3"),
+    )
+
     parser.add_argument("--skip-openbb", action="store_true")
+
     args = parser.parse_args()
 
     watchlist = load_watchlist(Path(args.watchlist))
-    crypto_symbols = watchlist["crypto_symbols"]
+    crypto_config = watchlist["crypto_universe"]
+    crypto_mode = crypto_config["mode"]
 
-    crypto, crypto_errors = fetch_crypto(
+    crypto_symbols = (
+        []
+        if crypto_mode == "discovery"
+        else watchlist["crypto_symbols"]
+    )
+
+    raw_crypto, crypto_errors = fetch_crypto(
         crypto_symbols,
         int(os.getenv("MAX_CRYPTO_AGE_MINUTES", "30")),
     )
+
+    crypto, universe_stats = filter_crypto_universe(
+        raw_crypto,
+        crypto_config,
+    )
+
+    excluded_text = ", ".join(
+        f"{key}={value}"
+        for key, value in sorted(
+            universe_stats["excluded_reasons"].items()
+        )
+    )
+
+    universe_summary = (
+        f"Crypto Universe {crypto_mode.upper()} | "
+        f"ورودی: {universe_stats['input_count']} | "
+        f"واجد شرایط: {universe_stats['eligible_count']} | "
+        f"حذف‌شده: {universe_stats['excluded_count']}"
+    )
+
+    if excluded_text:
+        universe_summary += f" | دلایل: {excluded_text}"
+
     series: list[MarketSeries] = list(crypto)
     errors: list[str] = list(crypto_errors)
 
@@ -1076,46 +1514,76 @@ def main() -> int:
             obb = get_openbb()
 
             equities, equity_errors = fetch_equity(
-                obb, watchlist["us_equities_etfs"]
+                obb,
+                watchlist["us_equities_etfs"],
             )
+
             proxies, proxy_errors = fetch_equity(
-                obb, watchlist["commodity_etf_proxies"], proxy=True
+                obb,
+                watchlist["commodity_etf_proxies"],
+                proxy=True,
             )
+
             fx, fx_errors = fetch_fx_reference(
-                obb, watchlist["fx_reference_pairs"]
+                obb,
+                watchlist["fx_reference_pairs"],
             )
+
             energy, energy_errors = fetch_energy(
-                obb, bool(os.getenv("EIA_API_KEY", "").strip())
+                obb,
+                bool(os.getenv("EIA_API_KEY", "").strip()),
             )
+
             macro, macro_errors = fetch_macro(
-                obb, bool(os.getenv("FRED_API_KEY", "").strip())
+                obb,
+                bool(os.getenv("FRED_API_KEY", "").strip()),
             )
 
             series.extend(equities + proxies + fx + energy + macro)
+
             errors.extend(
-                equity_errors + proxy_errors + fx_errors
-                + energy_errors + macro_errors
+                equity_errors
+                + proxy_errors
+                + fx_errors
+                + energy_errors
+                + macro_errors
             )
 
         except ImportError:
             errors.append("OpenBB نصب یا قابل بارگذاری نیست.")
+
         except Exception as exc:
             errors.append(
                 f"راه‌اندازی OpenBB ناموفق بود ({type(exc).__name__})."
             )
 
-    scores = {item.key: market_score(item) for item in series}
-    report = telegram_report(series, errors, scores)
+    scores = {
+        item.key: market_score(item)
+        for item in series
+    }
+
+    report = telegram_report(
+        series,
+        errors,
+        scores,
+        universe_summary=universe_summary,
+    )
 
     output_dir = Path(args.out)
     output_dir.mkdir(parents=True, exist_ok=True)
+
     stamp = now_utc().strftime("%Y%m%dT%H%M%SZ")
 
     report_path = output_dir / f"grios-{stamp}.txt"
+
     report_path.write_text(report + "\n", encoding="utf-8")
-    (output_dir / "latest.txt").write_text(report + "\n", encoding="utf-8")
+    (output_dir / "latest.txt").write_text(
+        report + "\n",
+        encoding="utf-8",
+    )
 
     db = ensure_db(Path(args.db))
+
     try:
         record_and_evaluate(db, series, scores)
     finally:
@@ -1123,6 +1591,7 @@ def main() -> int:
 
     print(report)
     print(f"\nSaved: {report_path}")
+
     return 0
 
 
