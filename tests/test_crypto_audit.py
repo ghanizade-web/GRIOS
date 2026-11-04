@@ -333,3 +333,18 @@ def test_save_crypto_audit_writes_valid_json_atomically(tmp_path):
     assert payload["source_revision"]["git_commit_sha"] == "baseline-sha"
     assert payload["audit"]["summary"]["valid"] == 1
     assert not target.with_suffix(".json.tmp").exists()
+
+def test_main_uses_declared_source_commit_argument():
+    import ast
+    from pathlib import Path
+
+    scanner_path = Path(__file__).resolve().parents[1] / "scanner.py"
+    tree = ast.parse(scanner_path.read_text(encoding="utf-8"))
+    names = {
+        node.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Name)
+    }
+    assert "crypto_audit_source_commit_sha" in names
+    assert "crypto_audit_baseline_sha" not in names
+
