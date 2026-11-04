@@ -51,7 +51,9 @@ def test_parse_namespace_and_reported_fields():
     result = parse()
     assert result["holdings_count"] == 2
     assert result["filer_cik"] == "0000123456"
-    assert result["holdings"][0]["value_usd_thousands"] == 125000
+    assert result["holdings"][0]["value_usd"] == 125000
+    assert result["holdings"][0]["reported_value_unit"] == "USD"
+    assert result["interpretation"]["normalized_value_unit"] == "USD"
     assert result["holdings"][1]["put_call"] == "Call"
     assert result["interpretation"]["does_not_prove_manager_proprietary_ownership"]
 
@@ -166,3 +168,30 @@ def test_amendment_chain_requires_same_filer_and_period():
     amendment["report_period"] = "2026-06-30"
     with pytest.raises(ValueError, match="same report period"):
         reconcile_13f_filing_chain([original, amendment])
+
+
+def test_legacy_filing_values_are_converted_from_thousands_to_usd():
+    legacy_xml = XML.replace("<value>125000</value>", "<value>125</value>").replace(
+        "<value>5000</value>", "<value>5</value>"
+    )
+    legacy = parse_13f_information_table(
+        legacy_xml,
+        **(BASE | {
+            "accession_number": "0000123456-22-000001",
+            "filed_at": "2022-11-01T12:00:00Z",
+            "report_period": "2022-09-30",
+            "source_url": "https://www.sec.gov/Archives/edgar/data/123456/000012345622000001/example.xml",
+        }),
+    )
+    assert legacy["interpretation"]["reported_value_unit"] == "USD_THOUSANDS"
+    assert legacy["holdings"][0]["reported_value"] == 125
+    assert legacy["holdings"][0]["value_usd"] == 125000
+
+
+def test_filing_date_controls_value_unit_for_pre_rule_quarter():
+    pre_rule_quarter = parse(
+        filed_at="2023-02-01T12:00:00Z",
+        report_period="2022-12-31",
+    )
+    assert pre_rule_quarter["interpretation"]["reported_value_unit"] == "USD"
+    assert pre_rule_quarter["holdings"][0]["value_usd"] == 125000
