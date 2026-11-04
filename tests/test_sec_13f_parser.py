@@ -82,9 +82,11 @@ def test_compare_snapshots_reports_position_change_not_trade():
         source_url="https://www.sec.gov/Archives/edgar/data/123456/000012345626000002/example.xml",
     )
     current["holdings"][0]["amount"] += 100
+    current["holdings"][0]["value_usd"] += 250
     comparison = compare_13f_snapshots(prior, current)
     changed = next(row for row in comparison["changes"] if row["cusip"] == "123456789")
     assert changed["amount_change"] == 100
+    assert changed["value_change_usd"] == 250
     assert "not proof of purchases" in comparison["interpretation"]
 
 
