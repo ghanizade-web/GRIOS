@@ -1,0 +1,59 @@
+name: Ingest SEC 13F Report Period
+
+on:
+  workflow_dispatch:
+    inputs:
+      filer_cik:
+        description: "SEC filer CIK (zero-padded 10 digits)"
+        required: true
+        type: string
+      report_period:
+        description: "13F report period (YYYY-MM-DD)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  ingest-sec-13f:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+      GRIOS_DATA_HUB_URL: ${{ vars.GRIOS_DATA_HUB_URL }}
+      GRIOS_INGEST_TOKEN: ${{ secrets.GRIOS_INGEST_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install runtime dependency
+        run: python -m pip install --upgrade httpx
+
+      - name: Ingest and publish SEC 13F report period
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          FILER_CIK: ${{ inputs.filer_cik }}
+          REPORT_PERIOD: ${{ inputs.report_period }}
+        run: |
+          python scripts/ingest_sec_13f.py \
+            --cik "$FILER_CIK" \
+            --report-period "$REPORT_PERIOD" \
+            --output artifacts/sec-13f/report.json \
+            --database artifacts/sec-13f/registry.sqlite3
+
+      - name: Upload SEC 13F audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sec-13f-${{ inputs.filer_cik }}-${{ inputs.report_period }}
+          path: |
+            artifacts/sec-13f/report.json
+            artifacts/sec-13f/registry.sqlite3
+          if-no-files-found: ignore
+          retention-days: 90
