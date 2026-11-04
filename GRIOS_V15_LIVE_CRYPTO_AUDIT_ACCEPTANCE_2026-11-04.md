@@ -173,3 +173,17 @@ The EIA API key was configured, but the Henry Hub spot series returned `OpenBBEr
 **Whole-market data acceptance: CONDITIONAL.** TON fallback is not implemented, Henry Hub EIA remains unavailable, and the existing scanner still lacks crypto OHLCV history, order-book spread, verified institutional flow, catalyst integration, and calibrated backtesting. The current score remains a preliminary screening heuristic, not a probability of profit or trade recommendation.
 
 The artifact is available from the workflow run page above. No secrets or credentials are included in the artifact by design.
+
+## 12. Post-run correction — TON native-asset rebrand
+
+A source-identity review on 2026-11-05 established that the native cryptocurrency of The Open Network was renamed from Toncoin (TON) to Gram (GRAM), effective 2026-06-15. The blockchain remains The Open Network (TON); the native asset's ticker and display name changed without a token migration.
+
+The prior scanner run's provider IDs — CoinGecko `the-open-network` and CoinMarketCap `11419` — resolve to Gram (prev. Toncoin), not to an unrelated token. The previous `IDENTITY_MISMATCH` result was therefore caused by stale scanner expectations for the old ticker/name, not by provider substitution. The earlier decision to keep rejecting the record was conservative, but its interpretation of the provider evidence was incorrect.
+
+The scanner correction now:
+- Uses `GRAM` as the canonical watchlist symbol.
+- Converts legacy `TON` watchlist entries to `GRAM` at load time and de-duplicates aliases.
+- Validates provider asset ID, symbol, and name/slug for GRAM in both ranked listings and pinned-ID fallback requests.
+- Continues rejecting mismatched IDs, names, symbols, duplicate rows, stale quotes, and invalid prices.
+
+**Runtime status:** this correction is in PR #40 and has not yet been validated by a post-merge live scan. The prior live artifact must not be retroactively described as a successful GRAM ingestion. A new scanner run is required to verify current provider coverage and Supabase publication.
