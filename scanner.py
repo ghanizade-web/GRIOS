@@ -16,6 +16,8 @@ from zoneinfo import ZoneInfo
 import httpx
 from dotenv import load_dotenv
 
+from data_coverage import build_data_coverage_report, publish_market_series
+
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env")
 
@@ -1708,6 +1710,7 @@ def main() -> int:
         universe_summary += f" | دلایل: {excluded_text}"
 
     series: list[MarketSeries] = list(crypto)
+    hub_series: list[MarketSeries] = list(raw_crypto)
     errors: list[str] = list(crypto_errors)
 
     if not args.skip_openbb:
@@ -1740,7 +1743,9 @@ def main() -> int:
                 bool(os.getenv("FRED_API_KEY", "").strip()),
             )
 
-            series.extend(equities + proxies + fx + energy + macro)
+            collected_series = equities + proxies + fx + energy + macro
+            series.extend(collected_series)
+            hub_series.extend(collected_series)
 
             errors.extend(
                 equity_errors
@@ -1763,17 +1768,42 @@ def main() -> int:
         for item in series
     }
 
+    coverage_report = build_data_coverage_report(
+        watchlist,
+        hub_series,
+        errors,
+    )
+    hub_result = publish_market_series(
+        hub_series,
+        source_revision=args.crypto_audit_source_commit_sha,
+    )
+
     report = telegram_report(
         series,
         errors,
         scores,
         universe_summary=universe_summary,
     )
+    report += (
+        f"\n\n📊 پوشش داده: {coverage_report['overall_status']} | "
+        f"Data Hub: {hub_result['status']} "
+        f"({hub_result['accepted']} رکورد پذیرفته‌شده)\n"
+    )
 
     output_dir = Path(args.out)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     stamp = now_utc().strftime("%Y%m%dT%H%M%SZ")
+
+    coverage_path = output_dir / f"data-coverage-{stamp}.json"
+    coverage_path.write_text(
+        json.dumps(coverage_report, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    (output_dir / "latest-coverage.json").write_text(
+        json.dumps(coverage_report, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
     audit_path = save_crypto_audit(
         crypto_audit,
@@ -1802,6 +1832,8 @@ def main() -> int:
     print(report)
     print(f"\nSaved: {report_path}")
     print(f"Crypto audit: {audit_path}")
+    print(f"Data coverage: {coverage_path}")
+    print("Data Hub: " + hub_result["status"] + " (" + str(hub_result["accepted"]) + " accepted)")
 
     return 0
 
