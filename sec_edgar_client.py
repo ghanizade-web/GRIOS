@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import re
+import math
+import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -59,6 +62,7 @@ class SecEdgarClient:
         *,
         user_agent: str,
         timeout: float = 20.0,
+        min_request_interval: float = 0.11,
         client: Any | None = None,
     ) -> None:
         agent = user_agent.strip()
@@ -68,11 +72,27 @@ class SecEdgarClient:
             "User-Agent": agent,
             "Accept-Encoding": "gzip, deflate",
         }
+        if isinstance(min_request_interval, bool) or not isinstance(min_request_interval, (int, float)) or not math.isfinite(min_request_interval) or min_request_interval < 0:
+            raise ValueError("min_request_interval must be a finite non-negative number of seconds.")
         self.timeout = timeout
+        self.min_request_interval = float(min_request_interval)
         self._client = client
+        self._request_lock = threading.Lock()
+        self._last_request_at: float | None = None
+
+    def _pace_request(self) -> None:
+        """Serialize request starts to remain below the SEC fair-access ceiling."""
+        with self._request_lock:
+            now = time.monotonic()
+            if self._last_request_at is not None:
+                wait = self.min_request_interval - (now - self._last_request_at)
+                if wait > 0:
+                    time.sleep(wait)
+            self._last_request_at = time.monotonic()
 
     def _get_json(self, url: str) -> dict[str, Any]:
         _sec_url(url)
+        self._pace_request()
         if self._client is None:
             with httpx.Client(timeout=self.timeout, headers=self.headers) as client:
                 response = client.get(url)
@@ -90,6 +110,7 @@ class SecEdgarClient:
         _sec_url(url)
         if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0:
             raise ValueError("max_bytes must be a positive integer.")
+        self._pace_request()
 
         def consume(response: Any) -> bytes:
             response.raise_for_status()
