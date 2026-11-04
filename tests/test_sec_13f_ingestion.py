@@ -125,3 +125,9 @@ def test_ingest_amendment_extracts_metadata_before_parser():
     )
     assert result["amendment_number"] == 2
     assert result["amendment_type"] == "RESTATEMENT"
+
+
+def test_parse_amendment_cover_page_accepts_yes_marker():
+    cover = AMENDMENT_COVER.replace("<isAmendment>true</isAmendment>", "<isAmendment>Y</isAmendment>")
+    result = parse_13f_cover_page(cover, form_type="13F-HR/A")
+    assert result["is_amendment"] is True
