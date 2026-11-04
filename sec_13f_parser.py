@@ -330,6 +330,7 @@ def reconcile_13f_filing_chain(filings: list[dict[str, Any]]) -> dict[str, Any]:
                 "issuer": item["issuer"],
                 "title_of_class": item["title_of_class"],
                 "cusip": item["cusip"],
+                "figi": item.get("figi"),
                 "put_call": item.get("put_call"),
                 "amount_type": item["amount_type"],
                 "investment_discretion": item["investment_discretion"],
@@ -338,6 +339,7 @@ def reconcile_13f_filing_chain(filings: list[dict[str, Any]]) -> dict[str, Any]:
                 "value_usd": 0,
                 "voting_authority": {"sole": 0, "shared": 0, "none": 0},
             })
+            row["figi"] = row.get("figi") or item.get("figi")
             row["amount"] += item["amount"]
             row["value_usd"] += item["value_usd"]
             for field in ("sole", "shared", "none"):
