@@ -300,6 +300,95 @@ def test_fetch_crypto_blocks_ambiguous_symbol_even_if_other_provider_returns_it(
     assert audit["summary"]["ambiguous_symbols_blocked"] == ["BTC"]
 
 
+
+def test_ton_coingecko_fallback_uses_exact_asset_id_and_accepts_fresh_quote():
+    row = cg_row(
+        symbol="ton",
+        name="Toncoin",
+        price=5.25,
+        id="the-open-network",
+        market_cap=12_000_000_000,
+        total_volume=300_000_000,
+        fully_diluted_valuation=25_000_000_000,
+    )
+    response = Mock()
+    response.json.return_value = [row]
+    response.raise_for_status.return_value = None
+    audit = {}
+    with patch.object(scanner.httpx, "get", return_value=response) as get:
+        rows, error = scanner.fetch_ton_by_provider_id("CoinGecko", "secret", 30, audit)
+    assert error is None
+    assert len(rows) == 1
+    assert rows[0].symbol == "TON"
+    assert rows[0].observations[-1]["close"] == pytest.approx(5.25)
+    assert audit["endpoint_mode"] == "provider_asset_id"
+    assert get.call_args.kwargs["params"]["ids"] == "the-open-network"
+
+
+def test_ton_fallback_rejects_wrong_provider_asset_identity():
+    row = cg_row(symbol="ton", name="Toncoin", id="not-ton")
+    response = Mock()
+    response.json.return_value = [row]
+    response.raise_for_status.return_value = None
+    audit = {}
+    with patch.object(scanner.httpx, "get", return_value=response):
+        rows, error = scanner.fetch_ton_by_provider_id("CoinGecko", "secret", 30, audit)
+    assert rows == []
+    assert error
+    assert audit["symbols"]["TON"]["status"] == "IDENTITY_MISMATCH"
+
+
+def test_ton_fallback_marks_duplicate_asset_rows_ambiguous():
+    row = cg_row(symbol="ton", name="Toncoin", id="the-open-network")
+    duplicate = {**row, "current_price": 5.26}
+    response = Mock()
+    response.json.return_value = [row, duplicate]
+    response.raise_for_status.return_value = None
+    audit = {}
+    with patch.object(scanner.httpx, "get", return_value=response):
+        rows, error = scanner.fetch_ton_by_provider_id("CoinGecko", "secret", 30, audit)
+    assert rows == []
+    assert error
+    assert audit["symbols"]["TON"]["status"] == "AMBIGUOUS_SYMBOL"
+
+
+def test_ton_fallback_rejects_stale_quote():
+    row = cg_row(symbol="ton", name="Toncoin", id="the-open-network", updated=stamp(minutes_ago=90))
+    response = Mock()
+    response.json.return_value = [row]
+    response.raise_for_status.return_value = None
+    audit = {}
+    with patch.object(scanner.httpx, "get", return_value=response):
+        rows, error = scanner.fetch_ton_by_provider_id("CoinGecko", "secret", 30, audit)
+    assert rows == []
+    assert error
+    assert audit["symbols"]["TON"]["status"] == "STALE"
+
+
+def test_ton_fallback_provider_outage_is_sanitized():
+    audit = {}
+    with patch.object(scanner.httpx, "get", side_effect=scanner.httpx.ConnectError("private connection detail")):
+        rows, error = scanner.fetch_ton_by_provider_id("CoinGecko", "secret", 30, audit)
+    assert rows == []
+    assert error
+    assert audit["status"] == "PROVIDER_ERROR"
+    assert "private connection detail" not in json.dumps(audit)
+
+
+def test_ton_coinmarketcap_fallback_uses_numeric_asset_id():
+    record = cmc_row(symbol="TON", name="Toncoin", price=5.2)
+    record.update({"id": 11419, "slug": "toncoin"})
+    response = Mock()
+    response.json.return_value = {"status": {"error_code": 0}, "data": {"11419": record}}
+    response.raise_for_status.return_value = None
+    audit = {}
+    with patch.object(scanner.httpx, "get", return_value=response) as get:
+        rows, error = scanner.fetch_ton_by_provider_id("CoinMarketCap", "secret", 30, audit)
+    assert error is None
+    assert len(rows) == 1
+    assert rows[0].symbol == "TON"
+    assert get.call_args.kwargs["params"]["id"] == "11419"
+
 def test_universe_filter_preserves_missing_fdv_eligibility_and_audits_rejection():
     good = series(extra_marker="good")
     low_cap = series(symbol="SMALL", name="Small", market_cap=10)
