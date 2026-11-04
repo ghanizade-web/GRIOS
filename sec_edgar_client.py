@@ -151,14 +151,14 @@ class SecEdgarClient:
         ):
             if form not in SUPPORTED_FORMS or (form == "13F-HR/A" and not include_amendments):
                 continue
-            if not isinstance(filing_date, str) or not re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}", filing_date):
+            if not isinstance(filing_date, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", filing_date):
                 raise ValueError("SEC filingDate must use YYYY-MM-DD.")
             if start_date and filing_date < start_date:
                 continue
             if end_date and filing_date > end_date:
                 continue
             accession = normalize_accession(accession)
-            if not isinstance(document, str) or not document.strip() or "/" in document or "\\\\" in document:
+            if not isinstance(document, str) or not document.strip() or "/" in document or "\\" in document:
                 raise ValueError("SEC primaryDocument must be a filename, not a path.")
             archive_dir = (
                 f"{SEC_ARCHIVES_BASE}{int(cik)}/"
@@ -219,7 +219,7 @@ class SecEdgarClient:
                 if not isinstance(entry, dict):
                     raise ValueError("SEC historical file metadata must be an object.")
                 name = entry.get("name")
-                if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_.-]+\\.json", name):
+                if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_.-]+\.json", name):
                     raise ValueError("SEC historical submissions filename is invalid.")
                 filing_from = entry.get("filingFrom")
                 filing_to = entry.get("filingTo")
