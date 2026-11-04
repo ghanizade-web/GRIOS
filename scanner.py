@@ -1778,7 +1778,7 @@ def main() -> int:
         crypto_audit,
         output_dir,
         stamp,
-        args.crypto_audit_baseline_sha,
+        args.crypto_audit_source_commit_sha,
         crypto_mode,
         max_crypto_age,
     )
