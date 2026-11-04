@@ -1933,6 +1933,11 @@ def main() -> int:
         hub_series,
         source_revision=args.crypto_audit_source_commit_sha,
     )
+    coverage_report["data_hub"] = {
+        "status": hub_result["status"],
+        "accepted": hub_result["accepted"],
+        "error": hub_result["error"],
+    }
 
     report = telegram_report(
         series,
