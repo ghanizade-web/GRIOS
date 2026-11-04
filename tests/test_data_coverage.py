@@ -80,3 +80,29 @@ def test_data_hub_publish_posts_versioned_payload_without_logging_token():
     assert captured["payload"]["schema_version"] == "1.0"
     assert captured["payload"]["source_revision"] == "commit-sha"
     assert "never-log-this" not in json.dumps(result)
+
+
+
+def test_data_hub_publish_reports_worker_http_error_code_without_credentials():
+    from urllib.error import HTTPError
+    from io import BytesIO
+
+    def fail_urlopen(request, timeout):
+        raise HTTPError(
+            request.full_url,
+            401,
+            "Unauthorized",
+            hdrs=None,
+            fp=BytesIO(b'{"error":"UNAUTHORIZED"}'),
+        )
+
+    with patch.dict("os.environ", {
+        "GRIOS_DATA_HUB_URL": "https://hub.example",
+        "GRIOS_DATA_HUB_TOKEN": "never-log-this",
+    }):
+        with patch("urllib.request.urlopen", side_effect=fail_urlopen):
+            result = publish_market_series([Item("BTC", "crypto")])
+
+    assert result["status"] == "FAILED"
+    assert result["error"] == "HTTP_401:UNAUTHORIZED"
+    assert "never-log-this" not in json.dumps(result)
