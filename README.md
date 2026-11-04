@@ -1,6 +1,6 @@
 # GRIOS Opportunity Scanner — MVP
 
-Small, research-only Python scanner using direct CoinGecko and CoinMarketCap REST adapters for crypto, plus OpenBB provider connectors for listed equities/ETFs, ECB FX reference data, EIA energy series, and FRED macro context. The current scanner does **not** call the GRIOS Cloudflare Data Hub; Data Hub integration remains a separate target-architecture item. It writes a Persian, Telegram-friendly text report, a machine-readable crypto audit JSON, and local SQLite snapshots/idea outcomes. The scanner itself does not send Telegram messages or place orders, and it does not claim validated alpha.
+Small, research-only Python scanner using direct CoinGecko and CoinMarketCap REST adapters for crypto, plus OpenBB provider connectors for listed equities/ETFs, ECB FX reference data, EIA energy series, and FRED macro context. It writes a Persian, Telegram-friendly text report, a machine-readable crypto audit JSON, and local SQLite snapshots/idea outcomes. An optional authenticated publisher sends normalized observations to the GRIOS Cloudflare Data Hub when `GRIOS_DATA_HUB_URL` and `GRIOS_DATA_HUB_TOKEN` are configured; without both values, scanning continues locally and publishing reports `NOT_CONFIGURED`. A separate `market-pulse` repository also contains a Twelve Data adapter and a manual scanner-to-Data-Hub workflow; that adapter is a distinct feed and should not be confused with this scanner's CoinGecko/CMC/OpenBB/ECB/EIA/FRED coverage. The scanner itself does not place orders and does not claim validated alpha.
 
 ## Actual MVP coverage
 
@@ -27,7 +27,7 @@ cp .env.example .env
 cp watchlist.example.json watchlist.json
 ```
 
-Edit `.env` and `watchlist.json`. Set `COINGECKO_API_KEY` and `COINMARKETCAP_API_KEY` for the direct crypto adapters, `EIA_API_KEY` for EIA, and `FRED_API_KEY` for macro series. Keep all credentials in `.env` or the CI secret store; never place them in URLs, source files, audit JSON, or logs. The script loads local environment variables via `python-dotenv`; `.env` is gitignored. In GitHub Actions, the `market-pulse` workflow supplies the required secrets to the scanner process.
+Edit `.env` and `watchlist.json`. Set `COINGECKO_API_KEY` and `COINMARKETCAP_API_KEY` for the direct crypto adapters, `EIA_API_KEY` for EIA, and `FRED_API_KEY` for macro series. Keep all credentials in `.env` or the CI secret store; never place them in URLs, source files, audit JSON, or logs. The script loads local environment variables via `python-dotenv`; `.env` is gitignored. In GitHub Actions, the GRIOS scanner workflow supplies provider credentials as repository secrets. For optional Data Hub publishing, set `GRIOS_DATA_HUB_URL` to the deployed Worker HTTPS origin and `GRIOS_DATA_HUB_TOKEN` to the same bearer token configured on the Worker. Never place secret values in source, reports, audit JSON, or logs.
 
 Generate a report:
 
@@ -41,7 +41,7 @@ If OpenBB feeds are not configured yet, explicitly run the crypto-only path:
 python scanner.py --skip-openbb
 ```
 
-The report is printed and written to `reports/latest.txt`; a dated report and `reports/crypto-audit-<timestamp>.json` are also generated. `data/opportunities.sqlite3` is the local journal. These are runtime outputs and should not be committed as source. Copy the text into Telegram manually. The separate `market-pulse` GitHub Actions workflow can optionally send the report when explicitly enabled; Telegram credentials are not required for a local scan.
+The report is printed and written to `reports/latest.txt`; a dated report and `reports/crypto-audit-<timestamp>.json` are also generated. `data/opportunities.sqlite3` is the local journal. These are runtime outputs and should not be committed as source. Copy the text into Telegram manually. When Data Hub credentials are configured, the scanner attempts authenticated ingestion and includes the publisher status and accepted count in the report. A successful local scan alone does not prove that Worker ingestion or readback succeeded.
 
 The crypto audit records the runtime GRIOS Git commit under `source_revision.git_commit_sha`. Run the focused test suite with `python -m py_compile scanner.py` and `python -m pytest -q`.
 
