@@ -1,6 +1,71 @@
 {
-  "us_equities_etfs": ["SPY", "QQQ", "NVDA", "MSFT"],
-  "commodity_etf_proxies": ["GLD", "SLV", "USO", "UNG", "CPER"],
-  "fx_reference_pairs": ["EURUSD", "EURGBP", "EURJPY", "EURTRY"],
-  "crypto_symbols": []
+  "us_equities_etfs": [
+    "SPY",
+    "QQQ",
+    "NVDA",
+    "MSFT"
+  ],
+  "commodity_etf_proxies": [
+    "GLD",
+    "SLV",
+    "USO",
+    "UNG",
+    "CPER"
+  ],
+  "fx_reference_pairs": [
+    "EURUSD",
+    "EURGBP",
+    "EURJPY",
+    "EURTRY"
+  ],
+  "crypto_symbols": [
+    "BTC",
+    "ETH",
+    "BNB",
+    "SOL",
+    "XRP",
+    "DOGE",
+    "ADA",
+    "TRX",
+    "LINK",
+    "AVAX",
+    "LTC",
+    "BCH",
+    "DOT",
+    "TON"
+  ],
+  "crypto_universe": {
+    "mode": "watchlist",
+    "min_market_cap_usd": 250000000,
+    "min_volume_24h_usd": 10000000,
+    "min_turnover_ratio": 0.01,
+    "max_fdv_market_cap_ratio": 3.0,
+    "require_two_sources": false,
+    "excluded_symbols": [
+      "USDT",
+      "USDC",
+      "USDS",
+      "DAI",
+      "USDE",
+      "FDUSD",
+      "TUSD",
+      "USDD",
+      "PYUSD",
+      "FRAX",
+      "WBTC",
+      "WETH",
+      "STETH",
+      "WSTETH"
+    ],
+    "excluded_name_terms": [
+      "stablecoin",
+      "wrapped",
+      "bridged",
+      "leveraged",
+      "3x long",
+      "3x short",
+      "2x long",
+      "2x short"
+    ]
+  }
 }
