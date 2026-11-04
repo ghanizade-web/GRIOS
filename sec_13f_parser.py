@@ -227,8 +227,10 @@ def compare_13f_snapshots(
                 item["investment_discretion"], item.get("other_manager"),
             )
             aggregate = result.setdefault(key, {
-                "issuer": item["issuer"], "amount": 0, "value_usd": 0,
+                "issuer": item["issuer"], "figi": item.get("figi"),
+                "amount": 0, "value_usd": 0,
             })
+            aggregate["figi"] = aggregate.get("figi") or item.get("figi")
             aggregate["amount"] += item["amount"]
             aggregate["value_usd"] += item["value_usd"]
         return result
@@ -246,6 +248,7 @@ def compare_13f_snapshots(
         new_value = after["value_usd"] if after else 0
         changes.append({
             "cusip": key[0],
+            "figi": (after or before).get("figi"),
             "put_call": key[1],
             "amount_type": key[2],
             "investment_discretion": key[3],
