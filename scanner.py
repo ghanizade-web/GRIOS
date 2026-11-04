@@ -1054,15 +1054,15 @@ def fetch_equity(
 def sanitized_exception_message(exc: Exception, limit: int = 240) -> str:
     """Return bounded diagnostic text without URLs or credential-like values."""
     message = " ".join(str(exc).split())
-    message = re.sub(r"https?://\\S+", "[URL]", message)
+    message = re.sub(r"https?://\S+", "[URL]", message)
     message = re.sub(
-        r"(?i)\\b(api[_-]?key|token|authorization|bearer)\\b\\s*[:=]\\s*[^\\s,;]+",
-        r"\\1=[REDACTED]",
+        r"(?i)\b(api[_-]?key|token|authorization|bearer)\b\s*[:=]\s*[^\s,;]+",
+        r"\1=[REDACTED]",
         message,
     )
     message = re.sub(
-        r"(?i)([?&](?:api_key|apikey|token|access_token|key)=)[^&\\s]+",
-        r"\\1[REDACTED]",
+        r"(?i)([?&](?:api_key|apikey|token|access_token|key)=)[^&\s]+",
+        r"\1[REDACTED]",
         message,
     )
     return message[:limit]
