@@ -4,6 +4,7 @@ import json
 import os
 import urllib.error
 import urllib.request
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -180,21 +181,61 @@ def serialize_market_series(item: Any) -> dict[str, Any]:
     }
 
 
+
+def _publish_direct_to_supabase(rows: list[dict[str, Any]], source_revision: str, timeout: int) -> dict[str, Any]:
+    base_url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    if not base_url or not service_key:
+        return {"status": "NOT_CONFIGURED", "accepted": 0, "error": None}
+    if not base_url.startswith("https://"):
+        return {"status": "CONFIG_ERROR", "accepted": 0, "error": "INVALID_SUPABASE_URL"}
+    run_id = str(uuid.uuid4())
+    generated_at = datetime.now(timezone.utc).isoformat()
+    records = [{"run_id": run_id, **row, "source_revision": source_revision, "generated_at": generated_at} for row in rows]
+    accepted = 0
+    try:
+        for offset in range(0, len(records), 500):
+            batch = records[offset:offset + 500]
+            request = urllib.request.Request(
+                base_url + "/rest/v1/grios_market_observations?on_conflict=run_id,asset_key,provider",
+                data=json.dumps(batch, ensure_ascii=False, allow_nan=False).encode("utf-8"),
+                headers={
+                    "apikey": service_key,
+                    "Authorization": "Bearer " + service_key,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Prefer": "resolution=ignore-duplicates,return=minimal",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                if response.status not in (200, 201, 204):
+                    return {"status": "REJECTED", "accepted": accepted, "error": "UNEXPECTED_SUPABASE_RESPONSE"}
+            accepted += len(batch)
+        return {"status": "DIRECT_SUPABASE", "accepted": accepted, "error": None}
+    except urllib.error.HTTPError as exc:
+        return {"status": "FAILED", "accepted": accepted, "error": f"SUPABASE_HTTP_{exc.code}"}
+    except Exception as exc:
+        return {"status": "FAILED", "accepted": accepted, "error": type(exc).__name__}
+
+
 def publish_market_series(
     series: list[Any],
     source_revision: str = "UNKNOWN",
     timeout: int = 20,
 ) -> dict[str, Any]:
+    rows = [serialize_market_series(item) for item in series]
+    if not rows:
+        return {"status": "NO_DATA", "accepted": 0, "error": None}
+    if os.getenv("SUPABASE_URL", "").strip() and os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip():
+        return _publish_direct_to_supabase(rows, source_revision, timeout)
+
     endpoint = os.getenv("GRIOS_DATA_HUB_URL", "").strip().rstrip("/")
     token = os.getenv("GRIOS_DATA_HUB_TOKEN", "").strip()
     if not endpoint or not token:
         return {"status": "NOT_CONFIGURED", "accepted": 0, "error": None}
     if not endpoint.startswith("https://"):
         return {"status": "CONFIG_ERROR", "accepted": 0, "error": "INVALID_ENDPOINT"}
-    rows = [serialize_market_series(item) for item in series]
-    if not rows:
-        return {"status": "NO_DATA", "accepted": 0, "error": None}
-
     accepted = 0
     try:
         for offset in range(0, len(rows), 500):
