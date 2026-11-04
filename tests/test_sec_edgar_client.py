@@ -163,3 +163,86 @@ def test_download_document_rejects_non_sec_and_non_https_urls():
         client.download_document("https://example.com/filing.xml")
     with pytest.raises(ValueError, match="HTTPS SEC.gov"):
         client.download_document("http://www.sec.gov/filing.xml")
+
+
+
+def test_discover_historical_13f_filings_and_deduplicates_accessions():
+    submissions_url = "https://data.sec.gov/submissions/CIK0000123456.json"
+    history_url = "https://data.sec.gov/submissions/CIK0000123456-submissions-001.json"
+    current = submissions_payload()
+    current["filings"]["files"] = [{
+        "name": "CIK0000123456-submissions-001.json",
+        "filingFrom": "2020-01-01",
+        "filingTo": "2025-12-31",
+        "filingCount": 2,
+    }]
+    historical = {
+        "form": ["13F-HR", "13F-HR/A"],
+        "accessionNumber": [
+            "0000123456-25-000001",
+            "0000123456-25-000002",
+        ],
+        "filingDate": ["2025-02-14", "2025-02-15"],
+        "reportDate": ["2024-12-31", "2024-12-31"],
+        "primaryDocument": ["primary25.xml", "amendment25.xml"],
+    }
+    fake = FakeHttpClient({
+        submissions_url: current,
+        history_url: historical,
+    })
+    client = SecEdgarClient(
+        user_agent="GRIOS Research research@example.org", client=fake
+    )
+    filings = client.discover_13f_filings("123456", include_historical=True)
+    assert len(filings) == 4
+    assert filings[0].accession_number == "0000123456-25-000001"
+    assert filings[-1].accession_number == "0000123456-26-000002"
+    assert sum(item.accession_number == "0000123456-26-000001" for item in filings) == 1
+
+
+def test_historical_pagination_respects_date_window_and_file_cap():
+    submissions_url = "https://data.sec.gov/submissions/CIK0000123456.json"
+    history_url = "https://data.sec.gov/submissions/CIK0000123456-submissions-001.json"
+    current = submissions_payload()
+    current["filings"]["files"] = [{
+        "name": "CIK0000123456-submissions-001.json",
+        "filingFrom": "2020-01-01",
+        "filingTo": "2025-12-31",
+        "filingCount": 2,
+    }]
+    historical = {
+        "form": ["13F-HR"],
+        "accessionNumber": ["0000123456-25-000001"],
+        "filingDate": ["2025-02-14"],
+        "reportDate": ["2024-12-31"],
+        "primaryDocument": ["primary25.xml"],
+    }
+    fake = FakeHttpClient({submissions_url: current, history_url: historical})
+    client = SecEdgarClient(
+        user_agent="GRIOS Research research@example.org", client=fake
+    )
+    filtered = client.discover_13f_filings(
+        "123456", start_date="2026-01-01", include_historical=True
+    )
+    assert all(item.filing_date >= "2026-01-01" for item in filtered)
+    with pytest.raises(ValueError, match="max_historical_files"):
+        client.discover_13f_filings(
+            "123456", include_historical=True, max_historical_files=0
+        )
+
+
+def test_historical_filename_is_validated_before_request():
+    submissions_url = "https://data.sec.gov/submissions/CIK0000123456.json"
+    current = submissions_payload()
+    current["filings"]["files"] = [{
+        "name": "../outside.json",
+        "filingFrom": "2020-01-01",
+        "filingTo": "2025-12-31",
+        "filingCount": 1,
+    }]
+    fake = FakeHttpClient({submissions_url: current})
+    client = SecEdgarClient(
+        user_agent="GRIOS Research research@example.org", client=fake
+    )
+    with pytest.raises(ValueError, match="filename is invalid"):
+        client.discover_13f_filings("123456", include_historical=True)

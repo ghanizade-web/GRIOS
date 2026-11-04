@@ -86,6 +86,7 @@ def ingest_13f_filing(
     accession_number: str,
     *,
     retrieved_at: str,
+    include_historical: bool = False,
 ) -> dict[str, Any]:
     """Discover, download, parse and normalize one SEC 13F filing.
 
@@ -94,7 +95,9 @@ def ingest_13f_filing(
     """
     normalized_cik = normalize_cik(cik)
     accession = normalize_accession(accession_number)
-    filings = client.discover_13f_filings(normalized_cik)
+    filings = client.discover_13f_filings(
+        normalized_cik, include_historical=include_historical
+    )
     filing = next((item for item in filings if item.accession_number == accession), None)
     if filing is None:
         raise ValueError("Requested accession was not found in SEC recent 13F submissions.")
