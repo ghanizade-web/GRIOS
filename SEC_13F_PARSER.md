@@ -18,7 +18,16 @@ The caller supplies the XML attachment and filing metadata:
 
 ## Normalized fields
 
-Each reported position includes issuer, title of class, CUSIP, reported value in USD thousands, share/principal amount and type, investment discretion, other manager, optional put/call designation, and voting authority.
+Each reported position includes issuer, title of class, CUSIP, raw reported value and its filing-date-dependent unit, normalized `value_usd`, share/principal amount and type, investment discretion, other manager, optional put/call designation, and voting authority.
+
+### Reported-value normalization
+
+The parser uses the filing date (not the report-period date) to interpret the XML `value` field:
+
+- Filings submitted before 2023-01-03: reported values are interpreted as USD thousands and multiplied by 1,000.
+- Filings submitted on or after 2023-01-03: reported values are interpreted as USD.
+
+All outputs expose `value_usd` in dollars, alongside `reported_value` and `reported_value_unit` so the original scale remains auditable. This follows the SEC's updated Form 13F rounding convention effective January 3, 2023 (SEC Form 13F FAQs, update note and FAQs 61–62): https://www.sec.gov/rules-regulations/staff-guidance/frequently-asked-questions-about-form-13f
 
 ## Amendment reconciliation
 
