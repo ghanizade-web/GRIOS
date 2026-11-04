@@ -221,6 +221,15 @@ def publish_market_series(
                 accepted += int(result.get("accepted", 0))
         return {"status": "CONNECTED", "accepted": accepted, "error": None}
     except urllib.error.HTTPError as exc:
-        return {"status": "FAILED", "accepted": accepted, "error": f"HTTP_{exc.code}"}
+        # Worker responses use small JSON error codes; never log request headers or tokens.
+        detail = f"HTTP_{exc.code}"
+        try:
+            body = json.loads(exc.read().decode("utf-8"))
+            worker_code = body.get("error") if isinstance(body, dict) else None
+            if isinstance(worker_code, str) and worker_code.replace("_", "").isalnum():
+                detail += f":{worker_code[:80]}"
+        except (UnicodeDecodeError, ValueError, TypeError):
+            pass
+        return {"status": "FAILED", "accepted": accepted, "error": detail}
     except Exception as exc:
         return {"status": "FAILED", "accepted": accepted, "error": type(exc).__name__}
