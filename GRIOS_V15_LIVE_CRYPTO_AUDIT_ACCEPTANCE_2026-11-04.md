@@ -120,7 +120,20 @@ Final verification for the correction:
 - Pull Request: [#5](https://github.com/ghanizade-web/GRIOS/pull/5)
 - CI run: [41899474446](https://github.com/ghanizade-web/GRIOS/actions/runs/41899474446)
 - `python -m py_compile scanner.py`: PASS
-- `python -m pytest -q`: **23 passed**
-- PR merged to `main` as commit `25e23f6c6d50861e19e3adf5984cf97bcb2a9926`
+- `python -m pytest -q`: **24 passed** in the final suite
+- PR #5 merged to `main` as commit `25e23f6c6d50861e19e3adf5984cf97bcb2a9926`
 
 This correction repairs audit metadata argument wiring. It does not alter `market_score()`, provider retrieval, reconciliation thresholds, or universe eligibility rules.
+
+
+## 10. Final repository integration and main-branch CI
+
+- PR [#7](https://github.com/ghanizade-web/GRIOS/pull/7) merged the end-to-end `main()` regression test. It verifies that `GRIOS_SOURCE_COMMIT_SHA` is written into `source_revision.git_commit_sha`, that the audit JSON is generated, and that the report output is written.
+- PR [#8](https://github.com/ghanizade-web/GRIOS/pull/8) corrected the README to match the actual implementation: direct CoinGecko/CoinMarketCap crypto adapters, rather than claiming the scanner already uses the Cloudflare Data Hub. It also enabled the crypto audit CI workflow on pushes to `main`.
+- PR #7 CI: [41900256396](https://github.com/ghanizade-web/GRIOS/actions/runs/41900256396) — PASS, 24 tests.
+- PR #8 CI: [41900475554](https://github.com/ghanizade-web/GRIOS/actions/runs/41900475554) — PASS, 24 tests.
+- Post-merge `main` CI: [41900573045](https://github.com/ghanizade-web/GRIOS/actions/runs/41900573045) — PASS, 24 tests.
+- PR #7 merge commit: `5eb33a599854fab2d01d382ebf2f34f3e922a53c`.
+- PR #8 merge commit: `53763c52f65d265447a483065618aefffffc6da1`.
+
+The current test suite contains 24 tests and the main-branch push validation is green. A fresh manual live scanner dispatch on the final GRIOS commit has not yet been performed; prior live provider evidence remains tied to the earlier runtime revision recorded in Section 1.
