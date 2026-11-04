@@ -340,11 +340,11 @@ def test_main_uses_declared_source_commit_argument():
 
     scanner_path = Path(__file__).resolve().parents[1] / "scanner.py"
     tree = ast.parse(scanner_path.read_text(encoding="utf-8"))
-    names = {
-        node.id
+    attributes = {
+        node.attr
         for node in ast.walk(tree)
-        if isinstance(node, ast.Name)
+        if isinstance(node, ast.Attribute)
     }
-    assert "crypto_audit_source_commit_sha" in names
-    assert "crypto_audit_baseline_sha" not in names
+    assert "crypto_audit_source_commit_sha" in attributes
+    assert "crypto_audit_baseline_sha" not in attributes
 
