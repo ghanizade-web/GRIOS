@@ -1,6 +1,7 @@
 import pytest
 
 from sec_13f_data_hub import GriosDataHubClient
+from sec_13f_registry import prepare_13f_data_hub_payload
 
 
 class FakeResponse:
@@ -60,7 +61,7 @@ def sample_report():
 
 
 def test_publish_sends_authenticated_validated_snapshot():
-    snapshot_id = "a" * 64
+    snapshot_id = prepare_13f_data_hub_payload(sample_report())["snapshot"]["snapshot_id"]
     fake = FakeHttpClient(FakeResponse({
         "status": "accepted", "snapshot_id": snapshot_id,
     }))
