@@ -1,7 +1,7 @@
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 const MAX_BODY_BYTES = 1_000_000;
 const MAX_ROWS = 500;
-const MAX_13F_BODY_BYTES = 5_000_000;
+const MAX_13F_BODY_BYTES = 10_000_000;
 const MAX_13F_FILINGS = 100;
 const MAX_13F_HOLDINGS = 25_000;
 const SCHEMA_VERSION = "1.0";
@@ -70,8 +70,11 @@ function valid13fSnapshot(snapshot) {
   const accessions = new Set();
   const amendmentNumbers = new Set();
   let originals = 0;
+  let originalPosition = -1;
   let previousFiledAt = null;
-  for (const filing of snapshot.applied_filings) {
+  let previousAmendmentNumber = 0;
+  for (let filingIndex = 0; filingIndex < snapshot.applied_filings.length; filingIndex += 1) {
+    const filing = snapshot.applied_filings[filingIndex];
     if (!filing || typeof filing !== "object" || Array.isArray(filing)) return false;
     if (!/^\d{10}-\d{2}-\d{6}$/.test(filing.accession_number || "") || accessions.has(filing.accession_number)) return false;
     accessions.add(filing.accession_number);
@@ -81,21 +84,25 @@ function valid13fSnapshot(snapshot) {
     if (!["BASE_SNAPSHOT", "REPLACED_PRIOR_SNAPSHOT", "SUPPLEMENTED_PRIOR_SNAPSHOT"].includes(filing.effect)) return false;
     if (filing.form_type === "13F-HR") {
       originals += 1;
+      originalPosition = filingIndex;
       if (filing.amendment_number != null || filing.amendment_type !== "ORIGINAL" || filing.effect !== "BASE_SNAPSHOT") return false;
     } else if (filing.form_type === "13F-HR/A") {
       if (!Number.isInteger(filing.amendment_number) || filing.amendment_number < 1 || filing.amendment_number > 99) return false;
       if (!["RESTATEMENT", "NEW HOLDINGS"].includes(filing.amendment_type)) return false;
-      if (amendmentNumbers.has(filing.amendment_number)) return false;
+      if (amendmentNumbers.has(filing.amendment_number) || filing.amendment_number <= previousAmendmentNumber) return false;
       amendmentNumbers.add(filing.amendment_number);
+      previousAmendmentNumber = filing.amendment_number;
     } else {
       return false;
     }
   }
-  if (originals !== 1 || !previousFiledAt || Date.parse(snapshot.latest_filed_at) !== Date.parse(previousFiledAt)) return false;
+  if (originals !== 1 || originalPosition !== 0 || !previousFiledAt || Date.parse(snapshot.latest_filed_at) !== Date.parse(previousFiledAt)) return false;
 
+  const rowIds = new Set();
   for (const holding of snapshot.holdings) {
     if (!holding || typeof holding !== "object" || Array.isArray(holding)) return false;
-    if (typeof holding.row_id !== "string" || !holding.row_id || holding.row_id.length > 256) return false;
+    if (typeof holding.row_id !== "string" || !holding.row_id || holding.row_id.length > 256 || rowIds.has(holding.row_id)) return false;
+    rowIds.add(holding.row_id);
     if (typeof holding.issuer !== "string" || !holding.issuer.trim() || typeof holding.title_of_class !== "string" || !holding.title_of_class.trim()) return false;
     if (!/^[A-Z0-9*@#]{9}$/.test(holding.cusip || "")) return false;
     if (holding.figi != null && !/^[A-Z0-9]{12}$/.test(holding.figi)) return false;
