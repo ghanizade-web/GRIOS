@@ -494,3 +494,65 @@ def test_main_persists_runtime_commit_sha_in_audit(tmp_path, monkeypatch):
     assert "baseline_sha" not in payload["audit"]
     assert (output_dir / "latest.txt").read_text(encoding="utf-8").startswith("test report\n\n📊 پوشش داده:")
 
+
+
+def test_ecb_fx_retries_one_transient_timeout_and_accepts_reference_data(monkeypatch):
+    from types import SimpleNamespace
+
+    response = Mock()
+    obb = SimpleNamespace(ecb=Mock())
+    obb.ecb.exchange_rates.side_effect = [
+        TimeoutError("temporary timeout"),
+        response,
+    ]
+    monkeypatch.setattr(
+        scanner,
+        "dataframe_rows",
+        lambda value: [{"date": "2026-11-04", "value": 1.16}],
+    )
+    sleep = Mock()
+    monkeypatch.setattr(scanner.time, "sleep", sleep)
+
+    rows, errors = scanner.fetch_fx_reference(obb, ["EURUSD"])
+
+    assert errors == []
+    assert len(rows) == 1
+    assert rows[0].symbol == "EURUSD"
+    assert rows[0].observations[-1]["close"] == pytest.approx(1.16)
+    assert obb.ecb.exchange_rates.call_count == 2
+    sleep.assert_called_once_with(0.5)
+
+
+def test_ecb_fx_reports_timeout_after_single_retry(monkeypatch):
+    from types import SimpleNamespace
+
+    obb = SimpleNamespace(ecb=Mock())
+    obb.ecb.exchange_rates.side_effect = TimeoutError("temporary timeout")
+    sleep = Mock()
+    monkeypatch.setattr(scanner.time, "sleep", sleep)
+
+    rows, errors = scanner.fetch_fx_reference(obb, ["EURTRY"])
+
+    assert rows == []
+    assert len(errors) == 1
+    assert "EURTRY" in errors[0]
+    assert "TimeoutError" in errors[0]
+    assert obb.ecb.exchange_rates.call_count == 2
+    sleep.assert_called_once_with(0.5)
+
+
+def test_ecb_fx_does_not_retry_non_timeout_errors(monkeypatch):
+    from types import SimpleNamespace
+
+    obb = SimpleNamespace(ecb=Mock())
+    obb.ecb.exchange_rates.side_effect = ValueError("invalid provider request")
+    sleep = Mock()
+    monkeypatch.setattr(scanner.time, "sleep", sleep)
+
+    rows, errors = scanner.fetch_fx_reference(obb, ["EURUSD"])
+
+    assert rows == []
+    assert len(errors) == 1
+    assert "ValueError" in errors[0]
+    assert obb.ecb.exchange_rates.call_count == 1
+    sleep.assert_not_called()
