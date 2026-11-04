@@ -500,7 +500,7 @@ def fetch_gram_by_provider_id(
                         "asset_id_matches": str(item.get("id")) == GRAM_PROVIDER_IDS[provider],
                         "slug_matches": str(item.get("slug") or "").lower() in {"gram", "gramprevtoncoin"},
                         "symbol_matches": str(item.get("symbol") or "").upper() == "GRAM",
-                        "name_matches": normalized_name(str(item.get("name") or "")) == "toncoin",
+                        "name_matches": normalized_name(str(item.get("name") or "")) in {"gram", "gramprevtoncoin"},
                     },
                 }
                 for item in records if isinstance(item, dict)
@@ -841,14 +841,14 @@ def fetch_crypto(
                 max_age_minutes,
                 audit=fallback_audit,
             )
-            provider_audits[provider]["ton_fallback"] = fallback_audit
+            provider_audits[provider]["gram_fallback"] = fallback_audit
             if fallback_rows:
                 provider_rows[provider].extend(fallback_rows)
                 provider_audits[provider].setdefault("symbols", {})["GRAM"] = fallback_audit.get("symbols", {}).get("GRAM", {"status": "VALID"})
             elif fallback_error:
                 provider_errors.append(fallback_error)
                 if fallback_audit.get("symbols", {}).get("GRAM", {}).get("status"):
-                    provider_audits[provider].setdefault("symbols", {})["TON"] = fallback_audit["symbols"]["TON"]
+                    provider_audits[provider].setdefault("symbols", {})["GRAM"] = fallback_audit["symbols"]["GRAM"]
         if error:
             provider_errors.append(error)
 
