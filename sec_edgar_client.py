@@ -153,6 +153,10 @@ class SecEdgarClient:
                 continue
             if not isinstance(filing_date, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", filing_date):
                 raise ValueError("SEC filingDate must use YYYY-MM-DD.")
+            try:
+                datetime.strptime(filing_date, "%Y-%m-%d")
+            except ValueError as exc:
+                raise ValueError("SEC filingDate is not a valid calendar date.") from exc
             if start_date and filing_date < start_date:
                 continue
             if end_date and filing_date > end_date:
