@@ -27,7 +27,7 @@ CMC_URL = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
 
 DEFAULT_CRYPTO_SYMBOLS = [
     "BTC", "ETH", "BNB", "SOL", "XRP", "DOGE", "ADA",
-    "TRX", "LINK", "AVAX", "LTC", "BCH", "DOT", "TON",
+    "TRX", "LINK", "AVAX", "LTC", "BCH", "DOT", "GRAM",
 ]
 
 CRYPTO_UNIVERSE_DEFAULTS = {
@@ -125,6 +125,13 @@ def load_watchlist(path: Path) -> dict[str, Any]:
         ]
         for key in keys
     }
+
+    # TON was the legacy ticker for the same native asset now named GRAM.
+    # Normalize old watchlists at the boundary and keep one canonical symbol.
+    result["crypto_symbols"] = list(dict.fromkeys(
+        "GRAM" if symbol == "TON" else symbol
+        for symbol in result["crypto_symbols"]
+    ))
 
     config = data.get("crypto_universe", {})
     if not isinstance(config, dict):
@@ -409,24 +416,24 @@ def fetch_coinmarketcap(
 
 
 
-TON_PROVIDER_IDS = {
+GRAM_PROVIDER_IDS = {
     "CoinGecko": "the-open-network",
     "CoinMarketCap": "11419",
 }
 CMC_QUOTES_URL = "https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest"
 
 
-def fetch_ton_by_provider_id(
+def fetch_gram_by_provider_id(
     provider: str,
     api_key: str,
     max_age_minutes: int,
     audit: dict[str, Any] | None = None,
 ) -> tuple[list[MarketSeries], str | None]:
-    """Fetch TON by immutable provider asset ID; never resolve by ticker alone."""
+    """Fetch GRAM by immutable provider asset ID; never resolve by ticker alone."""
     if not api_key:
         if audit is not None:
             audit.update({"provider": provider, "status": "MISSING_API_KEY", "fallback": True})
-        return [], f"{provider} TON fallback skipped: API key is missing."
+        return [], f"{provider} GRAM fallback skipped: API key is missing."
 
     try:
         if provider == "CoinGecko":
@@ -434,7 +441,7 @@ def fetch_ton_by_provider_id(
                 CG_URL,
                 params={
                     "vs_currency": "usd",
-                    "ids": TON_PROVIDER_IDS[provider],
+                    "ids": GRAM_PROVIDER_IDS[provider],
                     "sparkline": "false",
                     "price_change_percentage": "24h,7d,30d",
                 },
@@ -452,9 +459,9 @@ def fetch_ton_by_provider_id(
                     "symbol": str(item.get("symbol") or ""),
                     "name": str(item.get("name") or ""),
                     "checks": {
-                        "asset_id_matches": str(item.get("id") or "").lower() == TON_PROVIDER_IDS[provider],
-                        "symbol_matches": str(item.get("symbol") or "").upper() == "TON",
-                        "name_matches": normalized_name(str(item.get("name") or "")) in {"toncoin", "theopennetwork"},
+                        "asset_id_matches": str(item.get("id") or "").lower() == GRAM_PROVIDER_IDS[provider],
+                        "symbol_matches": str(item.get("symbol") or "").upper() == "GRAM",
+                        "name_matches": normalized_name(str(item.get("name") or "")) in {"gram", "gramprevtoncoin"},
                     },
                 }
                 for item in records if isinstance(item, dict)
@@ -465,7 +472,7 @@ def fetch_ton_by_provider_id(
         elif provider == "CoinMarketCap":
             response = httpx.get(
                 CMC_QUOTES_URL,
-                params={"id": TON_PROVIDER_IDS[provider], "convert": "USD"},
+                params={"id": GRAM_PROVIDER_IDS[provider], "convert": "USD"},
                 headers={
                     "X-CMC_PRO_API_KEY": api_key,
                     "Accept": "application/json",
@@ -478,7 +485,7 @@ def fetch_ton_by_provider_id(
                 raise ValueError("INVALID_RESPONSE")
             data = payload.get("data", {})
             if isinstance(data, dict):
-                records = [data[TON_PROVIDER_IDS[provider]]] if TON_PROVIDER_IDS[provider] in data else []
+                records = [data[GRAM_PROVIDER_IDS[provider]]] if GRAM_PROVIDER_IDS[provider] in data else []
             elif isinstance(data, list):
                 records = data
             else:
@@ -490,9 +497,9 @@ def fetch_ton_by_provider_id(
                     "symbol": str(item.get("symbol") or ""),
                     "name": str(item.get("name") or ""),
                     "checks": {
-                        "asset_id_matches": str(item.get("id")) == TON_PROVIDER_IDS[provider],
-                        "slug_matches": str(item.get("slug") or "").lower() == "toncoin",
-                        "symbol_matches": str(item.get("symbol") or "").upper() == "TON",
+                        "asset_id_matches": str(item.get("id")) == GRAM_PROVIDER_IDS[provider],
+                        "slug_matches": str(item.get("slug") or "").lower() in {"gram", "gramprevtoncoin"},
+                        "symbol_matches": str(item.get("symbol") or "").upper() == "GRAM",
                         "name_matches": normalized_name(str(item.get("name") or "")) == "toncoin",
                     },
                 }
@@ -510,10 +517,10 @@ def fetch_ton_by_provider_id(
                     "provider": provider,
                     "status": "NOT_RETURNED",
                     "fallback": True,
-                    "provider_asset_id": TON_PROVIDER_IDS[provider],
-                    "symbols": {"TON": {"status": "NOT_RETURNED"}},
+                    "provider_asset_id": GRAM_PROVIDER_IDS[provider],
+                    "symbols": {"GRAM": {"status": "NOT_RETURNED"}},
                 })
-            return [], f"{provider} TON fallback returned no asset."
+            return [], f"{provider} GRAM fallback returned no asset."
 
         if not all(isinstance(item, dict) for item in records):
             raise ValueError("INVALID_RESPONSE")
@@ -523,26 +530,26 @@ def fetch_ton_by_provider_id(
                     "provider": provider,
                     "status": "IDENTITY_MISMATCH",
                     "fallback": True,
-                    "provider_asset_id": TON_PROVIDER_IDS[provider],
+                    "provider_asset_id": GRAM_PROVIDER_IDS[provider],
                     "identity_evidence": identity_evidence,
-                    "symbols": {"TON": {"status": "IDENTITY_MISMATCH"}},
+                    "symbols": {"GRAM": {"status": "IDENTITY_MISMATCH"}},
                 })
-            return [], f"{provider} TON fallback failed strict asset identity validation."
+            return [], f"{provider} GRAM fallback failed strict asset identity validation."
 
         normalized, valid = audit_crypto_provider(
-            provider, records, ["TON"], max_age_minutes
+            provider, records, ["GRAM"], max_age_minutes
         )
         if audit is not None:
             audit.update(normalized)
             audit["fallback"] = True
-            audit["provider_asset_id"] = TON_PROVIDER_IDS[provider]
+            audit["provider_asset_id"] = GRAM_PROVIDER_IDS[provider]
             audit["endpoint_mode"] = "provider_asset_id"
-        if "TON" not in valid:
-            return [], f"{provider} TON fallback did not produce a fresh valid quote."
+        if "GRAM" not in valid:
+            return [], f"{provider} GRAM fallback did not produce a fresh valid quote."
 
-        item, price, stamp = valid["TON"]
+        item, price, stamp = valid["GRAM"]
         row = crypto_series(
-            symbol="TON",
+            symbol="GRAM",
             name=item["name"],
             provider=provider,
             stamp=stamp,
@@ -553,7 +560,7 @@ def fetch_ton_by_provider_id(
             change_24h=item["change_24h"],
             change_7d=item["change_7d"],
             change_30d=item["change_30d"],
-            slug=item["slug"] or TON_PROVIDER_IDS[provider],
+            slug=item["slug"] or GRAM_PROVIDER_IDS[provider],
         )
         return [row], None
     except (httpx.HTTPError, ValueError, TypeError, KeyError) as exc:
@@ -563,9 +570,9 @@ def fetch_ton_by_provider_id(
                 "status": "PROVIDER_ERROR" if not isinstance(exc, ValueError) or str(exc) != "INVALID_RESPONSE" else "INVALID_RESPONSE",
                 "error_type": type(exc).__name__,
                 "fallback": True,
-                "provider_asset_id": TON_PROVIDER_IDS.get(provider),
+                "provider_asset_id": GRAM_PROVIDER_IDS.get(provider),
             })
-        return [], f"{provider} TON fallback failed ({type(exc).__name__})."
+        return [], f"{provider} GRAM fallback failed ({type(exc).__name__})."
 
 def save_crypto_audit(
     audit: dict[str, Any],
@@ -826,9 +833,9 @@ def fetch_crypto(
         )
         provider_audits[provider] = local_audit
         provider_rows[provider] = rows
-        if "TON" in {str(value).strip().upper() for value in symbols} and local_audit.get("symbols", {}).get("TON", {}).get("status") == "NOT_RETURNED":
+        if "GRAM" in {str(value).strip().upper() for value in symbols} and local_audit.get("symbols", {}).get("GRAM", {}).get("status") == "NOT_RETURNED":
             fallback_audit: dict[str, Any] = {}
-            fallback_rows, fallback_error = fetch_ton_by_provider_id(
+            fallback_rows, fallback_error = fetch_gram_by_provider_id(
                 provider,
                 os.getenv(env_key, "").strip(),
                 max_age_minutes,
@@ -837,10 +844,10 @@ def fetch_crypto(
             provider_audits[provider]["ton_fallback"] = fallback_audit
             if fallback_rows:
                 provider_rows[provider].extend(fallback_rows)
-                provider_audits[provider].setdefault("symbols", {})["TON"] = fallback_audit.get("symbols", {}).get("TON", {"status": "VALID"})
+                provider_audits[provider].setdefault("symbols", {})["GRAM"] = fallback_audit.get("symbols", {}).get("GRAM", {"status": "VALID"})
             elif fallback_error:
                 provider_errors.append(fallback_error)
-                if fallback_audit.get("symbols", {}).get("TON", {}).get("status"):
+                if fallback_audit.get("symbols", {}).get("GRAM", {}).get("status"):
                     provider_audits[provider].setdefault("symbols", {})["TON"] = fallback_audit["symbols"]["TON"]
         if error:
             provider_errors.append(error)
