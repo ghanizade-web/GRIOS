@@ -61,7 +61,7 @@ def _date(value: str, field: str) -> str:
 def _sec_source(value: str) -> str:
     parsed = urlparse(value)
     host = (parsed.hostname or "").lower()
-    if parsed.scheme != "https" or host not in {"sec.gov", "www.sec.gov", "www.sec.gov"}:
+    if parsed.scheme != "https" or host not in {"sec.gov", "www.sec.gov"}:
         raise ValueError("source_url must be an HTTPS SEC.gov filing URL.")
     return value
 
@@ -249,7 +249,7 @@ def compare_13f_snapshots(
             "amount_change": new_amount - old_amount,
             "prior_value_usd": old_value,
             "current_value_usd": new_value,
-            "value_change_usd_thousands": new_value - old_value,
+            "value_change_usd": new_value - old_value,
             "status": "NEWLY_REPORTED" if before is None else (
                 "NO_LONGER_REPORTED" if after is None else "CONTINUED"
             ),
@@ -303,7 +303,6 @@ def reconcile_13f_filing_chain(filings: list[dict[str, Any]]) -> dict[str, Any]:
     numbers = [f["amendment_number"] for f in amendments]
     if len(numbers) != len(set(numbers)):
         raise ValueError("Duplicate amendment number in filing chain.")
-    ordered = [original] + amendments
     previous_filed = _iso(original["filed_at"], "filed_at")
     for amendment in amendments:
         filed = _iso(amendment["filed_at"], "filed_at")
