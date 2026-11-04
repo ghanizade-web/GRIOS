@@ -37,16 +37,16 @@ function requiredEnv(env) {
 
 async function supabaseRequest(env, path, init = {}) {
   const base = String(env.SUPABASE_URL).replace(/\/$/, "");
-  const upstream = await fetch(\`\${base}/rest/v1/\${path}\`, {
+  const upstream = await fetch(base + "/rest/v1/" + path, {
     ...init,
     headers: {
       apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      authorization: \`Bearer \${env.SUPABASE_SERVICE_ROLE_KEY}\`,
+      authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY,
       "content-type": "application/json",
       ...(init.headers || {}),
     },
   });
-  if (!upstream.ok) throw new Error(\`SUPABASE_HTTP_\${upstream.status}\`);
+  if (!upstream.ok) throw new Error("SUPABASE_HTTP_" + upstream.status);
   return upstream;
 }
 
@@ -104,12 +104,12 @@ export async function handleRequest(request, env) {
     if (url.pathname === "/v1/markets/latest" && request.method === "GET") {
       const params = new URLSearchParams();
       params.set("select", "asset_key,symbol,name,asset_class,instrument,provider,feed_class,currency,observed_at,data_as_of,caveat,observations,extra,source_revision");
-      if (url.searchParams.has("asset_class")) params.set("asset_class", \`eq.\${url.searchParams.get("asset_class")}\`);
-      if (url.searchParams.has("symbol")) params.set("symbol", \`eq.\${url.searchParams.get("symbol").toUpperCase()}\`);
+      if (url.searchParams.has("asset_class")) params.set("asset_class", "eq." + url.searchParams.get("asset_class"));
+      if (url.searchParams.has("symbol")) params.set("symbol", "eq." + url.searchParams.get("symbol").toUpperCase());
       params.set("order", "observed_at.desc");
       const limit = Math.max(1, Math.min(500, Number.parseInt(url.searchParams.get("limit") || "100", 10) || 100));
       params.set("limit", String(limit));
-      const result = await supabaseRequest(env, \`grios_latest_market_observations?\${params.toString()}\`);
+      const result = await supabaseRequest(env, "grios_latest_market_observations?" + params.toString());
       const rows = await result.json();
       return response({ schema_version: SCHEMA_VERSION, count: rows.length, observations: rows });
     }
