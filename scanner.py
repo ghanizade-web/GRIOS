@@ -1051,6 +1051,18 @@ def fetch_equity(
     return result, errors
 
 
+def safe_provider_error_detail(exc: Exception, limit: int = 240) -> str:
+    """Return concise provider diagnostics without URLs or credential-like values."""
+    detail = str(exc).strip()
+    detail = re.sub(r"https?://\\S+", "[URL]", detail)
+    detail = re.sub(
+        r"(?i)\\b(api[_-]?key|token|authorization)\\b\\s*[:=]\\s*[^,\\s]+",
+        r"\\1=[REDACTED]",
+        detail,
+    )
+    return detail[:limit] or type(exc).__name__
+
+
 def fetch_fx_reference(
     obb: Any,
     pairs: list[str],
@@ -1114,8 +1126,9 @@ def fetch_fx_reference(
             ))
 
         except Exception as exc:
+            detail = safe_provider_error_detail(exc)
             errors.append(
-                f"{pair}: ECB unavailable ({type(exc).__name__})."
+                f"{pair}: ECB unavailable ({type(exc).__name__}): {detail}."
             )
 
     return result, errors
