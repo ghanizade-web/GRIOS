@@ -10,12 +10,14 @@ The workflow is intentionally manual. Do not enable a recurring schedule until t
 
 Configuration: `config/sec_13f_watchlist.json`
 
-| Filer | CIK | Scope |
+| Filer | CIK | SEC filing-detail evidence |
 |---|---:|---|
-| BlackRock, Inc. | 0001364742 | SEC 13F-HR public holdings filings |
+| BlackRock, Inc. | 0001364742 | https://www.sec.gov/Archives/edgar/data/1364742/000108636424008417/0001086364-24-008417-index.htm |
+| Berkshire Hathaway Inc. | 0001067983 | https://www.sec.gov/Archives/edgar/data/1067983/000119312526352200/0001193125-26-352200-index.htm |
+| FMR LLC | 0000315066 | https://www.sec.gov/Archives/edgar/data/315066/000031506626002260/0000315066-26-002260-index.htm |
+| State Street Corporation | 0000093751 | https://www.sec.gov/Archives/edgar/data/93751/000009375126000507/0000093751-26-000507-index.html |
 
-The BlackRock CIK is grounded in its SEC filing detail page:
-https://www.sec.gov/Archives/edgar/data/1364742/000108636424008417/0001086364-24-008417-index.htm
+Each CIK above is shown as the filer on an SEC Form 13F-HR filing detail page. The list is a starter set of four direct filers, not a complete map of their subsidiaries, affiliates, funds or delegated managers. Do not interpret the listed manager's consolidated name as proof that it beneficially owns every reported position.
 
 Add managers only after verifying the filer CIK against an official SEC filing detail page. A manager name or ticker is not a substitute for a CIK. Entries may be disabled with `"enabled": false`.
 
