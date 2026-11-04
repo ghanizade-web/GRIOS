@@ -14,13 +14,13 @@ Envelope fields: schema_version=1.0, generated_at, source_revision, observations
 
 ## Deployment
 
-1. Apply supabase/migrations/20261104200000_grios_data_hub.sql to the existing Supabase project.
-2. In Cloudflare Worker settings, add secrets GRIOS_INGEST_TOKEN, SUPABASE_URL, and SUPABASE_SERVICE_ROLE_KEY. Generate a long random ingest token; never commit it. Use the Supabase server-side service-role key only as a Worker secret.
-3. From this directory run npm test, then npx wrangler deploy.
-4. Configure the scanner with GRIOS_DATA_HUB_URL and GRIOS_DATA_HUB_TOKEN in its server-side environment.
-5. Verify authenticated /v1/status, ingest a test observation, then query /v1/markets/latest.
+1. The migration `grios_market_observations_hub` has been applied to the connected Supabase project and verified: table and latest view exist; RLS is enabled; anon/authenticated have no SELECT grants; service_role has INSERT and view SELECT.
+2. Add these GitHub Actions repository secrets to `ghanizade-web/GRIOS`: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `GRIOS_INGEST_TOKEN`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`. Use the existing Supabase project URL for SUPABASE_URL. Generate a strong random ingest token. Never put any secret value in Git, issue comments, logs, or chat.
+3. Run the manual workflow [Deploy GRIOS Data Hub Worker](../../.github/workflows/deploy-data-hub.yml). It deploys the Worker and binds the three runtime secrets.
+4. Add `GRIOS_DATA_HUB_URL` (the deployed Worker origin) and `GRIOS_DATA_HUB_TOKEN` (same value as `GRIOS_INGEST_TOKEN`) as GitHub Actions secrets in `ghanizade-web/market-pulse`.
+5. Run [GRIOS Scanner to Data Hub](https://github.com/ghanizade-web/market-pulse/actions/workflows/grios-data-hub-scan.yml). Verify authenticated `/v1/status`, accepted record count, and `/v1/markets/latest`.
 
-The Supabase project must be active before the migration or live API test can succeed. No secrets are stored in this repository.
+The Supabase project is currently ACTIVE_HEALTHY and the schema migration is applied. Worker deployment still requires the Cloudflare and server-side secret configuration above. No secrets are stored in this repository.
 
 ## Security and data semantics
 
