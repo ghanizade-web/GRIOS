@@ -84,3 +84,23 @@ def test_latest_snapshot_lookup_does_not_cross_cik_or_period(tmp_path):
     assert get_13f_snapshot(
         database, filer_cik="0000123456", report_period="2026-06-30"
     ) is None
+
+
+
+def test_registry_rejects_duplicate_accessions_and_invalid_amendment_metadata(tmp_path):
+    report = sample_report()
+    report["applied_filings"].append(dict(report["applied_filings"][0]))
+    with pytest.raises(ValueError, match="Duplicate accession"):
+        persist_13f_snapshot(tmp_path / "13f.sqlite3", report)
+
+    report = sample_report()
+    report["applied_filings"][0]["amendment_type"] = "RESTATEMENT"
+    with pytest.raises(ValueError, match="Original 13F-HR"):
+        persist_13f_snapshot(tmp_path / "13f.sqlite3", report)
+
+
+def test_registry_rejects_non_integer_share_amounts(tmp_path):
+    report = sample_report()
+    report["holdings"][0]["amount"] = 10.5
+    with pytest.raises(ValueError, match="non-negative integer"):
+        persist_13f_snapshot(tmp_path / "13f.sqlite3", report)
