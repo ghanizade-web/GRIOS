@@ -34,3 +34,5 @@ Append one concise entry whenever a lasting decision, capability, source, deploy
 - The public GitHub main contains a Replit archive; keep backup sanitized and never re-upload credentials or raw conversation exports.
 - Daily 09:00 Asia/Tehran report is requested. Codex heartbeat can prompt a run, but does not autonomously publish a new message to the same chat. Do not claim otherwise.
 - API keys shared in past conversations are omitted from this context. Use provider secret stores only; rotate previously disclosed values where active.
+
+- 2026-11-05: Corrected the TON/GRAM provider identity model after verifying the June 15, 2026 native-token rebrand. The official TON media page identifies Gram (GRAM) as the token formerly known as Toncoin/TON; CoinGecko and CoinMarketCap now expose the same pinned provider IDs as Gram. Scanner watchlists now canonicalize legacy TON to GRAM, use GRAM as the default symbol, and retain strict provider-ID + symbol + name/slug checks. Added regression coverage for legacy watchlist migration and GRAM provider fallback. This is a ticker/name migration only; the underlying TON blockchain remains named TON.

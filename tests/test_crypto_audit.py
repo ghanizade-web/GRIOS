@@ -113,6 +113,17 @@ def config(**overrides) -> dict:
     return value
 
 
+
+def test_load_watchlist_normalizes_legacy_ton_to_gram(tmp_path):
+    watchlist = tmp_path / "watchlist.json"
+    watchlist.write_text(
+        json.dumps({"crypto_symbols": ["BTC", "TON", "GRAM", "TON"]}),
+        encoding="utf-8",
+    )
+    loaded = scanner.load_watchlist(watchlist)
+    assert loaded["crypto_symbols"] == ["BTC", "GRAM"]
+
+
 def test_parse_timestamp_rejects_naive_datetime():
     assert scanner.parse_timestamp("2026-11-04T12:00:00") is None
 
@@ -145,6 +156,54 @@ def test_provider_audit_rejects_invalid_rows(row, expected):
     )
     assert audit["symbols"]["BTC"]["status"] == expected
     assert valid == {}
+
+
+def test_provider_audit_accepts_canonical_gram_from_coingecko():
+    row = cg_row(
+        symbol="gram",
+        name="Gram (prev. Toncoin)",
+        id="the-open-network",
+    )
+    audit, valid = scanner.audit_crypto_provider(
+        "CoinGecko", [row], ["GRAM"], 30
+    )
+    assert "GRAM" in valid
+    assert audit["symbols"]["GRAM"]["status"] == "VALID"
+
+
+def test_provider_audit_accepts_canonical_gram_from_coinmarketcap():
+    row = cmc_row(symbol="GRAM", name="Gram (prev. Toncoin)")
+    row.update({"id": 11419, "slug": "gram"})
+    audit, valid = scanner.audit_crypto_provider(
+        "CoinMarketCap", [row], ["GRAM"], 30
+    )
+    assert "GRAM" in valid
+    assert audit["symbols"]["GRAM"]["status"] == "VALID"
+
+
+def test_provider_audit_rejects_gram_ticker_with_wrong_coingecko_asset_id():
+    row = cg_row(
+        symbol="gram",
+        name="Gram (prev. Toncoin)",
+        id="unrelated-gram",
+    )
+    audit, valid = scanner.audit_crypto_provider(
+        "CoinGecko", [row], ["GRAM"], 30
+    )
+    assert valid == {}
+    assert audit["symbols"]["GRAM"]["status"] == "IDENTITY_MISMATCH"
+    assert audit["symbols"]["GRAM"]["provider_identity_checks"]["asset_id_matches"] is False
+
+
+def test_provider_audit_rejects_gram_ticker_with_wrong_coinmarketcap_asset_id():
+    row = cmc_row(symbol="GRAM", name="Gram (prev. Toncoin)")
+    row.update({"id": 999999, "slug": "gram"})
+    audit, valid = scanner.audit_crypto_provider(
+        "CoinMarketCap", [row], ["GRAM"], 30
+    )
+    assert valid == {}
+    assert audit["symbols"]["GRAM"]["status"] == "IDENTITY_MISMATCH"
+    assert audit["symbols"]["GRAM"]["provider_identity_checks"]["asset_id_matches"] is False
 
 
 def test_provider_audit_marks_duplicate_ticker_ambiguous():
@@ -301,10 +360,10 @@ def test_fetch_crypto_blocks_ambiguous_symbol_even_if_other_provider_returns_it(
 
 
 
-def test_ton_coingecko_fallback_uses_exact_asset_id_and_accepts_fresh_quote():
+def test_gram_coingecko_fallback_uses_exact_asset_id_and_accepts_fresh_quote():
     row = cg_row(
-        symbol="ton",
-        name="Toncoin",
+        symbol="gram",
+        name="Gram (prev. Toncoin)",
         price=5.25,
         id="the-open-network",
         market_cap=12_000_000_000,
@@ -316,26 +375,26 @@ def test_ton_coingecko_fallback_uses_exact_asset_id_and_accepts_fresh_quote():
     response.raise_for_status.return_value = None
     audit = {}
     with patch.object(scanner.httpx, "get", return_value=response) as get:
-        rows, error = scanner.fetch_ton_by_provider_id("CoinGecko", "secret", 30, audit)
+        rows, error = scanner.fetch_gram_by_provider_id("CoinGecko", "secret", 30, audit)
     assert error is None
     assert len(rows) == 1
-    assert rows[0].symbol == "TON"
+    assert rows[0].symbol == "GRAM"
     assert rows[0].observations[-1]["close"] == pytest.approx(5.25)
     assert audit["endpoint_mode"] == "provider_asset_id"
     assert get.call_args.kwargs["params"]["ids"] == "the-open-network"
 
 
-def test_ton_fallback_rejects_wrong_provider_asset_identity():
-    row = cg_row(symbol="ton", name="Toncoin", id="not-ton")
+def test_gram_fallback_rejects_wrong_provider_asset_identity():
+    row = cg_row(symbol="gram", name="Gram (prev. Toncoin)", id="not-ton")
     response = Mock()
     response.json.return_value = [row]
     response.raise_for_status.return_value = None
     audit = {}
     with patch.object(scanner.httpx, "get", return_value=response):
-        rows, error = scanner.fetch_ton_by_provider_id("CoinGecko", "secret", 30, audit)
+        rows, error = scanner.fetch_gram_by_provider_id("CoinGecko", "secret", 30, audit)
     assert rows == []
     assert error
-    assert audit["symbols"]["TON"]["status"] == "IDENTITY_MISMATCH"
+    assert audit["symbols"]["GRAM"]["status"] == "IDENTITY_MISMATCH"
     evidence = audit["identity_evidence"][0]
     assert evidence["provider_asset_id"] == "not-ton"
     assert evidence["checks"]["asset_id_matches"] is False
@@ -343,55 +402,55 @@ def test_ton_fallback_rejects_wrong_provider_asset_identity():
     assert evidence["checks"]["name_matches"] is True
 
 
-def test_ton_fallback_marks_duplicate_asset_rows_ambiguous():
-    row = cg_row(symbol="ton", name="Toncoin", id="the-open-network")
+def test_gram_fallback_marks_duplicate_asset_rows_ambiguous():
+    row = cg_row(symbol="gram", name="Gram (prev. Toncoin)", id="the-open-network")
     duplicate = {**row, "current_price": 5.26}
     response = Mock()
     response.json.return_value = [row, duplicate]
     response.raise_for_status.return_value = None
     audit = {}
     with patch.object(scanner.httpx, "get", return_value=response):
-        rows, error = scanner.fetch_ton_by_provider_id("CoinGecko", "secret", 30, audit)
+        rows, error = scanner.fetch_gram_by_provider_id("CoinGecko", "secret", 30, audit)
     assert rows == []
     assert error
-    assert audit["symbols"]["TON"]["status"] == "AMBIGUOUS_SYMBOL"
+    assert audit["symbols"]["GRAM"]["status"] == "AMBIGUOUS_SYMBOL"
 
 
-def test_ton_fallback_rejects_stale_quote():
-    row = cg_row(symbol="ton", name="Toncoin", id="the-open-network", updated=stamp(minutes_ago=90))
+def test_gram_fallback_rejects_stale_quote():
+    row = cg_row(symbol="gram", name="Gram (prev. Toncoin)", id="the-open-network", updated=stamp(minutes_ago=90))
     response = Mock()
     response.json.return_value = [row]
     response.raise_for_status.return_value = None
     audit = {}
     with patch.object(scanner.httpx, "get", return_value=response):
-        rows, error = scanner.fetch_ton_by_provider_id("CoinGecko", "secret", 30, audit)
+        rows, error = scanner.fetch_gram_by_provider_id("CoinGecko", "secret", 30, audit)
     assert rows == []
     assert error
-    assert audit["symbols"]["TON"]["status"] == "STALE"
+    assert audit["symbols"]["GRAM"]["status"] == "STALE"
 
 
-def test_ton_fallback_provider_outage_is_sanitized():
+def test_gram_fallback_provider_outage_is_sanitized():
     audit = {}
     with patch.object(scanner.httpx, "get", side_effect=scanner.httpx.ConnectError("private connection detail")):
-        rows, error = scanner.fetch_ton_by_provider_id("CoinGecko", "secret", 30, audit)
+        rows, error = scanner.fetch_gram_by_provider_id("CoinGecko", "secret", 30, audit)
     assert rows == []
     assert error
     assert audit["status"] == "PROVIDER_ERROR"
     assert "private connection detail" not in json.dumps(audit)
 
 
-def test_ton_coinmarketcap_fallback_uses_numeric_asset_id():
-    record = cmc_row(symbol="TON", name="Toncoin", price=5.2)
-    record.update({"id": 11419, "slug": "toncoin"})
+def test_gram_coinmarketcap_fallback_uses_numeric_asset_id():
+    record = cmc_row(symbol="GRAM", name="Gram (prev. Toncoin)", price=5.2)
+    record.update({"id": 11419, "slug": "gram"})
     response = Mock()
     response.json.return_value = {"status": {"error_code": 0}, "data": {"11419": record}}
     response.raise_for_status.return_value = None
     audit = {}
     with patch.object(scanner.httpx, "get", return_value=response) as get:
-        rows, error = scanner.fetch_ton_by_provider_id("CoinMarketCap", "secret", 30, audit)
+        rows, error = scanner.fetch_gram_by_provider_id("CoinMarketCap", "secret", 30, audit)
     assert error is None
     assert len(rows) == 1
-    assert rows[0].symbol == "TON"
+    assert rows[0].symbol == "GRAM"
     assert get.call_args.kwargs["params"]["id"] == "11419"
 
 def test_universe_filter_preserves_missing_fdv_eligibility_and_audits_rejection():

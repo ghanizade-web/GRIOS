@@ -24,7 +24,7 @@ class Item:
 
 def test_coverage_reports_missing_symbols_and_not_covered_capabilities():
     watchlist = {
-        "crypto_symbols": ["BTC", "TON"],
+        "crypto_symbols": ["BTC", "GRAM"],
         "us_equities_etfs": ["SPY"],
         "commodity_etf_proxies": [],
         "fx_reference_pairs": [],
@@ -32,7 +32,7 @@ def test_coverage_reports_missing_symbols_and_not_covered_capabilities():
     }
     rows = [Item("BTC", "crypto"), Item("SPY", "us_equity_etf")]
     report = build_data_coverage_report(watchlist, rows, now=datetime(2026, 11, 4, 20, 5, tzinfo=timezone.utc))
-    assert report["feeds"]["crypto_spot"]["missing_symbols"] == ["TON"]
+    assert report["feeds"]["crypto_spot"]["missing_symbols"] == ["GRAM"]
     assert report["feeds"]["crypto_spot"]["coverage_pct"] == 50.0
     assert report["feeds"]["us_equities_etfs"]["status"] == "COMPLETE"
     assert "verified_institutional_fund_flows" in report["capabilities_not_implemented"]

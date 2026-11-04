@@ -29,7 +29,7 @@ Scope: GitHub Issue #11, Data Coverage and Cloudflare Data Hub.
 
 | Feed | Expected universe | Source | Current limitation |
 |---|---|---|---|
-| Crypto spot | Configured watchlist | CoinGecko + CoinMarketCap | Provider top-page limits; TON requires verified per-asset fallback |
+| Crypto spot | Configured watchlist | CoinGecko + CoinMarketCap | Provider top-page limits; native asset is now GRAM (formerly TON), with pinned-ID fallback |
 | US shares/ETFs | User watchlist | OpenBB/Cboe daily history | Not executable real-time quotes |
 | Commodity proxies | User watchlist | OpenBB/Cboe ETF proxies | Proxy exposure, not underlying spot/futures |
 | FX reference | User watchlist | ECB | Reference rates, not bid/ask or market depth |
