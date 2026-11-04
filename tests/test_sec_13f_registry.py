@@ -1,6 +1,8 @@
 import pytest
 
-from sec_13f_registry import get_13f_snapshot, persist_13f_snapshot
+from sec_13f_registry import (
+    get_13f_snapshot, persist_13f_snapshot, prepare_13f_data_hub_payload,
+)
 
 
 def sample_report():
@@ -104,3 +106,21 @@ def test_registry_rejects_non_integer_share_amounts(tmp_path):
     report["holdings"][0]["amount"] = 10.5
     with pytest.raises(ValueError, match="non-negative integer"):
         persist_13f_snapshot(tmp_path / "13f.sqlite3", report)
+
+
+
+def test_data_hub_payload_is_versioned_and_preserves_filing_provenance():
+    payload = prepare_13f_data_hub_payload(
+        sample_report(), source_revision="grios-main-sha"
+    )
+    assert payload["schema_version"] == "1.0"
+    snapshot = payload["snapshot"]
+    assert snapshot["source_revision"] == "grios-main-sha"
+    assert snapshot["applied_filings"][0]["accession_number"] == "0000123456-26-000001"
+    assert snapshot["holdings"][0]["row_id"]
+    assert snapshot["holdings"][0]["value_usd"] == 125000000
+
+
+def test_data_hub_payload_rejects_invalid_revision():
+    with pytest.raises(ValueError, match="source_revision"):
+        prepare_13f_data_hub_payload(sample_report(), source_revision=123)
