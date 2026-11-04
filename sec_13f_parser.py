@@ -357,6 +357,7 @@ def reconcile_13f_filing_chain(filings: list[dict[str, Any]]) -> dict[str, Any]:
         "amendment_type": "ORIGINAL",
         "filed_at": original["filed_at"],
         "source_url": original["source_url"],
+        "cover_page_source_url": original.get("cover_page_source_url"),
         "effect": "BASE_SNAPSHOT",
     }]
     for amendment in amendments:
@@ -382,6 +383,7 @@ def reconcile_13f_filing_chain(filings: list[dict[str, Any]]) -> dict[str, Any]:
             "amendment_type": amendment["amendment_type"],
             "filed_at": amendment["filed_at"],
             "source_url": amendment["source_url"],
+            "cover_page_source_url": amendment.get("cover_page_source_url"),
             "effect": effect,
         })
 
