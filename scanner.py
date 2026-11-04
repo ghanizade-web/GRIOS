@@ -407,6 +407,143 @@ def fetch_coinmarketcap(
         return [], "اتصال CoinMarketCap ناموفق بود؛ جزئیات محرمانه در گزارش ثبت نشد."
 
 
+
+TON_PROVIDER_IDS = {
+    "CoinGecko": "the-open-network",
+    "CoinMarketCap": "11419",
+}
+CMC_QUOTES_URL = "https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest"
+
+
+def fetch_ton_by_provider_id(
+    provider: str,
+    api_key: str,
+    max_age_minutes: int,
+    audit: dict[str, Any] | None = None,
+) -> tuple[list[MarketSeries], str | None]:
+    """Fetch TON by immutable provider asset ID; never resolve by ticker alone."""
+    if not api_key:
+        if audit is not None:
+            audit.update({"provider": provider, "status": "MISSING_API_KEY", "fallback": True})
+        return [], f"{provider} TON fallback skipped: API key is missing."
+
+    try:
+        if provider == "CoinGecko":
+            response = httpx.get(
+                CG_URL,
+                params={
+                    "vs_currency": "usd",
+                    "ids": TON_PROVIDER_IDS[provider],
+                    "sparkline": "false",
+                    "price_change_percentage": "24h,7d,30d",
+                },
+                headers={"x-cg-demo-api-key": api_key},
+                timeout=30,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, list):
+                raise ValueError("INVALID_RESPONSE")
+            records = payload
+            identity_ok = all(
+                str(item.get("id") or "").lower() == TON_PROVIDER_IDS[provider]
+                and str(item.get("symbol") or "").upper() == "TON"
+                and normalized_name(str(item.get("name") or "")) in {"toncoin", "theopennetwork"}
+                for item in records if isinstance(item, dict)
+            )
+        elif provider == "CoinMarketCap":
+            response = httpx.get(
+                CMC_QUOTES_URL,
+                params={"id": TON_PROVIDER_IDS[provider], "convert": "USD"},
+                headers={
+                    "X-CMC_PRO_API_KEY": api_key,
+                    "Accept": "application/json",
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, dict):
+                raise ValueError("INVALID_RESPONSE")
+            data = payload.get("data", {})
+            if isinstance(data, dict):
+                records = [data[TON_PROVIDER_IDS[provider]]] if TON_PROVIDER_IDS[provider] in data else []
+            elif isinstance(data, list):
+                records = data
+            else:
+                raise ValueError("INVALID_RESPONSE")
+            identity_ok = all(
+                str(item.get("id")) == TON_PROVIDER_IDS[provider]
+                and str(item.get("slug") or "").lower() == "toncoin"
+                and str(item.get("symbol") or "").upper() == "TON"
+                and normalized_name(str(item.get("name") or "")) == "toncoin"
+                for item in records if isinstance(item, dict)
+            )
+        else:
+            raise ValueError("UNSUPPORTED_PROVIDER")
+
+        if not records:
+            if audit is not None:
+                audit.update({
+                    "provider": provider,
+                    "status": "NOT_RETURNED",
+                    "fallback": True,
+                    "provider_asset_id": TON_PROVIDER_IDS[provider],
+                    "symbols": {"TON": {"status": "NOT_RETURNED"}},
+                })
+            return [], f"{provider} TON fallback returned no asset."
+
+        if not all(isinstance(item, dict) for item in records):
+            raise ValueError("INVALID_RESPONSE")
+        if not identity_ok:
+            if audit is not None:
+                audit.update({
+                    "provider": provider,
+                    "status": "IDENTITY_MISMATCH",
+                    "fallback": True,
+                    "provider_asset_id": TON_PROVIDER_IDS[provider],
+                    "symbols": {"TON": {"status": "IDENTITY_MISMATCH"}},
+                })
+            return [], f"{provider} TON fallback failed strict asset identity validation."
+
+        normalized, valid = audit_crypto_provider(
+            provider, records, ["TON"], max_age_minutes
+        )
+        if audit is not None:
+            audit.update(normalized)
+            audit["fallback"] = True
+            audit["provider_asset_id"] = TON_PROVIDER_IDS[provider]
+            audit["endpoint_mode"] = "provider_asset_id"
+        if "TON" not in valid:
+            return [], f"{provider} TON fallback did not produce a fresh valid quote."
+
+        item, price, stamp = valid["TON"]
+        row = crypto_series(
+            symbol="TON",
+            name=item["name"],
+            provider=provider,
+            stamp=stamp,
+            price=price,
+            market_cap=item["market_cap"],
+            volume=item["volume"],
+            fdv=item["fdv"],
+            change_24h=item["change_24h"],
+            change_7d=item["change_7d"],
+            change_30d=item["change_30d"],
+            slug=item["slug"] or TON_PROVIDER_IDS[provider],
+        )
+        return [row], None
+    except (httpx.HTTPError, ValueError, TypeError, KeyError) as exc:
+        if audit is not None:
+            audit.update({
+                "provider": provider,
+                "status": "PROVIDER_ERROR" if not isinstance(exc, ValueError) or str(exc) != "INVALID_RESPONSE" else "INVALID_RESPONSE",
+                "error_type": type(exc).__name__,
+                "fallback": True,
+                "provider_asset_id": TON_PROVIDER_IDS.get(provider),
+            })
+        return [], f"{provider} TON fallback failed ({type(exc).__name__})."
+
 def save_crypto_audit(
     audit: dict[str, Any],
     output_dir: Path,
@@ -666,6 +803,22 @@ def fetch_crypto(
         )
         provider_audits[provider] = local_audit
         provider_rows[provider] = rows
+        if "TON" in {str(value).strip().upper() for value in symbols} and local_audit.get("symbols", {}).get("TON", {}).get("status") == "NOT_RETURNED":
+            fallback_audit: dict[str, Any] = {}
+            fallback_rows, fallback_error = fetch_ton_by_provider_id(
+                provider,
+                os.getenv(env_key, "").strip(),
+                max_age_minutes,
+                audit=fallback_audit,
+            )
+            provider_audits[provider]["ton_fallback"] = fallback_audit
+            if fallback_rows:
+                provider_rows[provider].extend(fallback_rows)
+                provider_audits[provider].setdefault("symbols", {})["TON"] = fallback_audit.get("symbols", {}).get("TON", {"status": "VALID"})
+            elif fallback_error:
+                provider_errors.append(fallback_error)
+                if fallback_audit.get("symbols", {}).get("TON", {}).get("status"):
+                    provider_audits[provider].setdefault("symbols", {})["TON"] = fallback_audit["symbols"]["TON"]
         if error:
             provider_errors.append(error)
 
