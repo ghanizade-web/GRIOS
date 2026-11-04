@@ -445,11 +445,21 @@ def fetch_ton_by_provider_id(
             if not isinstance(payload, list):
                 raise ValueError("INVALID_RESPONSE")
             records = payload
-            identity_ok = all(
-                str(item.get("id") or "").lower() == TON_PROVIDER_IDS[provider]
-                and str(item.get("symbol") or "").upper() == "TON"
-                and normalized_name(str(item.get("name") or "")) in {"toncoin", "theopennetwork"}
+            identity_evidence = [
+                {
+                    "provider_asset_id": str(item.get("id") or ""),
+                    "symbol": str(item.get("symbol") or ""),
+                    "name": str(item.get("name") or ""),
+                    "checks": {
+                        "asset_id_matches": str(item.get("id") or "").lower() == TON_PROVIDER_IDS[provider],
+                        "symbol_matches": str(item.get("symbol") or "").upper() == "TON",
+                        "name_matches": normalized_name(str(item.get("name") or "")) in {"toncoin", "theopennetwork"},
+                    },
+                }
                 for item in records if isinstance(item, dict)
+            ]
+            identity_ok = bool(identity_evidence) and all(
+                all(item["checks"].values()) for item in identity_evidence
             )
         elif provider == "CoinMarketCap":
             response = httpx.get(
@@ -472,12 +482,23 @@ def fetch_ton_by_provider_id(
                 records = data
             else:
                 raise ValueError("INVALID_RESPONSE")
-            identity_ok = all(
-                str(item.get("id")) == TON_PROVIDER_IDS[provider]
-                and str(item.get("slug") or "").lower() == "toncoin"
-                and str(item.get("symbol") or "").upper() == "TON"
-                and normalized_name(str(item.get("name") or "")) == "toncoin"
+            identity_evidence = [
+                {
+                    "provider_asset_id": str(item.get("id") or ""),
+                    "slug": str(item.get("slug") or ""),
+                    "symbol": str(item.get("symbol") or ""),
+                    "name": str(item.get("name") or ""),
+                    "checks": {
+                        "asset_id_matches": str(item.get("id")) == TON_PROVIDER_IDS[provider],
+                        "slug_matches": str(item.get("slug") or "").lower() == "toncoin",
+                        "symbol_matches": str(item.get("symbol") or "").upper() == "TON",
+                        "name_matches": normalized_name(str(item.get("name") or "")) == "toncoin",
+                    },
+                }
                 for item in records if isinstance(item, dict)
+            ]
+            identity_ok = bool(identity_evidence) and all(
+                all(item["checks"].values()) for item in identity_evidence
             )
         else:
             raise ValueError("UNSUPPORTED_PROVIDER")
@@ -502,6 +523,7 @@ def fetch_ton_by_provider_id(
                     "status": "IDENTITY_MISMATCH",
                     "fallback": True,
                     "provider_asset_id": TON_PROVIDER_IDS[provider],
+                    "identity_evidence": identity_evidence,
                     "symbols": {"TON": {"status": "IDENTITY_MISMATCH"}},
                 })
             return [], f"{provider} TON fallback failed strict asset identity validation."

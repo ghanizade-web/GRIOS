@@ -336,6 +336,11 @@ def test_ton_fallback_rejects_wrong_provider_asset_identity():
     assert rows == []
     assert error
     assert audit["symbols"]["TON"]["status"] == "IDENTITY_MISMATCH"
+    evidence = audit["identity_evidence"][0]
+    assert evidence["provider_asset_id"] == "not-ton"
+    assert evidence["checks"]["asset_id_matches"] is False
+    assert evidence["checks"]["symbol_matches"] is True
+    assert evidence["checks"]["name_matches"] is True
 
 
 def test_ton_fallback_marks_duplicate_asset_rows_ambiguous():
