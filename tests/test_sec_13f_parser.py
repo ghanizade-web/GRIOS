@@ -89,6 +89,7 @@ def test_compare_snapshots_reports_position_change_not_trade():
     changed = next(row for row in comparison["changes"] if row["cusip"] == "123456789")
     assert changed["amount_change"] == 100
     assert changed["value_change_usd"] == 250
+    assert changed["figi"] == "BBG000B9XRY4"
     assert "not proof of purchases" in comparison["interpretation"]
 
 
@@ -144,6 +145,8 @@ def test_new_holdings_amendment_supplements_original_snapshot():
     amendment = make_amendment(1, "NEW HOLDINGS", [added])
     result = reconcile_13f_filing_chain([amendment, original])
     assert result["holdings_count"] == 3
+    original_position = next(row for row in result["holdings"] if row["cusip"] == "123456789")
+    assert original_position["figi"] == "BBG000B9XRY4"
     assert result["applied_filings"][1]["effect"] == "SUPPLEMENTED_PRIOR_SNAPSHOT"
 
 
