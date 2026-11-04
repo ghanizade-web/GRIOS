@@ -38,10 +38,12 @@ jobs:
       - name: Ingest and publish SEC 13F report period
         env:
           GITHUB_SHA: ${{ github.sha }}
+          FILER_CIK: ${{ inputs.filer_cik }}
+          REPORT_PERIOD: ${{ inputs.report_period }}
         run: |
           python scripts/ingest_sec_13f.py \
-            --cik "${{ inputs.filer_cik }}" \
-            --report-period "${{ inputs.report_period }}" \
+            --cik "$FILER_CIK" \
+            --report-period "$REPORT_PERIOD" \
             --output artifacts/sec-13f/report.json \
             --database artifacts/sec-13f/registry.sqlite3
 
