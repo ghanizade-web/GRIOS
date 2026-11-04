@@ -158,6 +158,29 @@ def test_provider_audit_rejects_invalid_rows(row, expected):
     assert valid == {}
 
 
+def test_provider_audit_accepts_canonical_gram_from_coingecko():
+    row = cg_row(
+        symbol="gram",
+        name="Gram (prev. Toncoin)",
+        id="the-open-network",
+    )
+    audit, valid = scanner.audit_crypto_provider(
+        "CoinGecko", [row], ["GRAM"], 30
+    )
+    assert "GRAM" in valid
+    assert audit["symbols"]["GRAM"]["status"] == "VALID"
+
+
+def test_provider_audit_accepts_canonical_gram_from_coinmarketcap():
+    row = cmc_row(symbol="GRAM", name="Gram (prev. Toncoin)")
+    row.update({"id": 11419, "slug": "gram"})
+    audit, valid = scanner.audit_crypto_provider(
+        "CoinMarketCap", [row], ["GRAM"], 30
+    )
+    assert "GRAM" in valid
+    assert audit["symbols"]["GRAM"]["status"] == "VALID"
+
+
 def test_provider_audit_rejects_gram_ticker_with_wrong_coingecko_asset_id():
     row = cg_row(
         symbol="gram",
