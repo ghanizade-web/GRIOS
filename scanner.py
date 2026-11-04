@@ -1125,9 +1125,12 @@ def fetch_energy(
         (
             "Henry Hub spot",
             "henry_hub_spot",
-            lambda: obb.eia.natural_gas.prices.natural_gas_spot_and_futures_prices(
+            lambda: obb.eia.data_browser(
                 provider="eia",
-                series="henry_hub_natural_gas_spot_price",
+                route="natural-gas/pri/fut",
+                frequency="daily",
+                facets="series:RNGWHHD",
+                data_type="value",
                 limit=260,
             ),
         ),
