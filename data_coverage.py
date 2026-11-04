@@ -152,7 +152,7 @@ def build_data_coverage_report(
         "schema_version": "1.0",
         "generated_at": now.astimezone(timezone.utc).isoformat(),
         "overall_status": (
-            "DEGRADED" if any(item["status"] in {"NONE", "PARTIAL", "PARTIAL_STALE", "STALE", "} for item in feeds.values())
+            "DEGRADED" if any(item["status"] in {"NONE", "PARTIAL", "PARTIAL_STALE", "STALE"} for item in feeds.values())
             else "DISCOVERY" if any(item["status"] == "DISCOVERY_MODE" for item in feeds.values())
             else "COVERED"
         ),
