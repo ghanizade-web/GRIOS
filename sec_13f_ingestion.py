@@ -148,6 +148,7 @@ def ingest_13f_report_period(
     *,
     retrieved_at: str,
     include_historical: bool = True,
+    database: str | None = None,
 ) -> dict[str, Any]:
     """Ingest every discovered public filing for one filer/report period.
 
@@ -188,4 +189,8 @@ def ingest_13f_report_period(
     reconciled["filing_accessions"] = [
         filing["accession_number"] for filing in parsed
     ]
+    if database is not None:
+        from sec_13f_registry import persist_13f_snapshot
+
+        reconciled["persistence"] = persist_13f_snapshot(database, reconciled)
     return reconciled
