@@ -1658,14 +1658,15 @@ def main() -> int:
 
     parser.add_argument("--skip-openbb", action="store_true")
 
-    parser.add_argument("--crypto-audit-source-commit-sha", default=os.getenv("GRIOS_SOURCE_COMMIT_SHA", "UNKNOWN"))
+    parser.add_argument(
+        "--crypto-audit-source-commit-sha",
+        default=os.getenv("GRIOS_SOURCE_COMMIT_SHA", "UNKNOWN"),
+    )
 
     args = parser.parse_args()
 
     max_crypto_age = int(os.getenv("MAX_CRYPTO_AGE_MINUTES", "30"))
-    crypto_audit: dict[str, Any] = {
-        "baseline_sha": args.crypto_audit_source_commit_sha,
-    }
+    crypto_audit: dict[str, Any] = {}
 
     watchlist = load_watchlist(Path(args.watchlist))
     crypto_config = watchlist["crypto_universe"]
