@@ -409,14 +409,14 @@ def save_crypto_audit(
     audit: dict[str, Any],
     output_dir: Path,
     timestamp: str,
-    baseline_sha: str,
+    source_commit_sha: str,
     mode: str,
     max_age_minutes: int,
 ) -> Path:
     document = {
         "schema_version": "1.0",
         "engine": "GRIOS Crypto Universe Audit",
-        "baseline": {"file": "scanner.py", "git_blob_sha": baseline_sha},
+        "source_revision": {"repository_file": "scanner.py", "git_commit_sha": source_commit_sha},
         "generated_at": iso(),
         "run": {
             "timestamp": timestamp,
@@ -1658,13 +1658,13 @@ def main() -> int:
 
     parser.add_argument("--skip-openbb", action="store_true")
 
-    parser.add_argument("--crypto-audit-baseline-sha", default="49b30e65914bac3df4383f17bbda9a9d7d8ccca4")
+    parser.add_argument("--crypto-audit-source-commit-sha", default=os.getenv("GRIOS_SOURCE_COMMIT_SHA", "UNKNOWN"))
 
     args = parser.parse_args()
 
     max_crypto_age = int(os.getenv("MAX_CRYPTO_AGE_MINUTES", "30"))
     crypto_audit: dict[str, Any] = {
-        "baseline_sha": args.crypto_audit_baseline_sha,
+        "baseline_sha": args.crypto_audit_source_commit_sha,
     }
 
     watchlist = load_watchlist(Path(args.watchlist))

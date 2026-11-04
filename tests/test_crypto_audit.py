@@ -330,6 +330,6 @@ def test_save_crypto_audit_writes_valid_json_atomically(tmp_path):
         30,
     )
     payload = json.loads(target.read_text(encoding="utf-8"))
-    assert payload["baseline"]["git_blob_sha"] == "baseline-sha"
+    assert payload["source_revision"]["git_commit_sha"] == "baseline-sha"
     assert payload["audit"]["summary"]["valid"] == 1
     assert not target.with_suffix(".json.tmp").exists()
