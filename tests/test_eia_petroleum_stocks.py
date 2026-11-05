@@ -2,6 +2,7 @@ from eia_petroleum_stocks import (
     EIA_SERIES,
     _validate_units,
     build_persian_report,
+    exit_code_for_payload,
     historical_percentile,
     normalize_observations,
 )
@@ -92,3 +93,18 @@ def test_persian_report_discloses_source_limits_and_data_type():
     assert "اجماع تحلیلگران" in report
     assert "صدک‌ها بر اساس تاریخچه دریافت‌شده و بدون تعدیل فصلی" in report
     assert "سیگنال خریدوفروش نیست" in report
+
+
+
+def test_eia_complete_coverage_gate_distinguishes_partial_from_full():
+    complete = {"status": "SUCCESS", "series_count": 9, "expected_series_count": 9}
+    partial = {"status": "PARTIAL", "series_count": 8, "expected_series_count": 9}
+    failed = {"status": "FAILED", "series_count": 0, "expected_series_count": 9}
+    not_configured = {"status": "NOT_CONFIGURED", "series_count": 0, "expected_series_count": 9}
+
+    assert exit_code_for_payload(complete) == 0
+    assert exit_code_for_payload(partial) == 0
+    assert exit_code_for_payload(partial, require_complete=True) == 1
+    assert exit_code_for_payload(complete, require_complete=True) == 0
+    assert exit_code_for_payload(failed) == 1
+    assert exit_code_for_payload(not_configured) == 1
