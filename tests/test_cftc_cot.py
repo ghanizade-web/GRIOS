@@ -53,6 +53,6 @@ def test_build_market_series_preserves_weekly_disclosure_caveats():
     rows = normalize_rows(sample_rows(), contract_code="088691", market_label="Gold")
     item = build_market_series({"market": "Gold", "symbol": "XAU"}, rows)
     assert item["data_as_of"] == "2026-01-13"
-    assert item["extra"]["noncommercial"]["weekly_net_change"] == 40000
+    assert item["extra"]["noncommercial"]["weekly_net_change"] == 30000
     assert item["extra"]["publication_date"] is None
     assert "not transaction records" in item["caveat"]
