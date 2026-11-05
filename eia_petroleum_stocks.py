@@ -179,10 +179,11 @@ def fetch_series(
     if not 2 <= history_limit <= 520:
         raise ValueError("history_limit must be between 2 and 520 weekly observations.")
     series_id = definition["series_id"]
-    url = f"{API_ROOT}/{series_id}/data/"
+    # EIA documents the legacy-series compatibility route as /seriesid/{series_id};
+    # unlike native APIv2 category routes, this endpoint does not append /data/.
+    url = f"{API_ROOT}/{series_id}"
     params = [
         ("api_key", api_key),
-        ("frequency", "weekly"),
         ("data[0]", "value"),
         ("sort[0][column]", "period"),
         ("sort[0][direction]", "desc"),
@@ -329,10 +330,15 @@ def run(
             try:
                 series.append(fetch_series(definition, api_key, history_limit=history_limit))
             except Exception as exc:
-                failures.append({
+                failure = {
                     "series_id": definition["series_id"],
                     "error_type": type(exc).__name__,
-                })
+                }
+                response = getattr(exc, "response", None)
+                status_code = getattr(response, "status_code", None)
+                if isinstance(status_code, int):
+                    failure["http_status"] = status_code
+                failures.append(failure)
         status = "SUCCESS" if not failures else ("PARTIAL" if series else "FAILED")
 
     publish_result = (
