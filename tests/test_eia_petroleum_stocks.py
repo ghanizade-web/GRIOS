@@ -1,5 +1,6 @@
 from eia_petroleum_stocks import (
     EIA_SERIES,
+    _validate_units,
     build_persian_report,
     historical_percentile,
     normalize_observations,
@@ -26,7 +27,7 @@ def test_normalize_observations_rejects_invalid_values():
     except ValueError as exc:
         assert "not finite" in str(exc)
     else:
-        raise AssertionError("non-finite inventory value must be rejected")
+        raise AssertionError("non-finite EIA value must be rejected")
 
 
 def test_historical_percentile_is_empirical_and_deterministic():
@@ -35,17 +36,44 @@ def test_historical_percentile_is_empirical_and_deterministic():
     assert historical_percentile([]) is None
 
 
-def test_eia_watchlist_uses_known_weekly_inventory_series():
-    assert {item["series_id"] for item in EIA_SERIES} == {
-        "PET.WCESTUS1.W",
-        "PET.WGTSTUS1.W",
-        "PET.WDISTUS1.W",
-    }
+def test_eia_watchlist_contains_official_weekly_supply_demand_series():
+    by_symbol = {item["symbol"]: item for item in EIA_SERIES}
+    assert len(EIA_SERIES) == 9
+    assert {
+        "EIA_CRUDE_STOCKS",
+        "EIA_GASOLINE_STOCKS",
+        "EIA_DISTILLATE_STOCKS",
+        "EIA_CRUDE_PRODUCTION",
+        "EIA_CRUDE_IMPORTS",
+        "EIA_CRUDE_EXPORTS",
+        "EIA_REFINERY_CRUDE_INPUTS",
+        "EIA_REFINERY_UTILIZATION",
+        "EIA_TOTAL_PRODUCT_SUPPLIED",
+    } == set(by_symbol)
+    assert by_symbol["EIA_CRUDE_PRODUCTION"]["series_id"] == "PET.WCRFPUS2.W"
+    assert by_symbol["EIA_CRUDE_IMPORTS"]["series_id"] == "PET.WCRIMUS2.W"
+    assert by_symbol["EIA_CRUDE_EXPORTS"]["series_id"] == "PET.WCREXUS2.W"
+    assert by_symbol["EIA_REFINERY_CRUDE_INPUTS"]["series_id"] == "PET.WCRRIUS2.W"
+    assert by_symbol["EIA_REFINERY_UTILIZATION"]["series_id"] == "PET.WPULEUS3.W"
+    assert by_symbol["EIA_TOTAL_PRODUCT_SUPPLIED"]["series_id"] == "PET.WRPUPUS2.W"
 
 
-def test_persian_report_discloses_no_consensus_or_causal_claim():
+def test_eia_units_are_checked_against_series_contract():
+    assert _validate_units("Percent", "percent", "PET.WPULEUS3.W") == "percent"
+    assert _validate_units("Thousand Barrels per Day", "thousand barrels per day", "PET.WCRFPUS2.W") == "thousand barrels per day"
+    try:
+        _validate_units("thousand barrels", "percent", "PET.WPULEUS3.W")
+    except ValueError as exc:
+        assert "Unexpected EIA unit" in str(exc)
+    else:
+        raise AssertionError("mismatched EIA units must be rejected")
+
+
+def test_persian_report_discloses_source_limits_and_data_type():
     item = {
         "symbol": "EIA_CRUDE_STOCKS",
+        "units": "thousand barrels",
+        "value_kind": "stock",
         "data_as_of": "2026-10-23",
         "extra": {
             "latest_value": 410000,
@@ -60,6 +88,7 @@ def test_persian_report_discloses_no_consensus_or_causal_claim():
         generated_at="2026-11-05T00:00:00+00:00",
         publish_result={"status": "DIRECT_SUPABASE", "accepted": 1},
     )
-    assert "موجودی نفت و فرآورده‌های آمریکا" in report
+    assert "تراز عرضه و تقاضا" in report
     assert "اجماع تحلیلگران" in report
-    assert "به‌تنهایی جهت قیمت نفت را تعیین نمی‌کند" in report
+    assert "صدک‌ها بر اساس تاریخچه دریافت‌شده و بدون تعدیل فصلی" in report
+    assert "سیگنال خریدوفروش نیست" in report
