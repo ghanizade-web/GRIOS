@@ -181,8 +181,7 @@ def run_watchlist(
         )
 
     entries = load_watchlist(watchlist_path)
-    # One shared SEC client is essential: request pacing then applies across
-    # every filer in this batch rather than resetting for each CIK.
+    # One shared SEC client applies request pacing across every filer.
     sec = SecEdgarClient(user_agent=user_agent)
     hub = GriosDataHubClient(data_hub_url, token)
     reports_dir = Path(output_dir)
@@ -211,9 +210,17 @@ def run_watchlist(
             )
             artifact = reports_dir / f"{entry['cik']}_{period}.json"
             artifact.write_text(
-                json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+                json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\\n",
                 encoding="utf-8",
             )
+            human_report = render_persian_filer_report(report, entry["name"])
+            text_artifact = reports_dir / f"{entry['cik']}_{period}.txt"
+            text_artifact.write_text(human_report + "\\n", encoding="utf-8")
+            top_holdings = sorted(
+                report.get("holdings", []),
+                key=lambda item: float(item.get("value_usd") or 0),
+                reverse=True,
+            )[:5]
             results.append({
                 "cik": entry["cik"],
                 "name": entry["name"],
@@ -258,9 +265,14 @@ def run_watchlist(
     destination = Path(summary_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + "\\n",
         encoding="utf-8",
     )
+    human_path = Path(summary_report_path) if summary_report_path else destination.with_suffix(".txt")
+    human_path.parent.mkdir(parents=True, exist_ok=True)
+    human_report = render_persian_watchlist_summary(summary)
+    human_path.write_text(human_report + "\\n", encoding="utf-8")
+    (human_path.parent / "latest-sec-13f.txt").write_text(human_report + "\\n", encoding="utf-8")
     return summary
 
 
