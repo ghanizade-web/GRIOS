@@ -144,6 +144,7 @@ def fetch_series(
         "observations": observations,
         "extra": {
             "series_id": series_id,
+            "name_fa": definition["name_fa"],
             "latest_value": latest["value"],
             "previous_value": previous["value"],
             "weekly_change": weekly_change,
@@ -188,7 +189,7 @@ def build_persian_report(
             change_pct = extra.get("weekly_change_pct")
             pct_text = "ناموجود" if change_pct is None else f"{change_pct:+.2f}٪"
             lines.extend([
-                f"{index}) {item['symbol'].replace('EIA_', '').replace('_', ' ')}",
+                f"{index}) {extra.get('name_fa', item['symbol'])}",
                 f"📦 سطح موجودی: {extra['latest_value']:,.0f} هزار بشکه",
                 f"🔁 تغییر هفتگی: {change_text} ({pct_text})",
                 f"📈 صدک تاریخی در تاریخچه دریافت‌شده: {extra['historical_percentile']}٪",
