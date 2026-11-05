@@ -104,7 +104,7 @@ def render_persian_filer_report(report: dict[str, Any], filer_name: str) -> str:
         "🧭 این گزارش بازسازیِ سبد افشاشده عمومی است؛ نه دفتر معاملات و نه توصیه سرمایه‌گذاری.",
         "🔗 منبع رسمی: https://www.sec.gov/edgar/search/",
     ])
-    return "\\n".join(lines)
+    return "\n".join(lines)
 
 
 def render_persian_watchlist_summary(summary: dict[str, Any]) -> str:
@@ -145,7 +145,7 @@ def render_persian_watchlist_summary(summary: dict[str, Any]) -> str:
         "⚠️ داده 13F دوره‌ای و با تأخیر است. موقعیت گزارش‌شده، اثبات خریدوفروش اخیر یا ورود سرمایه لحظه‌ای نیست.",
         "🔗 مرجع رسمی SEC: https://www.sec.gov/edgar/search/",
     ])
-    return "\\n".join(lines)
+    return "\n".join(lines)
 
 
 def run_watchlist(
@@ -210,12 +210,12 @@ def run_watchlist(
             )
             artifact = reports_dir / f"{entry['cik']}_{period}.json"
             artifact.write_text(
-                json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\\n",
+                json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",
             )
             human_report = render_persian_filer_report(report, entry["name"])
             text_artifact = reports_dir / f"{entry['cik']}_{period}.txt"
-            text_artifact.write_text(human_report + "\\n", encoding="utf-8")
+            text_artifact.write_text(human_report + "\n", encoding="utf-8")
             top_holdings = sorted(
                 report.get("holdings", []),
                 key=lambda item: float(item.get("value_usd") or 0),
@@ -265,14 +265,14 @@ def run_watchlist(
     destination = Path(summary_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + "\\n",
+        json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     human_path = Path(summary_report_path) if summary_report_path else destination.with_suffix(".txt")
     human_path.parent.mkdir(parents=True, exist_ok=True)
     human_report = render_persian_watchlist_summary(summary)
-    human_path.write_text(human_report + "\\n", encoding="utf-8")
-    (human_path.parent / "latest-sec-13f.txt").write_text(human_report + "\\n", encoding="utf-8")
+    human_path.write_text(human_report + "\n", encoding="utf-8")
+    (human_path.parent / "latest-sec-13f.txt").write_text(human_report + "\n", encoding="utf-8")
     return summary
 
 
