@@ -110,6 +110,18 @@ EIA_SERIES = [
 ]
 
 
+def failure_metadata(series_id: str, exc: Exception) -> dict[str, Any]:
+    failure: dict[str, Any] = {
+        "series_id": series_id,
+        "error_type": type(exc).__name__,
+    }
+    response = getattr(exc, "response", None)
+    status_code = getattr(response, "status_code", None)
+    if isinstance(status_code, int):
+        failure["http_status"] = status_code
+    return failure
+
+
 def _finite_number(value: Any) -> float:
     try:
         number = float(value)
@@ -330,15 +342,7 @@ def run(
             try:
                 series.append(fetch_series(definition, api_key, history_limit=history_limit))
             except Exception as exc:
-                failure = {
-                    "series_id": definition["series_id"],
-                    "error_type": type(exc).__name__,
-                }
-                response = getattr(exc, "response", None)
-                status_code = getattr(response, "status_code", None)
-                if isinstance(status_code, int):
-                    failure["http_status"] = status_code
-                failures.append(failure)
+                failures.append(failure_metadata(definition["series_id"], exc))
         status = "SUCCESS" if not failures else ("PARTIAL" if series else "FAILED")
 
     publish_result = (
