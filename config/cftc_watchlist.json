@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "report_type": "Legacy Futures Only",
+  "contracts": [
+    {
+      "market": "Gold futures",
+      "symbol": "GC",
+      "contract_market_code": "088691"
+    },
+    {
+      "market": "WTI crude oil futures",
+      "symbol": "CL",
+      "contract_market_code": "067651"
+    },
+    {
+      "market": "Natural gas futures",
+      "symbol": "NG",
+      "contract_market_code": "023651"
+    }
+  ]
+}
