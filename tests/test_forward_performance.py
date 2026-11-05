@@ -62,7 +62,7 @@ def test_performance_report_warns_when_sample_is_small():
     rendered = "\\n".join(lines)
     assert "Forward Paper Tracking" in rendered
     assert "نمونه کمتر از ۱۰" in rendered
-    assert "کارمزد، لغزش قیمت" in rendered
+    assert "هزینه رفت‌وبرگشت تنظیم نشده" in rendered
 
 
 def test_performance_report_handles_no_matured_evaluations():
