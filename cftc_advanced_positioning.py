@@ -224,7 +224,7 @@ def build_market_series(
             "net": current["net"],
             "weekly_net_change": current["net"] - prior["net"] if prior else None,
             "net_as_pct_open_interest": (
-                current["net"] / latest["open_interest"] * 100 if latest["open_interest"] else None
+                round(current["net"] / latest["open_interest"] * 100, 2) if latest["open_interest"] else None
             ),
             "historical_percentile": stats["percentile"],
             "historical_z_score": stats["z_score"],
