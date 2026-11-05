@@ -15,33 +15,50 @@ from report_formatting import social_footer_lines
 API_ROOT = "https://api.stlouisfed.org/fred"
 USER_AGENT = "GRIOS-Research/15.0"
 
-# Match exact official FRED release names; never infer a release ID from memory.
+# Official FRED release IDs are the stable match key; names are validated aliases.
 RELEASE_CATALOG = {
     "Consumer Price Index": {
+        "release_id": 10,
+        "accepted_names": ["Consumer Price Index"],
         "label_fa": "شاخص قیمت مصرف‌کننده (CPI)",
         "category": "inflation",
     },
     "Employment Situation": {
+        "release_id": 50,
+        "accepted_names": ["Employment Situation"],
         "label_fa": "گزارش وضعیت اشتغال آمریکا",
         "category": "labor",
     },
     "Gross Domestic Product": {
+        "release_id": 53,
+        "accepted_names": ["Gross Domestic Product"],
         "label_fa": "تولید ناخالص داخلی (GDP)",
         "category": "growth",
     },
     "Personal Income and Outlays": {
+        "release_id": 54,
+        "accepted_names": ["Personal Income and Outlays"],
         "label_fa": "درآمد و مخارج شخصی (PCE)",
         "category": "inflation",
     },
     "Advance Monthly Sales for Retail and Food Services": {
+        "release_id": 9,
+        "accepted_names": ["Advance Monthly Sales for Retail and Food Services"],
         "label_fa": "فروش خرده‌فروشی",
         "category": "consumption",
     },
     "Industrial Production and Capacity Utilization": {
+        "release_id": 13,
+        "accepted_names": [
+            "G.17 Industrial Production and Capacity Utilization",
+            "Industrial Production and Capacity Utilization",
+        ],
         "label_fa": "تولید صنعتی و ظرفیت تولید",
         "category": "production",
     },
     "Producer Price Index": {
+        "release_id": 46,
+        "accepted_names": ["Producer Price Index"],
         "label_fa": "شاخص قیمت تولیدکننده (PPI)",
         "category": "inflation",
     },
@@ -68,24 +85,30 @@ def match_release_catalog(releases: Any) -> tuple[list[dict[str, Any]], list[str
         raise ValueError("FRED releases response must contain an array.")
     matched = []
     missing = []
-    by_name = {
-        str(item.get("name") or "").strip(): item
-        for item in releases if isinstance(item, dict)
-    }
-    for official_name, definition in RELEASE_CATALOG.items():
-        item = by_name.get(official_name)
-        if not item:
-            missing.append(official_name)
+    by_id = {}
+    for item in releases:
+        if not isinstance(item, dict):
             continue
         try:
-            release_id = int(item["id"])
-        except (KeyError, TypeError, ValueError) as exc:
-            raise ValueError("FRED release entry has an invalid ID.") from exc
-        if release_id <= 0:
-            raise ValueError("FRED release ID must be positive.")
+            release_id = int(item.get("id"))
+        except (TypeError, ValueError):
+            continue
+        if release_id > 0:
+            by_id[release_id] = item
+
+    for catalog_name, definition in RELEASE_CATALOG.items():
+        release_id = definition["release_id"]
+        item = by_id.get(release_id)
+        if not item:
+            missing.append(catalog_name)
+            continue
+        actual_name = str(item.get("name") or "").strip()
+        if actual_name not in set(definition["accepted_names"]):
+            missing.append(catalog_name)
+            continue
         matched.append({
             "release_id": release_id,
-            "release_name": official_name,
+            "release_name": actual_name,
             "label_fa": definition["label_fa"],
             "category": definition["category"],
             "source_url": _safe_release_url(item),
