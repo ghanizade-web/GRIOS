@@ -11,6 +11,7 @@ from typing import Any
 import httpx
 
 from data_coverage import publish_market_series
+from report_formatting import social_footer_lines
 
 API_ROOT = "https://api.eia.gov/v2/seriesid"
 USER_AGENT = "GRIOS-Research/15.0"
@@ -206,6 +207,7 @@ def build_persian_report(
         "⚠️ این ارقام سطح موجودی هفتگی هستند؛ نه میزان خریدوفروش لحظه‌ای. ساعت انتشار، اجماع تحلیلگران و غافلگیری نسبت به انتظار بازار در این منبع موجود نیست.",
         "🧭 کاهش یا افزایش موجودی به‌تنهایی جهت قیمت نفت را تعیین نمی‌کند؛ تولید، واردات، پالایش، صادرات، تقاضا و وضعیت ذخایر باید هم‌زمان بررسی شوند.",
     ])
+    lines.extend(social_footer_lines())
     return "\n".join(lines)
 
 
