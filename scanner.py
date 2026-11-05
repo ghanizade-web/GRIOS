@@ -1736,155 +1736,119 @@ def telegram_report(
     universe_summary: str | None = None,
 ) -> str:
     tehran = now_utc().astimezone(ZoneInfo("Asia/Tehran"))
-
+    divider = "━━━━━━━━━━━━━━━━━━━━"
     lines = [
-        f"🌐 GRIOS | رادار فرصت‌ها | {tehran.strftime('%Y-%m-%d %H:%M')} تهران"
+        "🌐 گزارش روزانه رادار بازار GRIOS",
+        f"🕒 زمان تهیه: {tehran.strftime('%Y-%m-%d | %H:%M')} به وقت تهران",
+        divider,
+        "📡 وضعیت پوشش بازار",
     ]
 
     labels = {
-        "crypto": "کریپتو اسپات",
+        "crypto": "رمزارزها",
         "us_equity_etf": "سهام و ETF آمریکا",
-        "commodity_proxy": "ETFهای نماینده کالا",
-        "commodity_energy": "سری‌های انرژی EIA",
-        "fx_reference": "نرخ مرجع ECB",
-        "macro": "زمینه کلان FRED",
+        "commodity_proxy": "صندوق‌های کالایی",
+        "commodity_energy": "داده‌های انرژی",
+        "fx_reference": "نرخ‌های مرجع ارز",
+        "macro": "شاخص‌های اقتصاد کلان",
     }
-
-    lines.append(
-        "📡 پوشش: "
-        + " | ".join(
-            f"{label}: {sum(s.asset_class == key for s in series_list)}"
-            for key, label in labels.items()
-        )
+    lines.extend(
+        f"• {label}: {sum(s.asset_class == key for s in series_list)} نماد"
+        for key, label in labels.items()
     )
 
     if universe_summary:
-        lines.append("🧪 " + universe_summary)
+        lines.extend([divider, "🧪 فیلتر بازار رمزارز", universe_summary])
 
     ranked = []
-
-    for s in series_list:
-        score = scores.get(s.key, {})
-
-        if stale(s):
+    for item in series_list:
+        score = scores.get(item.key, {})
+        if stale(item):
             continue
-
-        if (
-            score.get("score") is not None
-            and score.get("decision") == "WATCH_ONLY"
-        ):
-            ranked.append((score["score"], s, score))
-
-    ranked.sort(key=lambda x: x[0], reverse=True)
+        if score.get("score") is not None and score.get("decision") == "WATCH_ONLY":
+            ranked.append((score["score"], item, score))
+    ranked.sort(key=lambda value: value[0], reverse=True)
 
     if ranked:
-        lines.append(
-            "\n🔎 نامزدهای پایش — امتیاز آزمایشی، نه سیگنال معامله"
-        )
+        lines.extend([
+            divider,
+            "🔎 نامزدهای قابل‌پایش",
+            "رتبه‌ها آزمایشی‌اند و سیگنال خرید یا فروش محسوب نمی‌شوند.",
+        ])
+        for index, (value, item, score) in enumerate(ranked[:7], 1):
+            price = price_now(item)
+            lines.extend([
+                divider,
+                f"{index}) {item.symbol} — امتیاز آزمایشی: {value}/100",
+                f"📍 نوع دارایی: {labels.get(item.asset_class, item.asset_class)}",
+                f"💵 آخرین قیمت: {price:g} {item.currency}" if price is not None else "💵 قیمت معتبر در دسترس نیست",
+                f"🗓 تاریخ داده: {item.data_as_of or 'نامشخص'} | منبع: {item.provider}",
+                f"📊 پوشش عوامل: {score.get('coverage', 0)}٪",
+                f"🧩 مبنای امتیاز: {score.get('why', 'جزئیات کافی موجود نیست')}",
+            ])
 
-        for index, (value, s, score) in enumerate(ranked[:7], 1):
-            price = price_now(s)
-
-            lines.append(
-                f"\n{index}. {s.symbol} | امتیاز {value}/100 "
-                f"| پوشش {score['coverage']}% | {s.asset_class}"
-            )
-
-            lines.append(
-                f"   آخرین قیمت: {price:g} {s.currency} "
-                f"| تاریخ داده: {s.data_as_of} | منبع: {s.provider}"
-            )
-
-            lines.append(f"   مبنا: {score['why']}")
-
-            if s.asset_class == "crypto":
-                extra = s.extra
-
-                momentum = "/".join(
-                    "—" if extra.get(k) is None
-                    else f"{extra[k]:+.1f}%"
-                    for k in (
-                        "change_24h",
-                        "change_7d",
-                        "change_30d",
-                    )
+            if item.asset_class == "crypto":
+                extra = item.extra
+                momentum = " / ".join(
+                    "ناموجود" if extra.get(key) is None else f"{extra[key]:+.1f}٪"
+                    for key in ("change_24h", "change_7d", "change_30d")
                 )
-
-                lines.append(f"   بازده ۲۴س/۷ر/۳۰ر: {momentum}")
-
+                lines.append(f"📈 تغییر قیمت (۲۴ ساعت / ۷ روز / ۳۰ روز): {momentum}")
                 if extra.get("market_cap") and extra.get("volume_24h"):
-                    turnover = (
-                        extra["volume_24h"] / extra["market_cap"] * 100
-                    )
-                    lines.append(
-                        f"   گردش حجم/ارزش بازار: {turnover:.2f}%"
-                    )
-
+                    turnover = extra["volume_24h"] / extra["market_cap"] * 100
+                    lines.append(f"🔄 نسبت حجم معاملات به ارزش بازار: {turnover:.2f}٪")
                 if extra.get("market_cap") and extra.get("fdv"):
-                    ratio = extra["fdv"] / extra["market_cap"]
-                    lines.append(f"   FDV/ارزش بازار: {ratio:.2f}x")
+                    lines.append(f"🧮 نسبت ارزش‌گذاری رقیق‌شده به ارزش بازار: {extra['fdv'] / extra['market_cap']:.2f} برابر")
+                lines.append(f"🧾 وضعیت احراز داده: {extra.get('universe_status', 'نامشخص')}")
 
-                lines.append(
-                    f"   وضعیت منابع: {extra.get('universe_status', 'UNKNOWN')}"
-                )
-
-            if s.caveat:
-                lines.append(f"   محدودیت داده: {s.caveat}")
+            if item.caveat:
+                lines.append(f"⚠️ محدودیت داده: {item.caveat}")
 
     else:
-        lines.append(
-            "\n⏸️ داده تازه و کافی برای نامزد رتبه‌پذیر وجود ندارد."
-        )
+        lines.extend([divider, "⏸️ در این نوبت، داده تازه و کافی برای معرفی نامزد قابل‌رتبه‌بندی وجود ندارد."])
 
-    fx = [
-        s for s in series_list
-        if s.asset_class == "fx_reference" and not stale(s)
-    ]
-
+    fx = [item for item in series_list if item.asset_class == "fx_reference" and not stale(item)]
     if fx:
-        lines.append(
-            "\n💱 فارکس: فقط نرخ مرجع روزانه ECB؛ "
-            "بدون bid/ask و spread، سیگنال خرید/فروش صادر نمی‌شود."
-        )
+        lines.extend([
+            divider,
+            "💱 بازار ارز",
+            "داده‌های ارز در این بخش نرخ مرجع روزانه بانک مرکزی اروپا هستند؛ قیمت لحظه‌ای، نرخ خریدوفروش و فاصله Bid/Ask در این فید وجود ندارد.",
+        ])
 
-    macro = [
-        s for s in series_list
-        if s.asset_class == "macro" and not stale(s)
-    ]
-
+    macro = [item for item in series_list if item.asset_class == "macro" and not stale(item)]
     if macro:
+        macro_labels = {
+            "DGS10": "بازده اوراق ۱۰ساله آمریکا",
+            "DGS2": "بازده اوراق ۲ساله آمریکا",
+            "DTWEXBGS": "شاخص گسترده دلار",
+            "VIXCLS": "شاخص نوسان VIX",
+        }
         parts = [
-            f"{s.symbol} {price_now(s):g}{s.currency} ({s.data_as_of})"
-            for s in macro if price_now(s) is not None
+            f"{macro_labels.get(item.symbol, item.symbol)}: {price_now(item):g} ({item.data_as_of})"
+            for item in macro if price_now(item) is not None
         ]
-
-        values = {s.symbol: price_now(s) for s in macro}
-
-        if (
-            values.get("DGS10") is not None
-            and values.get("DGS2") is not None
-        ):
-            parts.append(
-                f"10Y-2Y: {values['DGS10'] - values['DGS2']:+.2f}pp"
-            )
-
-        lines.append("\n🧭 زمینه کلان FRED: " + " | ".join(parts))
+        values = {item.symbol: price_now(item) for item in macro}
+        if values.get("DGS10") is not None and values.get("DGS2") is not None:
+            parts.append(f"اختلاف بازده ۱۰ساله و ۲ساله: {values['DGS10'] - values['DGS2']:+.2f} واحد درصد")
+        lines.extend([divider, "🧭 نمای کلی اقتصاد کلان", *parts])
 
     if errors:
-        lines.append("\n⚠️ وضعیت فیدها:")
+        lines.extend([divider, "⚠️ هشدارهای منابع داده"])
         lines.extend(f"• {error}" for error in errors[:8])
 
-    lines.append(
-        "\n🧭 تصمیم CIO: فقط WATCH. این نسخه ابزار غربالگری اولیه است؛ "
-        "جریان نهادی تأییدشده، کاتالیزور بنیادی و نسبت ریسک/بازده کامل "
-        "هنوز متصل نیست."
-    )
-
-    lines.append(
-        "امتیازها کالیبره یا به‌صورت تاریخی اعتبارسنجی نشده‌اند؛ "
-        "هیچ سفارش یا تخصیص سرمایه‌ای صادر نمی‌شود."
-    )
-
+    lines.extend([
+        divider,
+        "🧭 جمع‌بندی کمیته سرمایه‌گذاری",
+        "وضعیت این نسخه: فقط پایش (WATCH). داده جریان سرمایه نهادیِ تأییدشده، کاتالیست بنیادیِ کامل و مدل جامع ریسک به بازده هنوز در این گزارش ادغام نشده‌اند.",
+        "⛔ امتیازها هنوز کالیبره و با آزمون تاریخی مستقل اعتبارسنجی نشده‌اند. این گزارش توصیه شخصی، سفارش معاملاتی یا تخصیص سرمایه صادر نمی‌کند.",
+        divider,
+        "🔗 ارتباط و دنبال‌کردن تحلیل‌ها",
+        "تلگرام: https://t.me/drghanizade",
+        "اینستاگرام: https://www.instagram.com/dr.ghanizade",
+        "ایکس: https://x.com/DrGhanizadeh",
+        "لینکدین: https://www.linkedin.com/in/drghanizade",
+        "TradingView: https://www.tradingview.com/u/DrGhanizadeh",
+    ])
     return "\n".join(lines)
 
 
@@ -1949,8 +1913,9 @@ def main() -> int:
         )
     )
 
+    universe_mode_label = "کشف دارایی‌های واجد شرایط" if crypto_mode == "discovery" else "فهرست نمادهای منتخب"
     universe_summary = (
-        f"Crypto Universe {crypto_mode.upper()} | "
+        f"حالت: {universe_mode_label} | "
         f"ورودی: {universe_stats['input_count']} | "
         f"واجد شرایط: {universe_stats['eligible_count']} | "
         f"حذف‌شده: {universe_stats['excluded_count']}"
@@ -2039,10 +2004,25 @@ def main() -> int:
         scores,
         universe_summary=universe_summary,
     )
+    coverage_labels = {
+        "COVERED": "پوشش کامل فیدهای درخواستی",
+        "DEGRADED": "پوشش ناقص",
+        "DISCOVERY": "حالت کشف دارایی",
+    }
+    hub_labels = {
+        "DIRECT_SUPABASE": "اتصال مستقیم به پایگاه داده برقرار",
+        "CONNECTED": "اتصال به هاب داده برقرار",
+        "NOT_CONFIGURED": "اتصال تنظیم نشده",
+        "FAILED": "ارسال ناموفق",
+        "NO_DATA": "داده‌ای برای ارسال وجود نداشت",
+        "CONFIG_ERROR": "خطای تنظیمات",
+        "REJECTED": "داده توسط مقصد پذیرفته نشد",
+    }
     report += (
-        f"\n\n📊 پوشش داده: {coverage_report['overall_status']} | "
-        f"Data Hub: {hub_result['status']} "
-        f"({hub_result['accepted']} رکورد پذیرفته‌شده)\n"
+        f"\n\n━━━━━━━━━━━━━━━━━━━━\n"
+        f"📊 جمع‌بندی پوشش داده: {coverage_labels.get(coverage_report['overall_status'], 'وضعیت نامشخص')}\n"
+        f"🔗 وضعیت ذخیره‌سازی: {hub_labels.get(hub_result['status'], 'وضعیت نامشخص')}\n"
+        f"📥 تعداد رکورد پذیرفته‌شده: {hub_result['accepted']}\n"
     )
 
     output_dir = Path(args.out)

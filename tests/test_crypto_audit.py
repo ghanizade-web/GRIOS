@@ -551,7 +551,7 @@ def test_main_persists_runtime_commit_sha_in_audit(tmp_path, monkeypatch):
     payload = json.loads(audit_files[0].read_text(encoding="utf-8"))
     assert payload["source_revision"]["git_commit_sha"] == "runtime-commit-123"
     assert "baseline_sha" not in payload["audit"]
-    assert (output_dir / "latest.txt").read_text(encoding="utf-8").startswith("test report\n\n📊 پوشش داده:")
+    assert (output_dir / "latest.txt").read_text(encoding="utf-8").startswith("test report\n\n━━━━━━━━━━━━━━━━━━━━\n📊 جمع‌بندی پوشش داده:")
 
 
 
