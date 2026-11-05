@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "futures_only": true,
+  "contracts": [
+    {
+      "report_type": "DISAGGREGATED",
+      "market": "Gold futures",
+      "symbol": "GC",
+      "contract_market_code": "088691"
+    },
+    {
+      "report_type": "DISAGGREGATED",
+      "market": "WTI crude oil futures",
+      "symbol": "CL",
+      "contract_market_code": "067651"
+    },
+    {
+      "report_type": "DISAGGREGATED",
+      "market": "Natural gas futures",
+      "symbol": "NG",
+      "contract_market_code": "023651"
+    },
+    {
+      "report_type": "TFF",
+      "market": "E-mini S&P 500 futures",
+      "symbol": "ES",
+      "contract_market_code": "13874A"
+    },
+    {
+      "report_type": "TFF",
+      "market": "Mini Nasdaq-100 futures",
+      "symbol": "NQ",
+      "contract_market_code": "209742"
+    },
+    {
+      "report_type": "TFF",
+      "market": "Euro FX futures",
+      "symbol": "6E",
+      "contract_market_code": "099741"
+    },
+    {
+      "report_type": "TFF",
+      "market": "British Pound futures",
+      "symbol": "6B",
+      "contract_market_code": "096742"
+    },
+    {
+      "report_type": "TFF",
+      "market": "Japanese Yen futures",
+      "symbol": "6J",
+      "contract_market_code": "097741"
+    }
+  ]
+}
