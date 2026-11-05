@@ -104,3 +104,24 @@ def test_publish_report_applies_rtl_before_sending(tmp_path, monkeypatch):
     assert publisher.publish_report(report, "dummy", "@grios") == 1
     assert sent[0].startswith("\u2067")
     assert "BTC: 100" in sent[0]
+
+
+
+def test_chunk_message_counts_utf16_units_for_astral_emoji():
+    chunks = publisher.chunk_message("🚀🚀🚀🚀", limit=3)
+    assert chunks == ["🚀", "🚀", "🚀", "🚀"]
+    assert all(publisher.utf16_units(chunk) <= 3 for chunk in chunks)
+
+
+def test_publish_report_measures_rtl_isolates_and_emoji_before_chunking(tmp_path, monkeypatch):
+    report = tmp_path / "report.txt"
+    report.write_text("\n".join(["گزارش " + ("🚀" * 200) for _ in range(10)]), encoding="utf-8")
+    sent = []
+    monkeypatch.setattr(publisher, "_send", lambda token, chat_id, text: sent.append(text))
+
+    count = publisher.publish_report(report, "dummy", "@grios")
+
+    assert count == len(sent)
+    assert len(sent) > 1
+    assert all(publisher.utf16_units(chunk) <= publisher.TELEGRAM_SAFE_TEXT_UNITS for chunk in sent)
+    assert all(chunk.startswith("\u2067") and chunk.endswith("\u2069") for chunk in sent)

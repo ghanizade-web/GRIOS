@@ -12,7 +12,15 @@ RTL_MARK = "\u2067"
 POP_DIRECTIONAL_ISOLATE = "\u2069"
 
 
-def chunk_message(message: str, limit: int = 4000) -> list[str]:
+TELEGRAM_SAFE_TEXT_UNITS = 3800
+
+
+def utf16_units(text: str) -> int:
+    """Count Telegram's text length conservatively in UTF-16 code units."""
+    return sum(2 if ord(char) > 0xFFFF else 1 for char in text)
+
+
+def chunk_message(message: str, limit: int = TELEGRAM_SAFE_TEXT_UNITS) -> list[str]:
     if limit < 1:
         raise ValueError("limit must be positive")
     text = message.strip()
@@ -22,15 +30,26 @@ def chunk_message(message: str, limit: int = 4000) -> list[str]:
     current = ""
     for line in text.splitlines():
         candidate = line if not current else current + "\n" + line
-        if len(candidate) <= limit:
+        if utf16_units(candidate) <= limit:
             current = candidate
             continue
         if current:
             chunks.append(current)
             current = ""
-        while len(line) > limit:
-            chunks.append(line[:limit])
-            line = line[limit:]
+        while utf16_units(line) > limit:
+            part_chars: list[str] = []
+            used_units = 0
+            for char in line:
+                char_units = 2 if ord(char) > 0xFFFF else 1
+                if used_units + char_units > limit:
+                    break
+                part_chars.append(char)
+                used_units += char_units
+            if not part_chars:
+                raise ValueError("limit is too small for a Unicode character")
+            part = "".join(part_chars)
+            chunks.append(part)
+            line = line[len(part):]
         current = line
     if current:
         chunks.append(current)
@@ -90,9 +109,11 @@ def _send(token: str, chat_id: str, text: str, timeout: int = 20) -> None:
 
 def publish_report(report_path: str | Path, token: str, chat_id: str) -> int:
     report = Path(report_path).read_text(encoding="utf-8")
-    chunks = chunk_message(report)
+    # Add RTL isolates before measuring length; they count toward Telegram's limit.
+    rendered = apply_rtl_direction(report)
+    chunks = chunk_message(rendered)
     for chunk in chunks:
-        _send(token, chat_id, apply_rtl_direction(chunk))
+        _send(token, chat_id, chunk)
     return len(chunks)
 
 
