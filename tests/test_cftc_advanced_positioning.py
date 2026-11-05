@@ -108,7 +108,7 @@ def test_persian_report_labels_participant_categories_and_discloses_limits():
     )
     assert "مدیران دارایی و نهادهای سرمایه‌گذاری" in report
     assert "صندوق‌های اهرمی" in report
-    assert "جریان لحظه‌ای ورود سرمایه" in report
+    assert "جریان قطعی ورود سرمایه" in report
     assert "Futures Only" in report
     assert "https://farcaster.xyz/drghanizade" in report
 
