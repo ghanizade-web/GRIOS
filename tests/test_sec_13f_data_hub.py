@@ -1,6 +1,6 @@
 import pytest
 
-from sec_13f_data_hub import GriosDataHubClient
+from sec_13f_data_hub import GriosDataHubClient, Supabase13FClient
 from sec_13f_registry import prepare_13f_data_hub_payload
 
 
@@ -102,3 +102,61 @@ def test_rejects_non_https_or_pathful_base_url():
         GriosDataHubClient("http://hub.example.com", "token")
     with pytest.raises(ValueError, match="must not include a path"):
         GriosDataHubClient("https://hub.example.com/api", "token")
+
+
+
+def test_supabase_publisher_calls_service_role_rpc_with_snapshot_payload():
+    snapshot_id = prepare_13f_data_hub_payload(sample_report())["snapshot"]["snapshot_id"]
+    fake = FakeHttpClient(FakeResponse({
+        "snapshot_id": snapshot_id,
+        "snapshot_inserted": True,
+        "filings_received": 1,
+        "holdings_received": 1,
+    }))
+    client = Supabase13FClient(
+        "https://project.supabase.co", "service-role-key", client=fake
+    )
+    result = client.publish_snapshot(sample_report(), source_revision="abc123")
+    method, url, kwargs = fake.calls[0]
+    assert method == "POST"
+    assert url.endswith("/rest/v1/rpc/ingest_grios_13f_snapshot")
+    assert kwargs["headers"]["apikey"] == "service-role-key"
+    assert kwargs["headers"]["authorization"] == "Bearer service-role-key"
+    assert kwargs["json"]["p_snapshot"]["source_revision"] == "abc123"
+    assert kwargs["json"]["p_snapshot"]["snapshot_id"] == snapshot_id
+    assert result["status"] == "accepted"
+    assert result["snapshot_id"] == snapshot_id
+
+
+def test_supabase_publisher_rejects_wrong_snapshot_identity():
+    fake = FakeHttpClient(FakeResponse({"snapshot_id": "b" * 64}))
+    client = Supabase13FClient(
+        "https://project.supabase.co", "service-role-key", client=fake
+    )
+    with pytest.raises(ValueError, match="different"):
+        client.publish_snapshot(sample_report())
+
+
+def test_supabase_read_latest_uses_rpc_and_returns_snapshot():
+    fake = FakeHttpClient(FakeResponse({"snapshot_id": "a" * 64, "holdings": []}, status=200))
+    client = Supabase13FClient(
+        "https://project.supabase.co", "service-role-key", client=fake
+    )
+    result = client.get_latest_snapshot("0000123456", "2026-09-30")
+    method, url, kwargs = fake.calls[0]
+    assert method == "POST"
+    assert url.endswith("/rest/v1/rpc/get_grios_latest_13f_snapshot")
+    assert kwargs["json"] == {
+        "p_filer_cik": "0000123456",
+        "p_report_period": "2026-09-30",
+    }
+    assert result["snapshot_id"] == "a" * 64
+
+
+def test_supabase_client_rejects_non_origin_urls_and_missing_key():
+    with pytest.raises(ValueError, match="HTTPS origin"):
+        Supabase13FClient("http://project.supabase.co", "key")
+    with pytest.raises(ValueError, match="HTTPS origin"):
+        Supabase13FClient("https://project.supabase.co/rest/v1", "key")
+    with pytest.raises(ValueError, match="service-role key"):
+        Supabase13FClient("https://project.supabase.co", " ")
