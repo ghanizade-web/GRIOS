@@ -185,3 +185,66 @@ def test_persian_watchlist_summary_includes_partial_failure_and_top_positions():
     assert "پردازش ناقص" in rendered
     assert "Example A" in rendered
     assert "TimeoutError" in rendered
+
+
+
+def test_watchlist_prefers_direct_supabase_publisher_when_credentials_exist(
+    tmp_path, monkeypatch
+):
+    source = tmp_path / "watchlist.json"
+    write_watchlist(source, [{"cik": "1364742", "name": "BlackRock, Inc."}])
+    created = []
+
+    class FakeSupabaseClient:
+        def __init__(self, supabase_url, service_role_key):
+            created.append((supabase_url, service_role_key))
+
+    monkeypatch.setattr(watchlist_module, "Supabase13FClient", FakeSupabaseClient)
+    monkeypatch.setattr(
+        watchlist_module,
+        "SecEdgarClient",
+        lambda *, user_agent: object(),
+    )
+    monkeypatch.setattr(
+        watchlist_module,
+        "ingest_13f_report_period",
+        lambda *args, **kwargs: {
+            "filer_cik": "0001364742",
+            "report_period": "2026-09-30",
+            "holdings_count": 0,
+            "discovered_filing_count": 1,
+            "data_hub_publish": {"snapshot_id": "a" * 64},
+        },
+    )
+    result = watchlist_module.run_watchlist(
+        "2026-09-30",
+        watchlist_path=source,
+        output_dir=tmp_path / "reports",
+        registry_path=tmp_path / "registry.sqlite3",
+        summary_path=tmp_path / "summary.json",
+        environ={
+            "SEC_USER_AGENT": ENV["SEC_USER_AGENT"],
+            "SUPABASE_URL": "https://project.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "service-role-key",
+        },
+    )
+    assert created == [("https://project.supabase.co", "service-role-key")]
+    assert result["publisher_backend"] == "DIRECT_SUPABASE"
+    assert result["filers_published"] == 1
+
+
+def test_watchlist_rejects_partial_supabase_credentials(tmp_path):
+    source = tmp_path / "watchlist.json"
+    write_watchlist(source, [{"cik": "1364742", "name": "BlackRock"}])
+    with pytest.raises(RuntimeError, match="must be configured together"):
+        watchlist_module.run_watchlist(
+            "2026-09-30",
+            watchlist_path=source,
+            output_dir=tmp_path / "reports",
+            registry_path=tmp_path / "registry.sqlite3",
+            summary_path=tmp_path / "summary.json",
+            environ={
+                "SEC_USER_AGENT": ENV["SEC_USER_AGENT"],
+                "SUPABASE_URL": "https://project.supabase.co",
+            },
+        )
