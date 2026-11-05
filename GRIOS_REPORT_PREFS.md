@@ -38,7 +38,7 @@ The owner's broader operating blueprint is recorded in [`GRIOS_OPERATING_MANUAL_
 
 
 
-## Research sources to consider
+## Event calendar and catalyst discipline\n- Use official release calendars for event dates and preserve the source's exact date and time precision. If the source provides only a date, do not invent an hour or timezone.\n- Keep consensus, actual result, revision and surprise as unavailable until a source explicitly provides them. A calendar event alone does not justify a directional market thesis.\n- Mark events as source-confirmed calendar entries, not as verified market catalysts; assess impact only after expectations, actual release and market reaction can be compared.\n\n## Research sources to consider
 - Idea discovery and investment theses: [Capitalist Exploits](https://capitalistexploits.at/), [CAPEX Insider](https://capexinsider.com/), [Real Vision](https://www.realvision.com/your-future), and [Seeking Alpha](https://seekingalpha.com/), plus comparable global research/commentary sources when relevant and accessible.
 - These are leads and viewpoints, not automatic confirmation. Note paywalls, author incentives, publication dates, and whether claims are independently verified. Do not imply access to subscriber-only material when unavailable.
 - For validation, prioritize primary sources and high-quality independent reporting/data: company filings and releases, SEC, EIA, FRED, CFTC, grid operators, energy agencies, exchange/inventory data, and other relevant regulators or statistical agencies. Cite the source nearest to the claim.
