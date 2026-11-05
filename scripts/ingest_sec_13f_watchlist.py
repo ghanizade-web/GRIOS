@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from sec_13f_data_hub import GriosDataHubClient
+from sec_13f_data_hub import GriosDataHubClient, Supabase13FClient
 from sec_13f_ingestion import ingest_13f_report_period
 from report_formatting import social_footer_lines
 from sec_edgar_client import SecEdgarClient, normalize_cik
@@ -170,23 +170,36 @@ def run_watchlist(
     user_agent = env.get("SEC_USER_AGENT", "").strip()
     data_hub_url = env.get("GRIOS_DATA_HUB_URL", "").strip()
     token = env.get("GRIOS_INGEST_TOKEN", "").strip()
+    supabase_url = env.get("SUPABASE_URL", "").strip()
+    service_role_key = env.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     source_revision = env.get("GRIOS_SOURCE_REVISION", "").strip() or env.get("GITHUB_SHA", "").strip() or None
-    missing = [
-        name for name, value in (
-            ("SEC_USER_AGENT", user_agent),
-            ("GRIOS_DATA_HUB_URL", data_hub_url),
-            ("GRIOS_INGEST_TOKEN", token),
-        ) if not value
-    ]
-    if missing:
+    if not user_agent:
+        raise RuntimeError("Missing required GitHub Actions variable: SEC_USER_AGENT.")
+
+    if bool(supabase_url) != bool(service_role_key):
         raise RuntimeError(
-            "Missing required GitHub Actions variables/secrets: " + ", ".join(missing)
+            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured together."
         )
+    if supabase_url and service_role_key:
+        hub = Supabase13FClient(supabase_url, service_role_key)
+        publisher_backend = "DIRECT_SUPABASE"
+    else:
+        missing = [
+            name for name, value in (
+                ("GRIOS_DATA_HUB_URL", data_hub_url),
+                ("GRIOS_INGEST_TOKEN", token),
+            ) if not value
+        ]
+        if missing:
+            raise RuntimeError(
+                "Missing SEC 13F publisher configuration: " + ", ".join(missing)
+            )
+        hub = GriosDataHubClient(data_hub_url, token)
+        publisher_backend = "DATA_HUB_WORKER"
 
     entries = load_watchlist(watchlist_path)
     # One shared SEC client applies request pacing across every filer.
     sec = SecEdgarClient(user_agent=user_agent)
-    hub = GriosDataHubClient(data_hub_url, token)
     reports_dir = Path(output_dir)
     reports_dir.mkdir(parents=True, exist_ok=True)
     results = []
@@ -258,6 +271,7 @@ def run_watchlist(
         "report_period": period,
         "watchlist_path": str(watchlist_path),
         "source_revision": source_revision,
+        "publisher_backend": publisher_backend,
         "status": "SUCCESS" if failed == 0 else "PARTIAL_FAILURE",
         "filers_total": len(entries),
         "filers_published": published,
