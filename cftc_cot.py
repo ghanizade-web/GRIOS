@@ -178,10 +178,64 @@ def build_market_series(contract: dict[str, str], rows: list[dict[str, Any]]) ->
     }
 
 
+def _format_contract_number(value: Any, *, signed: bool = False) -> str:
+    if value is None:
+        return "ناموجود"
+    number = float(value)
+    return f"{number:+,.0f}" if signed else f"{number:,.0f}"
+
+
+def render_persian_report(payload: dict[str, Any]) -> str:
+    status_labels = {
+        "PUBLISHED": "ذخیره‌سازی موفق",
+        "DIRECT_SUPABASE": "ذخیره‌سازی مستقیم در پایگاه داده",
+        "CONNECTED": "اتصال به هاب داده برقرار",
+        "NOT_CONFIGURED": "اتصال پایگاه داده تنظیم نشده",
+        "SKIPPED": "ارسال به پایگاه داده انجام نشد",
+        "FAILED": "ذخیره‌سازی ناموفق",
+        "REJECTED": "داده توسط مقصد پذیرفته نشد",
+    }
+    lines = [
+        "🏛️ گزارش هفتگی موقعیت معامله‌گران — GRIOS",
+        "📚 منبع: کمیسیون معاملات آتی کالای آمریکا (CFTC)",
+        f"🕒 زمان دریافت: {payload.get('retrieved_at', 'نامشخص')}",
+        "━━━━━━━━━━━━━━━━━━━━",
+        "⚠️ این گزارش موقعیت‌های هفتگی را نشان می‌دهد؛ نه معاملات لحظه‌ای و نه جریان قطعی ورود یا خروج سرمایه.",
+    ]
+    for index, item in enumerate(payload.get("contracts", []), 1):
+        lines.extend([
+            "━━━━━━━━━━━━━━━━━━━━",
+            f"{index}) {item.get('market', 'بازار نامشخص')} ({item.get('symbol', '—')})",
+            f"🗓 تاریخ مبنای گزارش: {item.get('report_date', 'نامشخص')} — تاریخ موقعیت‌ها سه‌شنبه است.",
+            f"📦 موقعیت باز کل (Open Interest): {_format_contract_number(item.get('open_interest'))} قرارداد",
+            f"🟢 خالص موقعیت معامله‌گران غیرتجاری: {_format_contract_number(item.get('noncommercial_net'), signed=True)} قرارداد",
+            f"🔴 تغییر هفتگی خالص موقعیت غیرتجاری: {_format_contract_number(item.get('noncommercial_weekly_change'), signed=True)} قرارداد",
+            f"📊 صدک تاریخی خالص موقعیت غیرتجاری: {item.get('noncommercial_percentile', 'ناموجود')}٪",
+            f"📐 امتیاز استاندارد تاریخی (Z-Score): {item.get('noncommercial_z_score', 'ناموجود')}",
+            f"🔵 خالص موقعیت معامله‌گران تجاری: {_format_contract_number(item.get('commercial_net'), signed=True)} قرارداد",
+            f"🔁 تغییر هفتگی خالص موقعیت تجاری: {_format_contract_number(item.get('commercial_weekly_change'), signed=True)} قرارداد",
+            f"📈 تعداد مشاهدات تاریخی: {item.get('history_count', 0)} هفته",
+        ])
+    publish = payload.get("publish", {})
+    lines.extend([
+        "━━━━━━━━━━━━━━━━━━━━",
+        f"💾 وضعیت ذخیره‌سازی: {status_labels.get(publish.get('status'), publish.get('status', 'نامشخص'))}",
+        f"📥 تعداد رکورد پذیرفته‌شده: {publish.get('accepted', 0)}",
+        "🧭 روش محاسبه: خالص موقعیت = قراردادهای خرید − قراردادهای فروش. صدک و Z-Score از تاریخچه دریافت‌شده محاسبه می‌شوند.",
+        "⚖️ طبقه‌بندی این نسخه فقط Legacy Futures Only است؛ طبقه‌بندی‌های Disaggregated و TFF و داده اختیار معامله در آن ادغام نشده‌اند.",
+        "🔗 منبع رسمی: https://publicreporting.cftc.gov/",
+        "━━━━━━━━━━━━━━━━━━━━",
+        "این گزارش پژوهشی است و به‌تنهایی مبنای توصیه یا اجرای معامله نیست.",
+        "🔗 ارتباط: https://t.me/drghanizade | https://www.tradingview.com/u/DrGhanizadeh",
+    ])
+    return "\n".join(lines)
+
+
 def run(
     watchlist_path: str | Path,
     output_path: str | Path,
     *,
+    report_output_path: str | Path | None = None,
     history_limit: int = 260,
     publish: bool = True,
     source_revision: str | None = None,
@@ -198,13 +252,19 @@ def run(
         rows = fetch_contract(contract, limit=history_limit)
         item = build_market_series(contract, rows)
         series.append(item)
+        noncommercial = item["extra"]["noncommercial"]
+        commercial = item["extra"]["commercial"]
         results.append({
             "market": item["name"],
             "symbol": item["symbol"],
             "report_date": item["data_as_of"],
             "open_interest": item["extra"]["open_interest"],
-            "noncommercial_net": item["extra"]["noncommercial"]["net"],
-            "noncommercial_percentile": item["extra"]["noncommercial"]["historical_percentile"],
+            "noncommercial_net": noncommercial["net"],
+            "noncommercial_weekly_change": noncommercial["weekly_net_change"],
+            "noncommercial_percentile": noncommercial["historical_percentile"],
+            "noncommercial_z_score": noncommercial["historical_z_score"],
+            "commercial_net": commercial["net"],
+            "commercial_weekly_change": commercial["weekly_net_change"],
             "history_count": len(rows),
         })
     publish_result = publish_market_series(series, source_revision or os.getenv("GITHUB_SHA", "UNKNOWN")) if publish else {
@@ -229,6 +289,13 @@ def run(
     destination = Path(output_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report_path = Path(report_output_path) if report_output_path else destination.with_suffix(".txt")
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report = render_persian_report(payload)
+    report_path.write_text(report + "\n", encoding="utf-8")
+    latest_report = report_path.parent / "cftc-positioning-latest.txt"
+    latest_report.write_text(report + "\n", encoding="utf-8")
     return payload
 
 
@@ -236,15 +303,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Fetch and publish CFTC Legacy Futures Only positioning.")
     parser.add_argument("--watchlist", default="config/cftc_watchlist.json")
     parser.add_argument("--output", default="reports/cftc-positioning-latest.json")
+    parser.add_argument("--report-output", default="reports/cftc-positioning-latest.txt")
     parser.add_argument("--history-limit", type=int, default=260)
     parser.add_argument("--no-publish", action="store_true")
     args = parser.parse_args()
-    result = run(args.watchlist, args.output, history_limit=args.history_limit, publish=not args.no_publish)
+    result = run(args.watchlist, args.output, report_output_path=args.report_output, history_limit=args.history_limit, publish=not args.no_publish)
     print(json.dumps({
         "status": result["status"],
         "contract_count": len(result["contracts"]),
         "publish": result["publish"],
         "output": args.output,
+        "persian_report": args.report_output,
     }, ensure_ascii=False))
     return 0 if result["status"] in {"PUBLISHED", "SKIPPED"} else 1
 
