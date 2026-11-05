@@ -61,3 +61,26 @@ def test_calendar_payload_and_persian_report_preserve_data_limitations():
     assert "ساعت انتشار" in report
     assert "اجماع بازار و نتیجه واقعی" in report
     assert "حدس نمی‌زند" in report
+
+
+
+def test_industrial_production_matches_fred_id_13_name_alias():
+    matched, missing = match_release_catalog([
+        {
+            "id": 13,
+            "name": "G.17 Industrial Production and Capacity Utilization",
+            "link": "https://fred.stlouisfed.org/release?rid=13",
+        }
+    ])
+    assert len(matched) == 1
+    assert matched[0]["release_id"] == 13
+    assert matched[0]["release_name"] == "G.17 Industrial Production and Capacity Utilization"
+    assert "Industrial Production and Capacity Utilization" not in missing
+
+
+def test_fred_release_id_is_not_accepted_when_name_identity_conflicts():
+    matched, missing = match_release_catalog([
+        {"id": 13, "name": "Consumer Price Index"}
+    ])
+    assert matched == []
+    assert "Industrial Production and Capacity Utilization" in missing
