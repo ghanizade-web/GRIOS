@@ -1,0 +1,42 @@
+name: GRIOS CFTC Positioning
+
+on:
+  workflow_dispatch:
+  schedule:
+    # CFTC publishes the weekly report on Friday; run after the normal release window.
+    - cron: "0 23 * * 5"
+  push:
+    paths:
+      - .github/workflows/grios-cftc-positioning.yml
+
+permissions:
+  contents: read
+
+jobs:
+  ingest-cftc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout GRIOS
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run CFTC positioning ingestion
+        env:
+          SUPABASE_URL: https://ouzayspfyhkhktntonxd.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          python cftc_cot.py --watchlist config/cftc_watchlist.json --output reports/cftc-positioning-latest.json --history-limit 260
+
+      - name: Upload CFTC evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grios-cftc-positioning-${{ github.run_number }}
+          path: reports/cftc-positioning-latest.json
+          if-no-files-found: warn
+          retention-days: 30
