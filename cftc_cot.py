@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from data_coverage import publish_market_series
+from report_formatting import social_footer_lines
 
 API_ROOT = "https://publicreporting.cftc.gov/resource"
 LEGACY_FUTURES_ONLY_DATASET = "6dca-aqww"
@@ -226,8 +227,8 @@ def render_persian_report(payload: dict[str, Any]) -> str:
         "🔗 منبع رسمی: https://publicreporting.cftc.gov/",
         "━━━━━━━━━━━━━━━━━━━━",
         "این گزارش پژوهشی است و به‌تنهایی مبنای توصیه یا اجرای معامله نیست.",
-        "🔗 ارتباط: https://t.me/drghanizade | https://www.tradingview.com/u/DrGhanizadeh",
     ])
+    lines.extend(social_footer_lines())
     return "\n".join(lines)
 
 
