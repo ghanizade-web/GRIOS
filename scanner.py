@@ -1667,8 +1667,6 @@ def build_paper_performance_records(
 
     for item in valid:
         score = scores.get(item.key, {})
-        if score.get("decision") != "WATCH_ONLY" or score.get("score") is None:
-            continue
         price = price_now(item)
         if price is None or price <= 0:
             continue
