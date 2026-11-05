@@ -1,8 +1,11 @@
+import httpx
+
 from eia_petroleum_stocks import (
     EIA_SERIES,
     _validate_units,
     build_persian_report,
     exit_code_for_payload,
+    failure_metadata,
     historical_percentile,
     normalize_observations,
 )
@@ -108,3 +111,18 @@ def test_eia_complete_coverage_gate_distinguishes_partial_from_full():
     assert exit_code_for_payload(complete, require_complete=True) == 0
     assert exit_code_for_payload(failed) == 1
     assert exit_code_for_payload(not_configured) == 1
+
+
+
+def test_failure_metadata_preserves_http_status_without_response_body():
+    request = httpx.Request("GET", "https://api.eia.gov/v2/seriesid/PET.WCESTUS1.W")
+    response = httpx.Response(403, request=request)
+    error = httpx.HTTPStatusError("Forbidden", request=request, response=response)
+
+    result = failure_metadata("PET.WCESTUS1.W", error)
+    assert result == {
+        "series_id": "PET.WCESTUS1.W",
+        "error_type": "HTTPStatusError",
+        "http_status": 403,
+    }
+    assert "api_key" not in str(result)
