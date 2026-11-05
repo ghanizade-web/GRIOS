@@ -10,6 +10,8 @@ from typing import Any
 
 import httpx
 
+from report_formatting import social_footer_lines
+
 API_ROOT = "https://api.stlouisfed.org/fred"
 USER_AGENT = "GRIOS-Research/15.0"
 
@@ -264,6 +266,7 @@ def render_persian_report(payload: dict[str, Any]) -> str:
         "🧭 رویداد مهم لزوماً به معنی جهت مشخص بازار نیست. تحلیل واکنش بازار باید پس از دریافت داده واقعی و مقایسه با انتظارات انجام شود.",
         "🔗 مرجع: https://fred.stlouisfed.org/",
     ])
+    lines.extend(social_footer_lines())
     return "\n".join(lines)
 
 
