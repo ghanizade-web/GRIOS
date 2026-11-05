@@ -56,3 +56,31 @@ def test_build_market_series_preserves_weekly_disclosure_caveats():
     assert item["extra"]["noncommercial"]["weekly_net_change"] == 30000
     assert item["extra"]["publication_date"] is None
     assert "not transaction records" in item["caveat"]
+
+
+def test_persian_report_contains_directional_labels_and_disclosures():
+    from cftc_cot import render_persian_report
+
+    payload = {
+        "retrieved_at": "2026-11-06T23:00:00+00:00",
+        "publish": {"status": "DIRECT_SUPABASE", "accepted": 3},
+        "contracts": [{
+            "market": "Gold futures",
+            "symbol": "GC",
+            "report_date": "2026-11-03",
+            "open_interest": 500000,
+            "noncommercial_net": 12000,
+            "noncommercial_weekly_change": 1500,
+            "noncommercial_percentile": 82.5,
+            "noncommercial_z_score": 1.25,
+            "commercial_net": -12000,
+            "commercial_weekly_change": -1500,
+            "history_count": 260,
+        }],
+    }
+    report = render_persian_report(payload)
+    assert "گزارش هفتگی موقعیت معامله‌گران" in report
+    assert "جریان قطعی ورود یا خروج سرمایه" in report
+    assert "خالص موقعیت معامله‌گران غیرتجاری: +12,000" in report
+    assert "صدک تاریخی" in report
+    assert "طبقه‌بندی‌های Disaggregated و TFF" in report
