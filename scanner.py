@@ -1742,10 +1742,10 @@ def persian_score_reason(reason: Any) -> str:
     text = str(reason or "").strip()
     if text in translations:
         return translations[text]
-    match = re.match(r"20-period return ([+-]?\\d+(?:\\.\\d+)?)%; technical heuristic only\\.", text)
+    match = re.match(r"20-period return ([+-]?\d+(?:\.\d+)?)%; technical heuristic only\.", text)
     if match:
         return f"بازده ۲۰ دوره‌ای: {float(match.group(1)):+.1f}٪؛ این فقط یک شاخص فنی مقدماتی است."
-    if any("\\u0600" <= char <= "\\u06ff" for char in text):
+    if any("\u0600" <= char <= "\u06ff" for char in text):
         return text
     return "توضیح فنی امتیاز در نسخه فعلی موجود نیست."
 
