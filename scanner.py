@@ -1731,6 +1731,72 @@ def record_and_evaluate(
 
 
 
+
+def performance_summary(db: sqlite3.Connection) -> dict[str, Any]:
+    rows = db.execute("""
+        SELECT e.checkpoint_days, e.return_pct
+        FROM evaluations e
+        JOIN ideas i ON i.id = e.idea_id
+        WHERE i.decision = 'WATCH_ONLY'
+        ORDER BY e.checkpoint_days, e.evaluated_at
+    """).fetchall()
+    grouped: dict[int, list[float]] = {}
+    for checkpoint, return_pct in rows:
+        if checkpoint not in {1, 7, 30, 90, 365}:
+            continue
+        value = as_float(return_pct)
+        if value is not None:
+            grouped.setdefault(int(checkpoint), []).append(value)
+
+    checkpoints = {}
+    for checkpoint in (1, 7, 30, 90, 365):
+        values = grouped.get(checkpoint, [])
+        if not values:
+            continue
+        checkpoints[checkpoint] = {
+            "sample_size": len(values),
+            "mean_return_pct": round(statistics.mean(values), 3),
+            "median_return_pct": round(statistics.median(values), 3),
+            "win_rate_pct": round(sum(value > 0 for value in values) / len(values) * 100, 2),
+            "best_return_pct": round(max(values), 3),
+            "worst_return_pct": round(min(values), 3),
+        }
+    return {
+        "status": "AVAILABLE" if checkpoints else "NO_MATURED_EVALUATIONS",
+        "total_evaluations": sum(item["sample_size"] for item in checkpoints.values()),
+        "checkpoints": checkpoints,
+    }
+
+
+def render_performance_summary(summary: dict[str, Any] | None) -> list[str]:
+    lines = [
+        "📚 پایش عملکرد نامزدهای قبلی (Forward Paper Tracking)",
+        "این بخش نتیجه پیگیری رو‌به‌جلوی نامزدهای ثبت‌شده است؛ بک‌تست تاریخی یا توصیه معاملاتی نیست.",
+    ]
+    checkpoints = (summary or {}).get("checkpoints", {})
+    labels = {1: "۱ روزه", 7: "۷ روزه", 30: "۳۰ روزه", 90: "۹۰ روزه", 365: "۳۶۵ روزه"}
+    if not checkpoints:
+        lines.append("⏳ هنوز ارزیابی سررسیدشده‌ای برای نامزدهای ثبت‌شده وجود ندارد.")
+    else:
+        for checkpoint in (1, 7, 30, 90, 365):
+            item = checkpoints.get(checkpoint)
+            if not item:
+                continue
+            lines.append(
+                f"• افق {labels[checkpoint]} | نمونه: {item['sample_size']} | "
+                f"میانگین بازده: {item['mean_return_pct']:+.2f}٪ | "
+                f"میانه: {item['median_return_pct']:+.2f}٪ | "
+                f"نرخ بازده مثبت: {item['win_rate_pct']:.1f}٪"
+            )
+            if item["sample_size"] < 10:
+                lines.append("  ⚠️ تعداد نمونه کمتر از ۱۰ است؛ نتیجه از نظر آماری قابل اتکا نیست.")
+    lines.extend([
+        "⚠️ این پایش هنوز کارمزد، لغزش قیمت، معیار مقایسه، سوگیری بقا و بازسازی کامل داده‌های نقطه‌به‌نقطه را پوشش نمی‌دهد.",
+        "⛔ بازده مثبت گذشته تضمین‌کننده نتیجه آینده نیست.",
+    ])
+    return lines
+
+
 def persian_score_reason(reason: Any) -> str:
     translations = {
         "Context/reference series; not independently tradable.": "این سری صرفاً برای زمینه‌سازی و مرجع است و به‌تنهایی ابزار معاملاتی محسوب نمی‌شود.",
@@ -1755,6 +1821,7 @@ def telegram_report(
     errors: list[str],
     scores: dict[str, dict[str, Any]],
     universe_summary: str | None = None,
+    performance: dict[str, Any] | None = None,
 ) -> str:
     tehran = now_utc().astimezone(ZoneInfo("Asia/Tehran"))
     divider = "━━━━━━━━━━━━━━━━━━━━"
@@ -1858,6 +1925,8 @@ def telegram_report(
         lines.extend(f"• {error}" for error in errors[:8])
 
     lines.extend([
+        divider,
+        *render_performance_summary(performance),
         divider,
         "🧭 جمع‌بندی کمیته سرمایه‌گذاری",
         "وضعیت این نسخه: فقط پایش (WATCH). داده جریان سرمایه نهادیِ تأییدشده، کاتالیست بنیادیِ کامل و مدل جامع ریسک به بازده هنوز در این گزارش ادغام نشده‌اند.",
@@ -2013,11 +2082,19 @@ def main() -> int:
         "error": hub_result["error"],
     }
 
+    db = ensure_db(Path(args.db))
+    try:
+        record_and_evaluate(db, series, scores)
+        performance = performance_summary(db)
+    finally:
+        db.close()
+
     report = telegram_report(
         series,
         errors,
         scores,
         universe_summary=universe_summary,
+        performance=performance,
     )
     coverage_labels = {
         "COVERED": "پوشش کامل فیدهای درخواستی",
@@ -2071,13 +2148,6 @@ def main() -> int:
         report + "\n",
         encoding="utf-8",
     )
-
-    db = ensure_db(Path(args.db))
-
-    try:
-        record_and_evaluate(db, series, scores)
-    finally:
-        db.close()
 
     print(report)
     print(f"\nSaved: {report_path}")
