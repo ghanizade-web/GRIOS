@@ -87,3 +87,20 @@ def test_send_does_not_retry_client_error(monkeypatch):
     with pytest.raises(RuntimeError, match="TELEGRAM_HTTP_400"):
         publisher._send("dummy", "@grios", "report")
     assert calls["count"] == 1
+
+
+def test_apply_rtl_direction_isolates_persian_lines_and_keeps_latin_lines():
+    rendered = publisher.apply_rtl_direction("گزارش بازار\nBTC / USD: 65000")
+    assert rendered.splitlines()[0].startswith("\u2067")
+    assert rendered.splitlines()[0].endswith("\u2069")
+    assert rendered.splitlines()[1] == "BTC / USD: 65000"
+
+
+def test_publish_report_applies_rtl_before_sending(tmp_path, monkeypatch):
+    report = tmp_path / "report.txt"
+    report.write_text("گزارش فارسی\nBTC: 100", encoding="utf-8")
+    sent = []
+    monkeypatch.setattr(publisher, "_send", lambda token, chat_id, text: sent.append(text))
+    assert publisher.publish_report(report, "dummy", "@grios") == 1
+    assert sent[0].startswith("\u2067")
+    assert "BTC: 100" in sent[0]
