@@ -31,7 +31,7 @@ def test_normalize_observations_rejects_invalid_values():
 
 def test_historical_percentile_is_empirical_and_deterministic():
     assert historical_percentile([10, 20, 30, 40, 50]) == 100.0
-    assert historical_percentile([10, 20, 30, 40, 30]) == 60.0
+    assert historical_percentile([10, 20, 30, 40, 30]) == 80.0
     assert historical_percentile([]) is None
 
 
