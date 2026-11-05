@@ -373,9 +373,21 @@ def run(
     return payload
 
 
+def exit_code_for_payload(payload: dict[str, Any], *, require_complete: bool = False) -> int:
+    status = payload.get("status")
+    count = payload.get("series_count", 0)
+    expected = payload.get("expected_series_count", len(EIA_SERIES))
+    if status in {"FAILED", "NOT_CONFIGURED"}:
+        return 1
+    if require_complete and (status != "SUCCESS" or count != expected):
+        return 1
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Fetch weekly EIA U.S. petroleum supply and disposition.")
     parser.add_argument("--history-limit", type=int, default=260)
+    parser.add_argument("--require-complete", action="store_true", help="Exit non-zero unless every configured EIA series is available.")
     parser.add_argument("--output-json", default="reports/eia-petroleum-stocks-latest.json")
     parser.add_argument("--output-text", default="reports/eia-petroleum-stocks-latest.txt")
     args = parser.parse_args()
@@ -386,7 +398,7 @@ def main() -> int:
         output_text=args.output_text,
     )
     print(f"EIA_PETROLEUM_BALANCE: {payload['status']} ({payload['series_count']}/{payload['expected_series_count']} series)")
-    return 0
+    return exit_code_for_payload(payload, require_complete=args.require_complete)
 
 
 if __name__ == "__main__":
