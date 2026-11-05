@@ -10,9 +10,11 @@ on:
       - main
     paths:
       - "scanner.py"
+      - "cftc_cot.py"
       - "README.md"
       - "tests/**"
       - ".github/workflows/crypto-audit-tests.yml"
+      - ".github/workflows/grios-cftc-positioning.yml"
 
 permissions:
   contents: read
@@ -34,8 +36,8 @@ jobs:
       - name: Install test dependencies
         run: python -m pip install --upgrade pip pytest httpx python-dotenv
 
-      - name: Compile scanner
-        run: python -m py_compile scanner.py
+      - name: Compile scanner and CFTC adapter
+        run: python -m py_compile scanner.py cftc_cot.py
 
-      - name: Run crypto audit tests
+      - name: Run test suite
         run: python -m pytest -q
