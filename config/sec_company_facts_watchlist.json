@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "companies": [
+    {"symbol": "AAPL", "name": "Apple Inc.", "cik": "0000320193"},
+    {"symbol": "MSFT", "name": "Microsoft Corporation", "cik": "0000789019"},
+    {"symbol": "NVDA", "name": "NVIDIA Corporation", "cik": "0001045810"},
+    {"symbol": "AMZN", "name": "Amazon.com, Inc.", "cik": "0001018724"},
+    {"symbol": "GOOGL", "name": "Alphabet Inc.", "cik": "0001652044"},
+    {"symbol": "META", "name": "Meta Platforms, Inc.", "cik": "0001326801"},
+    {"symbol": "BRK.B", "name": "Berkshire Hathaway Inc.", "cik": "0001067983"}
+  ]
+}
