@@ -18,6 +18,7 @@ import httpx
 from dotenv import load_dotenv
 
 from data_coverage import build_data_coverage_report, publish_market_series
+from report_formatting import social_footer_lines
 
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env")
@@ -1729,6 +1730,26 @@ def record_and_evaluate(
     db.commit()
 
 
+
+def persian_score_reason(reason: Any) -> str:
+    translations = {
+        "Context/reference series; not independently tradable.": "این سری صرفاً برای زمینه‌سازی و مرجع است و به‌تنهایی ابزار معاملاتی محسوب نمی‌شود.",
+        "At least three of four crypto factors are required.": "برای محاسبه امتیاز، حداقل سه عامل از چهار عامل رمزارزی باید داده معتبر داشته باشند.",
+        "Preliminary momentum, alignment, turnover and FDV screen; not a calibrated trading signal.": "غربالگری مقدماتی بر پایه مومنتوم، هم‌جهتی بازده‌ها، گردش معاملات و ارزش‌گذاری رقیق‌شده است؛ هنوز سیگنال معاملاتی کالیبره‌شده نیست.",
+        "Fewer than 61 valid observations.": "کمتر از ۶۱ مشاهده معتبر در تاریخچه موجود است.",
+        "Historical observations available.": "تاریخچه مشاهدات معتبر در دسترس است.",
+    }
+    text = str(reason or "").strip()
+    if text in translations:
+        return translations[text]
+    match = re.match(r"20-period return ([+-]?\\d+(?:\\.\\d+)?)%; technical heuristic only\\.", text)
+    if match:
+        return f"بازده ۲۰ دوره‌ای: {float(match.group(1)):+.1f}٪؛ این فقط یک شاخص فنی مقدماتی است."
+    if any("\\u0600" <= char <= "\\u06ff" for char in text):
+        return text
+    return "توضیح فنی امتیاز در نسخه فعلی موجود نیست."
+
+
 def telegram_report(
     series_list: list[MarketSeries],
     errors: list[str],
@@ -1784,7 +1805,7 @@ def telegram_report(
                 f"💵 آخرین قیمت: {price:g} {item.currency}" if price is not None else "💵 قیمت معتبر در دسترس نیست",
                 f"🗓 تاریخ داده: {item.data_as_of or 'نامشخص'} | منبع: {item.provider}",
                 f"📊 پوشش عوامل: {score.get('coverage', 0)}٪",
-                f"🧩 مبنای امتیاز: {score.get('why', 'جزئیات کافی موجود نیست')}",
+                f"🧩 مبنای امتیاز: {persian_score_reason(score.get('why'))}",
             ])
 
             if item.asset_class == "crypto":
@@ -1841,14 +1862,8 @@ def telegram_report(
         "🧭 جمع‌بندی کمیته سرمایه‌گذاری",
         "وضعیت این نسخه: فقط پایش (WATCH). داده جریان سرمایه نهادیِ تأییدشده، کاتالیست بنیادیِ کامل و مدل جامع ریسک به بازده هنوز در این گزارش ادغام نشده‌اند.",
         "⛔ امتیازها هنوز کالیبره و با آزمون تاریخی مستقل اعتبارسنجی نشده‌اند. این گزارش توصیه شخصی، سفارش معاملاتی یا تخصیص سرمایه صادر نمی‌کند.",
-        divider,
-        "🔗 ارتباط و دنبال‌کردن تحلیل‌ها",
-        "تلگرام: https://t.me/drghanizade",
-        "اینستاگرام: https://www.instagram.com/dr.ghanizade",
-        "ایکس: https://x.com/DrGhanizadeh",
-        "لینکدین: https://www.linkedin.com/in/drghanizade",
-        "TradingView: https://www.tradingview.com/u/DrGhanizadeh",
     ])
+    lines.extend(social_footer_lines())
     return "\n".join(lines)
 
 
