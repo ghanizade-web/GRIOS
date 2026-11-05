@@ -58,6 +58,96 @@ def load_watchlist(path: str | Path) -> list[dict[str, Any]]:
     return entries
 
 
+
+def _usd(value: Any) -> str:
+    try:
+        return f"${float(value):,.0f}"
+    except (TypeError, ValueError):
+        return "ناموجود"
+
+
+def render_persian_filer_report(report: dict[str, Any], filer_name: str) -> str:
+    holdings = report.get("holdings", [])
+    total_value = sum(float(item.get("value_usd") or 0) for item in holdings)
+    top_holdings = sorted(
+        holdings,
+        key=lambda item: float(item.get("value_usd") or 0),
+        reverse=True,
+    )[:5]
+    lines = [
+        "🏛️ گزارش مالکیت‌های افشاشده در فرم 13F",
+        f"🏢 مدیر گزارش‌دهنده: {filer_name}",
+        f"🗓 دوره گزارش: {report.get('report_period', 'نامشخص')}",
+        f"📅 آخرین تاریخ ثبت در SEC: {report.get('latest_filed_at', 'نامشخص')}",
+        "━━━━━━━━━━━━━━━━━━━━",
+        f"📦 تعداد ردیف‌های مالکیت گزارش‌شده: {report.get('holdings_count', len(holdings))}",
+        f"💰 مجموع ارزش ردیف‌های گزارش‌شده: {_usd(total_value)}",
+        "🔎 پنج موقعیت بزرگ بر اساس ارزش گزارش‌شده:",
+    ]
+    if top_holdings:
+        for index, item in enumerate(top_holdings, 1):
+            option = f" | اختیار {item['put_call']}" if item.get("put_call") else ""
+            lines.append(
+                f"{index}. {item.get('issuer', 'نامشخص')} — "
+                f"{_usd(item.get('value_usd'))}{option}"
+            )
+    else:
+        lines.append("در داده دریافتی، ردیف مالکیت قابل‌نمایشی وجود ندارد.")
+    filings = report.get("applied_filings", [])
+    if filings:
+        lines.extend(["━━━━━━━━━━━━━━━━━━━━", "📚 اسناد رسمی ثبت‌شده:"])
+        lines.extend(str(item.get("source_url")) for item in filings if item.get("source_url"))
+    lines.extend([
+        "━━━━━━━━━━━━━━━━━━━━",
+        "⚠️ فرم 13F افشای دوره‌ایِ دارایی‌های مشمول گزارش در پایان فصل است؛ تاریخ انجام معامله را نشان نمی‌دهد و ممکن است تا ۴۵ روز پس از پایان فصل منتشر شود.",
+        "⚠️ این داده به‌تنهایی مالک ذی‌نفع، سرمایه اختصاصی مدیر، موقعیت فروش، معاملات جاری یا جریان لحظه‌ای سرمایه را اثبات نمی‌کند.",
+        "🧭 این گزارش بازسازیِ سبد افشاشده عمومی است؛ نه دفتر معاملات و نه توصیه سرمایه‌گذاری.",
+        "🔗 منبع رسمی: https://www.sec.gov/edgar/search/",
+    ])
+    return "\\n".join(lines)
+
+
+def render_persian_watchlist_summary(summary: dict[str, Any]) -> str:
+    status_labels = {
+        "SUCCESS": "پردازش فهرست با موفقیت انجام شد",
+        "PARTIAL_FAILURE": "پردازش ناقص؛ برخی مدیران با خطا مواجه شدند",
+    }
+    lines = [
+        "🏛️ گزارش پایش مدیران سرمایه — فرم SEC 13F",
+        f"🗓 دوره گزارش: {summary.get('report_period', 'نامشخص')}",
+        "━━━━━━━━━━━━━━━━━━━━",
+        f"👥 تعداد مدیران در فهرست: {summary.get('filers_total', 0)}",
+        f"✅ گزارش‌های دریافت و ثبت‌شده: {summary.get('filers_published', 0)}",
+        f"⚠️ گزارش‌های ناموفق: {summary.get('filers_failed', 0)}",
+        f"⏭️ موارد غیرفعال: {summary.get('filers_skipped', 0)}",
+        f"📊 وضعیت کل: {status_labels.get(summary.get('status'), summary.get('status', 'نامشخص'))}",
+        "━━━━━━━━━━━━━━━━━━━━",
+    ]
+    for item in summary.get("results", []):
+        status = item.get("status")
+        icon = "✅" if status == "PUBLISHED" else "⚠️" if status == "FAILED" else "⏭️"
+        lines.append(f"{icon} {item.get('name', 'نامشخص')}")
+        if status == "PUBLISHED":
+            lines.append(
+                f"   تعداد موقعیت‌ها: {item.get('holdings_count', 0)} | "
+                f"تعداد اسناد: {item.get('filings_count', 0)}"
+            )
+            for index, holding in enumerate(item.get("top_holdings", []), 1):
+                option = f" ({holding['put_call']})" if holding.get("put_call") else ""
+                lines.append(
+                    f"   {index}. {holding.get('issuer', 'نامشخص')}: "
+                    f"{_usd(holding.get('value_usd'))}{option}"
+                )
+        elif status == "FAILED":
+            lines.append(f"   علت فنی: {item.get('error_type', 'خطای نامشخص')}")
+    lines.extend([
+        "━━━━━━━━━━━━━━━━━━━━",
+        "⚠️ داده 13F دوره‌ای و با تأخیر است. موقعیت گزارش‌شده، اثبات خریدوفروش اخیر یا ورود سرمایه لحظه‌ای نیست.",
+        "🔗 مرجع رسمی SEC: https://www.sec.gov/edgar/search/",
+    ])
+    return "\\n".join(lines)
+
+
 def run_watchlist(
     report_period: str,
     *,
@@ -65,6 +155,7 @@ def run_watchlist(
     output_dir: str | Path,
     registry_path: str | Path,
     summary_path: str | Path,
+    summary_report_path: str | Path | None = None,
     environ: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     try:
@@ -130,7 +221,16 @@ def run_watchlist(
                 "snapshot_id": report.get("data_hub_publish", {}).get("snapshot_id"),
                 "holdings_count": report.get("holdings_count"),
                 "filings_count": report.get("discovered_filing_count"),
+                "top_holdings": [
+                    {
+                        "issuer": item.get("issuer"),
+                        "value_usd": item.get("value_usd"),
+                        "put_call": item.get("put_call"),
+                    }
+                    for item in top_holdings
+                ],
                 "artifact": str(artifact),
+                "text_artifact": str(text_artifact),
             })
         except Exception as exc:  # continue the batch; report failures explicitly
             results.append({
@@ -173,6 +273,7 @@ def main() -> int:
     parser.add_argument("--output-dir", default="artifacts/sec-13f-watchlist/reports")
     parser.add_argument("--database", default="artifacts/sec-13f-watchlist/registry.sqlite3")
     parser.add_argument("--summary", default="artifacts/sec-13f-watchlist/summary.json")
+    parser.add_argument("--summary-report", default="artifacts/sec-13f-watchlist/summary.txt")
     args = parser.parse_args()
 
     summary = run_watchlist(
@@ -181,6 +282,7 @@ def main() -> int:
         output_dir=args.output_dir,
         registry_path=args.database,
         summary_path=args.summary,
+        summary_report_path=args.summary_report,
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 1 if summary["filers_failed"] else 0
