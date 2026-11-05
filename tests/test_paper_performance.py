@@ -5,7 +5,12 @@ import paper_performance as paper
 
 
 def _response(status=200, payload=None):
-    return httpx.Response(status, json=payload) if payload is not None else httpx.Response(status)
+    request = httpx.Request("GET", "https://example.supabase.co/rest/v1/test")
+    return (
+        httpx.Response(status, json=payload, request=request)
+        if payload is not None
+        else httpx.Response(status, request=request)
+    )
 
 
 def test_fingerprint_is_stable_and_asset_date_scoped():
