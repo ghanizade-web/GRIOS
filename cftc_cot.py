@@ -268,7 +268,7 @@ def run(
             "commercial_weekly_change": commercial["weekly_net_change"],
             "history_count": len(rows),
         })
-    publish_result = publish_market_series(series, source_revision or os.getenv("GITHUB_SHA", "UNKNOWN")) if publish else {
+    publish_result = publish_market_series(series, source_revision or os.getenv("GRIOS_SOURCE_REVISION") or os.getenv("GITHUB_SHA", "UNKNOWN")) if publish else {
         "status": "SKIPPED", "accepted": 0, "error": None
     }
     payload = {
