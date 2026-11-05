@@ -8,6 +8,8 @@ import urllib.request
 from pathlib import Path
 
 API_ROOT = "https://api.telegram.org"
+RTL_MARK = "\u2067"
+POP_DIRECTIONAL_ISOLATE = "\u2069"
 
 
 def chunk_message(message: str, limit: int = 4000) -> list[str]:
@@ -33,6 +35,17 @@ def chunk_message(message: str, limit: int = 4000) -> list[str]:
     if current:
         chunks.append(current)
     return chunks
+
+
+def apply_rtl_direction(message: str) -> str:
+    """Isolate Persian-containing lines so mixed RTL/LTR text renders predictably."""
+    rendered = []
+    for line in message.splitlines():
+        if any("\u0600" <= char <= "\u06ff" for char in line):
+            rendered.append(f"{RTL_MARK}{line}{POP_DIRECTIONAL_ISOLATE}")
+        else:
+            rendered.append(line)
+    return "\n".join(rendered)
 
 
 def _send(token: str, chat_id: str, text: str, timeout: int = 20) -> None:
@@ -76,9 +89,10 @@ def _send(token: str, chat_id: str, text: str, timeout: int = 20) -> None:
 
 
 def publish_report(report_path: str | Path, token: str, chat_id: str) -> int:
-    chunks = chunk_message(Path(report_path).read_text(encoding="utf-8"))
+    report = Path(report_path).read_text(encoding="utf-8")
+    chunks = chunk_message(report)
     for chunk in chunks:
-        _send(token, chat_id, chunk)
+        _send(token, chat_id, apply_rtl_direction(chunk))
     return len(chunks)
 
 
