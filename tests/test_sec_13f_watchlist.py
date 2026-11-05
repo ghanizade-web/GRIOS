@@ -138,3 +138,46 @@ def test_committed_watchlist_contains_verified_unique_institutional_filers():
         item["reference_url"].startswith("https://www.sec.gov/")
         for item in entries
     )
+
+
+def test_persian_13f_renderers_disclose_report_delay_and_show_largest_positions():
+    report = {
+        "report_period": "2026-09-30",
+        "latest_filed_at": "2026-11-14T00:00:00+00:00",
+        "holdings_count": 2,
+        "holdings": [
+            {"issuer": "Example A", "value_usd": 125000000, "put_call": None},
+            {"issuer": "Example B", "value_usd": 50000000, "put_call": "Call"},
+        ],
+        "applied_filings": [{"source_url": "https://www.sec.gov/Archives/edgar/data/1/example"}],
+    }
+    rendered = watchlist_module.render_persian_filer_report(report, "Example Manager")
+    assert "گزارش مالکیت‌های افشاشده" in rendered
+    assert "Example A" in rendered
+    assert "تا ۴۵ روز" in rendered
+    assert "جریان لحظه‌ای سرمایه" in rendered
+
+
+def test_persian_watchlist_summary_includes_partial_failure_and_top_positions():
+    summary = {
+        "report_period": "2026-09-30",
+        "status": "PARTIAL_FAILURE",
+        "filers_total": 2,
+        "filers_published": 1,
+        "filers_failed": 1,
+        "filers_skipped": 0,
+        "results": [
+            {
+                "name": "Example Manager",
+                "status": "PUBLISHED",
+                "holdings_count": 10,
+                "filings_count": 2,
+                "top_holdings": [{"issuer": "Example A", "value_usd": 1000000}],
+            },
+            {"name": "Failed Manager", "status": "FAILED", "error_type": "TimeoutError"},
+        ],
+    }
+    rendered = watchlist_module.render_persian_watchlist_summary(summary)
+    assert "پردازش ناقص" in rendered
+    assert "Example A" in rendered
+    assert "TimeoutError" in rendered
