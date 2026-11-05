@@ -18,6 +18,12 @@ import httpx
 from dotenv import load_dotenv
 
 from data_coverage import build_data_coverage_report, publish_market_series
+from paper_performance import (
+    BENCHMARK_SYMBOLS,
+    PaperJournalError,
+    SupabasePaperJournal,
+    resolve_round_trip_cost_bps,
+)
 from report_formatting import social_footer_lines
 
 ROOT = Path(__file__).resolve().parent
@@ -1365,6 +1371,14 @@ def clamp(value: float, low: float = 0, high: float = 100) -> float:
 
 
 def market_score(series: MarketSeries) -> dict[str, Any]:
+    if series.asset_class == "commodity_proxy" and series.symbol.upper() == "DBC":
+        return {
+            "score": None,
+            "coverage": 100,
+            "decision": "DATA_ONLY",
+            "why": "Broad commodity benchmark; reference series only.",
+        }
+
     if series.asset_class in {"fx_reference", "macro"}:
         return {
             "score": None,
@@ -1636,6 +1650,78 @@ def price_now(series: MarketSeries) -> float | None:
     return as_float(series.observations[-1].get("close"))
 
 
+def build_paper_performance_records(
+    series_list: list[MarketSeries],
+    scores: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    valid = [
+        item for item in series_list
+        if not stale(item) and price_now(item) is not None and item.data_as_of
+    ]
+    by_class_symbol = {
+        (item.asset_class, item.symbol.strip().upper()): item
+        for item in valid
+    }
+    records: list[dict[str, Any]] = []
+    warnings: list[str] = []
+
+    for item in valid:
+        score = scores.get(item.key, {})
+        price = price_now(item)
+        if price is None or price <= 0:
+            continue
+
+        benchmark_symbol = BENCHMARK_SYMBOLS.get(item.asset_class)
+        benchmark = (
+            by_class_symbol.get((item.asset_class, benchmark_symbol))
+            if benchmark_symbol else None
+        )
+        benchmark_price = None
+        benchmark_asset_key = None
+        if (
+            benchmark is not None
+            and benchmark.key != item.key
+            and benchmark.data_as_of == item.data_as_of
+        ):
+            candidate_price = price_now(benchmark)
+            if candidate_price is not None and candidate_price > 0:
+                benchmark_price = candidate_price
+                benchmark_asset_key = benchmark.key
+
+        try:
+            cost_bps = resolve_round_trip_cost_bps(item.asset_class)
+        except ValueError:
+            cost_bps = None
+            warnings.append(
+                f"هزینه رفت‌وبرگشت برای {item.asset_class} معتبر نیست؛ بازده خالص آن طبقه محاسبه نمی‌شود."
+            )
+
+        records.append({
+            "asset_key": item.key,
+            "symbol": item.symbol,
+            "asset_class": item.asset_class,
+            "provider": item.provider,
+            "data_as_of": item.data_as_of,
+            "recorded_at": iso(),
+            "price": price,
+            "technical_score": score.get("score"),
+            "factor_coverage_pct": score.get("coverage", 0),
+            "decision": score.get("decision"),
+            "thesis": persian_score_reason(score.get("why")),
+            "invalidation": "بازبینی در صورت نقض فرضیه ثبت‌شده یا تغییر ساختاری داده‌ها.",
+            "benchmark_symbol": benchmark_symbol,
+            "benchmark_asset_key": benchmark_asset_key,
+            "benchmark_entry_price": benchmark_price,
+            "assumed_round_trip_cost_bps": cost_bps,
+            "metadata": {
+                "score_reason": str(score.get("why") or ""),
+                "observed_at": item.observed_at,
+                "benchmark_matched_same_date": benchmark_asset_key is not None,
+            },
+        })
+    return records, warnings
+
+
 def record_and_evaluate(
     db: sqlite3.Connection,
     series_list: list[MarketSeries],
@@ -1763,17 +1849,25 @@ def performance_summary(db: sqlite3.Connection) -> dict[str, Any]:
         }
     return {
         "status": "AVAILABLE" if checkpoints else "NO_MATURED_EVALUATIONS",
+        "backend": "LOCAL_SQLITE",
         "total_evaluations": sum(item["sample_size"] for item in checkpoints.values()),
         "checkpoints": checkpoints,
     }
 
 
 def render_performance_summary(summary: dict[str, Any] | None) -> list[str]:
+    summary = summary or {}
     lines = [
         "📚 پایش عملکرد نامزدهای قبلی (Forward Paper Tracking)",
-        "این بخش نتیجه پیگیری رو‌به‌جلوی نامزدهای ثبت‌شده است؛ بک‌تست تاریخی یا توصیه معاملاتی نیست.",
+        "این بخش پیگیری رو‌به‌جلوی نامزدهای ثبت‌شده است؛ بک‌تست تاریخی یا توصیه معاملاتی نیست.",
     ]
-    checkpoints = (summary or {}).get("checkpoints", {})
+    backend = summary.get("backend")
+    if backend == "SUPABASE_PERSISTENT":
+        lines.append("💾 دفتر ثبت عملکرد: ذخیره‌سازی پایدار Supabase")
+    elif backend == "LOCAL_SQLITE":
+        lines.append("⚠️ دفتر ثبت عملکرد: SQLite محلی؛ سابقه بین runnerهای ابری تضمین‌شده نیست.")
+
+    checkpoints = summary.get("checkpoints", {})
     labels = {1: "۱ روزه", 7: "۷ روزه", 30: "۳۰ روزه", 90: "۹۰ روزه", 365: "۳۶۵ روزه"}
     if not checkpoints:
         lines.append("⏳ هنوز ارزیابی سررسیدشده‌ای برای نامزدهای ثبت‌شده وجود ندارد.")
@@ -1784,14 +1878,36 @@ def render_performance_summary(summary: dict[str, Any] | None) -> list[str]:
                 continue
             lines.append(
                 f"• افق {labels[checkpoint]} | نمونه: {item['sample_size']} | "
-                f"میانگین بازده: {item['mean_return_pct']:+.2f}٪ | "
-                f"میانه: {item['median_return_pct']:+.2f}٪ | "
-                f"نرخ بازده مثبت: {item['win_rate_pct']:.1f}٪"
+                f"بازده ناخالص میانگین/میانه: {item['mean_return_pct']:+.2f}٪ / "
+                f"{item['median_return_pct']:+.2f}٪ | نرخ مثبت: {item['win_rate_pct']:.1f}٪"
             )
+            if item.get("excess_sample_size", 0):
+                lines.append(
+                    f"  📐 بازده مازاد نسبت به معیار هم‌تاریخ: "
+                    f"{item['mean_excess_return_pct']:+.2f}٪ میانگین؛ "
+                    f"نرخ مازاد مثبت: {item['excess_win_rate_pct']:.1f}٪ "
+                    f"(نمونه {item['excess_sample_size']})"
+                )
+            if item.get("cost_configured_sample_size", 0):
+                lines.append(
+                    f"  💸 بازده خالص پس از هزینه رفت‌وبرگشت فرضی: "
+                    f"{item['mean_net_return_pct']:+.2f}٪ میانگین؛ "
+                    f"نرخ مثبت: {item['net_win_rate_pct']:.1f}٪ "
+                    f"(نمونه {item['cost_configured_sample_size']})"
+                )
             if item["sample_size"] < 10:
                 lines.append("  ⚠️ تعداد نمونه کمتر از ۱۰ است؛ نتیجه از نظر آماری قابل اتکا نیست.")
+    if not any(
+        item.get("cost_configured_sample_size", 0)
+        for item in checkpoints.values()
+    ):
+        lines.append(
+            "ℹ️ هزینه رفت‌وبرگشت هنوز برای طبقات دارایی تنظیم نشده است؛ "
+            "بازده خالص تا زمان تعیین فرض هزینه محاسبه نمی‌شود."
+        )
     lines.extend([
-        "⚠️ این پایش هنوز کارمزد، لغزش قیمت، معیار مقایسه، سوگیری بقا و بازسازی کامل داده‌های نقطه‌به‌نقطه را پوشش نمی‌دهد.",
+        "⚠️ بازده مازاد فقط با benchmark دارای تاریخ مشاهده یکسان محاسبه می‌شود. هزینه‌ها فرضی‌اند و لغزش واقعی، مالیات، تأمین مالی و اثر بازار را تضمین نمی‌کنند.",
+        "⚠️ کنترل کامل سوگیری بقا و بازسازی نقطه‌به‌نقطه هنوز تکمیل نشده است.",
         "⛔ بازده مثبت گذشته تضمین‌کننده نتیجه آینده نیست.",
     ])
     return lines
@@ -2085,9 +2201,44 @@ def main() -> int:
     db = ensure_db(Path(args.db))
     try:
         record_and_evaluate(db, series, scores)
-        performance = performance_summary(db)
+        local_performance = performance_summary(db)
     finally:
         db.close()
+
+    performance = local_performance
+    paper_journal_status = {
+        "status": "LOCAL_SQLITE",
+        "ideas_seen": 0,
+        "signals_inserted": 0,
+        "evaluations_inserted": 0,
+    }
+    if os.getenv("SUPABASE_URL", "").strip() and os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip():
+        try:
+            paper_records, paper_warnings = build_paper_performance_records(series, scores)
+            errors.extend(paper_warnings)
+            journal = SupabasePaperJournal()
+            journal_counts = journal.record_and_evaluate(
+                paper_records,
+                source_revision=args.crypto_audit_source_commit_sha,
+            )
+            performance = journal.performance_summary()
+            paper_journal_status = {
+                "status": "SUPABASE_PERSISTENT",
+                **journal_counts,
+            }
+        except (PaperJournalError, ValueError) as exc:
+            errors.append(
+                f"دفتر عملکرد پایدار Supabase در دسترس نبود ({type(exc).__name__})؛ "
+                "گزارش این نوبت از دفتر محلی استفاده می‌کند."
+            )
+            paper_journal_status = {
+                "status": "SUPABASE_FAILED_LOCAL_FALLBACK",
+                "ideas_seen": 0,
+                "signals_inserted": 0,
+                "evaluations_inserted": 0,
+            }
+
+    coverage_report["paper_performance_journal"] = paper_journal_status
 
     report = telegram_report(
         series,

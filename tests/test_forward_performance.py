@@ -1,4 +1,11 @@
-from scanner import ensure_db, performance_summary, render_performance_summary
+from scanner import (
+    MarketSeries,
+    build_paper_performance_records,
+    ensure_db,
+    market_score,
+    performance_summary,
+    render_performance_summary,
+)
 
 
 def test_performance_summary_calculates_forward_tracking_metrics(tmp_path):
@@ -55,9 +62,50 @@ def test_performance_report_warns_when_sample_is_small():
     rendered = "\\n".join(lines)
     assert "Forward Paper Tracking" in rendered
     assert "نمونه کمتر از ۱۰" in rendered
-    assert "کارمزد، لغزش قیمت" in rendered
+    assert "هزینه رفت‌وبرگشت هنوز" in rendered
 
 
 def test_performance_report_handles_no_matured_evaluations():
     lines = render_performance_summary({"checkpoints": {}})
     assert any("هنوز ارزیابی سررسیدشده‌ای" in line for line in lines)
+
+
+
+def test_paper_records_match_same_date_spy_and_keep_dbc_as_reference():
+    today = __import__("datetime").date.today().isoformat()
+    nvda = MarketSeries(
+        key="equity:NVDA", symbol="NVDA", name="NVIDIA",
+        asset_class="us_equity_etf", instrument="equity", provider="OpenBB",
+        feed_class="daily", currency="USD",
+        observations=[{"date": today, "close": 100}],
+        data_as_of=today,
+    )
+    spy = MarketSeries(
+        key="equity:SPY", symbol="SPY", name="S&P 500",
+        asset_class="us_equity_etf", instrument="ETF", provider="OpenBB",
+        feed_class="daily", currency="USD",
+        observations=[{"date": today, "close": 500}],
+        data_as_of=today,
+    )
+    dbc = MarketSeries(
+        key="commodity:DBC", symbol="DBC", name="Broad Commodity ETF",
+        asset_class="commodity_proxy", instrument="ETF", provider="OpenBB",
+        feed_class="daily", currency="USD",
+        observations=[{"date": today, "close": 20}],
+        data_as_of=today,
+    )
+    scores = {
+        nvda.key: {"score": 75, "coverage": 100, "decision": "WATCH_ONLY", "why": "test"},
+        spy.key: {"score": 70, "coverage": 100, "decision": "WATCH_ONLY", "why": "benchmark"},
+        dbc.key: market_score(dbc),
+    }
+
+    records, warnings = build_paper_performance_records([nvda, spy, dbc], scores)
+    by_key = {item["asset_key"]: item for item in records}
+
+    assert warnings == []
+    assert by_key[nvda.key]["benchmark_symbol"] == "SPY"
+    assert by_key[nvda.key]["benchmark_asset_key"] == spy.key
+    assert by_key[nvda.key]["benchmark_entry_price"] == 500
+    assert by_key[spy.key]["benchmark_asset_key"] is None
+    assert by_key[dbc.key]["decision"] == "DATA_ONLY"
