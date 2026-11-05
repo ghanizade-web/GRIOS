@@ -107,6 +107,9 @@ def test_watchlist_batch_reuses_one_sec_client_and_continues_after_failure(
     assert result["filers_failed"] == 1
     assert result["filers_skipped"] == 1
     assert (tmp_path / "reports" / "0001364742_2026-09-30.json").exists()
+    assert (tmp_path / "reports" / "0001364742_2026-09-30.txt").exists()
+    assert (tmp_path / "reports" / "latest-sec-13f.txt").exists()
+    assert "گزارش پایش مدیران سرمایه" in (tmp_path / "reports" / "latest-sec-13f.txt").read_text(encoding="utf-8")
     assert json.loads(summary_path.read_text(encoding="utf-8"))["filers_failed"] == 1
 
 
