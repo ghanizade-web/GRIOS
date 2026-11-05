@@ -30,7 +30,7 @@ DATASETS = {
         ],
         "categories": {
             "producer_merchant": {
-                "label_fa": "تولیدکنندگان و بازرگانان",
+                "label_fa": "تولیدکنندگان، بازرگانان و مصرف‌کنندگان صنعتی",
                 "long": "prod_merc_positions_long",
                 "short": "prod_merc_positions_short",
             },
@@ -40,7 +40,7 @@ DATASETS = {
                 "short": "swap__positions_short_all",
             },
             "managed_money": {
-                "label_fa": "مدیریت‌کنندگان سرمایه و صندوق‌های سفته‌باز",
+                "label_fa": "مدیران سرمایه (Managed Money)",
                 "long": "m_money_positions_long_all",
                 "short": "m_money_positions_short_all",
             },
@@ -81,7 +81,7 @@ DATASETS = {
                 "short": "asset_mgr_positions_short",
             },
             "leveraged_funds": {
-                "label_fa": "صندوق‌های اهرمی و سفته‌بازان حرفه‌ای",
+                "label_fa": "صندوق‌های اهرمی (Leveraged Funds)",
                 "long": "lev_money_positions_long",
                 "short": "lev_money_positions_short",
             },
