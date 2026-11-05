@@ -24,7 +24,7 @@ def run_ingestion(
     user_agent = env.get("SEC_USER_AGENT", "").strip()
     data_hub_url = env.get("GRIOS_DATA_HUB_URL", "").strip()
     token = env.get("GRIOS_INGEST_TOKEN", "").strip()
-    source_revision = env.get("GITHUB_SHA", "").strip() or None
+    source_revision = env.get("GRIOS_SOURCE_REVISION", "").strip() or env.get("GITHUB_SHA", "").strip() or None
     missing = [
         name for name, value in (
             ("SEC_USER_AGENT", user_agent),
