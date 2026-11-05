@@ -346,7 +346,7 @@ def run(
         status = "SUCCESS" if not failures else ("PARTIAL" if series else "FAILED")
 
     publish_result = (
-        publish_market_series(series, source_revision or os.getenv("GITHUB_SHA", "UNKNOWN"))
+        publish_market_series(series, source_revision or os.getenv("GRIOS_SOURCE_REVISION") or os.getenv("GITHUB_SHA", "UNKNOWN"))
         if series else {"status": "NO_DATA", "accepted": 0, "error": None}
     )
     payload = {
