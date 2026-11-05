@@ -41,7 +41,8 @@ jobs:
             --watchlist config/sec_13f_watchlist.json \
             --output-dir artifacts/sec-13f-watchlist/reports \
             --database artifacts/sec-13f-watchlist/registry.sqlite3 \
-            --summary artifacts/sec-13f-watchlist/summary.json
+            --summary artifacts/sec-13f-watchlist/summary.json \
+            --summary-report artifacts/sec-13f-watchlist/summary.txt
 
       - name: Upload institutional 13F audit artifacts
         if: always()

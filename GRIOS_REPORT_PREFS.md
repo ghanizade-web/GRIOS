@@ -5,7 +5,10 @@ Use this as the durable editorial brief for GRIOS market reports.
 The owner's broader operating blueprint is recorded in [`GRIOS_OPERATING_MANUAL_v1.md`](GRIOS_OPERATING_MANUAL_v1.md). Treat its agent organization, G-Score labels, and roadmap as intended design unless implementation and validation are explicitly verified. This report brief and `GRIOS/docs/COMMANDS.md` describe current evidence and command limits.
 
 ## Scope and style
-- Write in Persian, compact and engaging, ready to paste into Telegram; use clear headings and a few relevant emojis.
+- Write in fluent Persian, compact and engaging, ready to paste into Telegram; use clear headings, meaningful emojis, horizontal dividers and readable mobile-sized sections.
+- Every human-readable report and Telegram publication must be right-to-left (RTL). Isolate Persian lines from Latin tickers, numbers, URLs and technical identifiers so mixed-direction text remains readable.
+- Keep machine-readable JSON, API schemas, provider names, tickers, CIKs, CUSIPs and source URLs unchanged; localize the human-facing explanation and labels.
+- Use explicit Persian labels for data freshness, reporting period, publication time, confidence, caveats, data coverage and pipeline status. Never translate a status in a way that changes its technical meaning.
 - Exclude Iran's stock market. Cover global equities (especially US, and relevant Asia/Europe), FX, crypto, and commodities: energy, precious/base metals, and agriculture when there is a meaningful signal.
 - Prefer a small set of differentiated, evidence-backed signals over a long quote board. Include prices only as useful anchors, with source and observation time; spend more space on why the move matters.
 - For each selected signal explain the catalyst, the causal link to the asset, the supporting and opposing evidence, what would confirm or invalidate the thesis, and the next dated/near-term event when verified.
