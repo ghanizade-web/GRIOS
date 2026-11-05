@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 
 from sec_13f_data_hub import GriosDataHubClient
 from sec_13f_ingestion import ingest_13f_report_period
+from report_formatting import social_footer_lines
 from sec_edgar_client import SecEdgarClient, normalize_cik
 
 
@@ -104,6 +105,7 @@ def render_persian_filer_report(report: dict[str, Any], filer_name: str) -> str:
         "🧭 این گزارش بازسازیِ سبد افشاشده عمومی است؛ نه دفتر معاملات و نه توصیه سرمایه‌گذاری.",
         "🔗 منبع رسمی: https://www.sec.gov/edgar/search/",
     ])
+    lines.extend(social_footer_lines())
     return "\n".join(lines)
 
 
@@ -145,6 +147,7 @@ def render_persian_watchlist_summary(summary: dict[str, Any]) -> str:
         "⚠️ داده 13F دوره‌ای و با تأخیر است. موقعیت گزارش‌شده، اثبات خریدوفروش اخیر یا ورود سرمایه لحظه‌ای نیست.",
         "🔗 مرجع رسمی SEC: https://www.sec.gov/edgar/search/",
     ])
+    lines.extend(social_footer_lines())
     return "\n".join(lines)
 
 
