@@ -1,7 +1,7 @@
 # GRIOS v15 — Supabase-Only Data Hub Architecture
 
 **Decision date:** 2026-11-07  
-**Status:** Migration in progress; database and direct-ingestion path verified.
+**Status:** Repository migration merged; GRIOS direct-ingestion path verified. The Twelve Data adapter migration is merged and unit-tested; its live manual workflow has not yet been run.
 
 ## Architecture decision
 
@@ -22,15 +22,15 @@ GitHub Actions remains the scheduled compute/orchestration layer. It runs the Py
 
 ### Live database evidence (2026-11-07)
 
-A read-only query returned 953 market-observation rows, 38 distinct ingestion runs, and 7 provider labels. The newest row was inserted at 2026-11-07 15:05:53 UTC.
+A read-only query returned 1,073 market-observation rows, 40 distinct ingestion runs, and 7 provider labels. The newest row was inserted at 2026-11-07 15:52:08 UTC.
 
 Provider coverage observed in the table:
-- CoinGecko + CoinMarketCap: 318 rows
-- OpenBB Cboe: 310 rows across equity ETF and commodity proxy classes
-- OpenBB ECB: 99 rows
-- OpenBB FRED: 92 rows
+- CoinGecko + CoinMarketCap: 346 rows
+- OpenBB Cboe: 376 rows across equity ETF and commodity proxy classes
+- OpenBB ECB: 113 rows
+- OpenBB FRED: 100 rows
 - CFTC: 61 rows
-- OpenBB EIA: 46 rows
+- OpenBB EIA: 50 rows
 - EIA: 27 rows
 
 These counts establish persisted observations, not that every provider is real-time or every market universe is complete. Each record retains provider, feed class, instrument, observation timestamp, source date, caveat, payload and source revision.
@@ -45,7 +45,7 @@ These counts establish persisted observations, not that every provider is real-t
 5. Reporting and CFTC context readers query Supabase directly.
 6. Telegram publication remains a separate report-delivery step.
 
-The Twelve Data adapter in the private `market-pulse` repository is being migrated to the same direct Supabase table; it must not call a Worker endpoint.
+The Twelve Data adapter in the private `market-pulse` repository is now implemented and merged to write to the same direct Supabase table; its unit tests pass, but its live manual workflow has not yet been executed.
 
 ## Security model
 
@@ -60,7 +60,7 @@ The Twelve Data adapter in the private `market-pulse` repository is being migrat
 
 The Supabase-only migration removes the Cloudflare Worker implementation and Wrangler deployment workflow, removes the Worker CI job and fallback publisher, updates documentation, and enforces direct Supabase ingestion in tests.
 
-The private `market-pulse` migration updates its Twelve Data adapter and workflows to use the same Supabase credentials and table.
+Private `market-pulse` PR #25 is merged (commit `dd613437937848a6b5093110166930e3f4fafdac`); its CI passed. Public GRIOS PR #68 is merged (commit `b2d26c7d4bbe873f4b6308c8b92b1802ffbb95b9`); post-merge CI passed. BLS macro-feed PR #67 is also merged (commit `5b304d798d23423063cd78f49d6992cfe2c5168f`).
 
 ## Operational verification
 
