@@ -73,3 +73,25 @@ def test_classifier_rejects_geopolitical_headlines_without_market_transmission()
 def test_classifier_recognizes_precious_metals_and_multi_asset_summary():
     topics = market_news.classify_topics("Precious Metals Post Weekly Gains")
     assert "metals" in topics
+
+
+
+def test_official_bls_macro_feeds_are_registered_and_classified():
+    names = {feed["name"] for feed in market_news.FEEDS}
+    assert "BLS — Employment Situation" in names
+    assert "BLS — Consumer Price Index" in names
+    assert "BLS — Producer Price Index" in names
+    assert "BLS — Job Openings and Labor Turnover Survey" in names
+
+    now = datetime.now(timezone.utc)
+    published = (now - timedelta(hours=1)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    xml = f"""<rss><channel><item>
+      <title>Employment Situation</title>
+      <link>https://www.bls.gov/news.release/empsit.htm</link>
+      <description>Monthly labor market release.</description>
+      <pubDate>{published}</pubDate>
+    </item></channel></rss>"""
+    feed = {"name": "BLS — Employment Situation", "url": "https://www.bls.gov/feed/empsit.rss", "tier": "TIER_1", "kind": "official", "focus": "labor"}
+    items = market_news._parse_feed(xml, feed, now)
+    assert len(items) == 1
+    assert "global_growth" in items[0]["topics"]
