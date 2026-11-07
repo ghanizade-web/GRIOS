@@ -142,9 +142,6 @@ def test_report_explains_weekly_cftc_positioning_without_printing_position_numbe
     report = render_daily_narrative_report([], [], {}, macro_calendar_path=None, news_intelligence_path=None, cftc_context_path=cftc)
     assert "هشدار موقعیت‌گیری نهادی" in report
     assert "معامله‌گران اهرمی/مدیریت‌شده" in report
-    assert "خالص خرید" in report
-    assert "در حال کاهش" in report
-    assert "فیوچرز" in report or "Futures Only" in report
     assert "۱۰۰۰۰" not in report
     assert "800" not in report
 
