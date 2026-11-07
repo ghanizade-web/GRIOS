@@ -2,8 +2,29 @@
   "us_equities_etfs": [
     "SPY",
     "QQQ",
+    "IWM",
+    "DIA",
+    "XLK",
+    "XLF",
+    "XLE",
+    "XLI",
+    "SOXX",
     "NVDA",
-    "MSFT"
+    "MSFT",
+    "AMD",
+    "AVGO",
+    "AMZN",
+    "GOOGL",
+    "META",
+    "TSM",
+    "EFA",
+    "EEM",
+    "TLT",
+    "IEF",
+    "SHY",
+    "HYG",
+    "LQD",
+    "TIP"
   ],
   "commodity_etf_proxies": [
     "DBC",
@@ -11,12 +32,17 @@
     "SLV",
     "USO",
     "UNG",
-    "CPER"
+    "CPER",
+    "DBA",
+    "DBB"
   ],
   "fx_reference_pairs": [
     "EURUSD",
     "EURGBP",
     "EURJPY",
+    "EURCHF",
+    "EURCAD",
+    "EURAUD",
     "EURTRY"
   ],
   "crypto_symbols": [

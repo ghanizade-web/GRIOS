@@ -1951,6 +1951,14 @@ def telegram_report(
             "GRIOS_MACRO_CALENDAR_PATH",
             "reports/macro-calendar-latest.json",
         ),
+        news_intelligence_path=os.getenv(
+            "GRIOS_NEWS_INTELLIGENCE_PATH",
+            "reports/news-intelligence-latest.json",
+        ),
+        cftc_context_path=os.getenv(
+            "GRIOS_CFTC_CONTEXT_PATH",
+            "reports/cftc-positioning-latest.json",
+        ),
     )
 
 
