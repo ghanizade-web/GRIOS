@@ -365,7 +365,7 @@ def _decision_brief(
             prior = closes[-21:-1]
             breakout = recent > max(prior)
             breakdown = recent < min(prior)
-        direction = "خرید مشروط" if aligned_up else "فروش استقراضی مشروط"
+        direction = "صعودی" if aligned_up else "نزولی"
         trigger = (
             "ورود فقط پس از تثبیت بالای سقف نوسان اخیر و بازآزمایی موفق."
             if aligned_up and breakout else
