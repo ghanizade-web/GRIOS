@@ -27,7 +27,7 @@ Publish a concise Persian, decision-first intelligence briefing that identifies 
 - Attribute each item to its publisher and link to the original source.
 - Prefer official primary sources for policy, regulation, macro releases and supply data; use established financial journalism for reported developments.
 - Distinguish confirmed facts, reported claims and GRIOS interpretation.
-- Explain why the news matters to the specific market; do not treat a headline as a trade signal.
+- For every selected story, print the actual RSS summary/excerpt as the news brief; never replace the story with a bare URL or generic placeholder.\n- Follow each story with a market-specific transmission analysis: what variable changes, which instruments/sectors are exposed, likely positive/negative/conditional pathways, and what market evidence would confirm the interpretation.\n- A URL is a verification link only; it is not the news content or the analysis.\n- Preserve numeric facts in headlines when they are material; do not suppress a headline merely because it contains prices, percentages or dates.\n- Do not classify generic political stories as relevant to every market. Require a direct transmission channel or explicit market relevance.
 - Group the same story under more than one market only when its transmission is genuinely cross-asset.
 - If a market has no sufficiently relevant verified news, say so instead of inventing coverage.
 - News headlines and RSS excerpts are not represented as full-article research.
@@ -50,7 +50,7 @@ Publish a concise Persian, decision-first intelligence briefing that identifies 
 - If data is missing, stale, contradictory or unavailable, disclose the limitation and suppress the related conclusion.
 - CFTC Futures Only is weekly positioning, not real-time flow.
 - SEC 13F holdings are delayed and partial disclosures, not real-time institutional activity.
-- The current synthesis is deterministic and rule-based; RSS headlines/excerpts are not full-text analysis unless a separately approved full-text research pipeline is added.
+- The current synthesis is deterministic and rule-based; RSS summaries/excerpts are not represented as full-text article review. Each story must nevertheless include its available excerpt and an explicit market-specific impact analysis. If a source supplies no excerpt, label that limitation and do not fabricate article details. A future full-text research stage should retrieve permitted article text or official releases and preserve source-level evidence.
 
 ## Output limits
 
