@@ -67,7 +67,9 @@ def test_official_calendar_events_are_included_without_inventing_consensus(tmp_p
     }]}), encoding="utf-8")
     report = render_daily_narrative_report([], [], {}, macro_calendar_path=calendar)
     assert "رویدادهای اقتصادی پیش‌رو" in report
-    assert "Consumer Price Index" in report
+    assert "شاخص قیمت مصرف‌کننده (CPI)" in report
+    assert "۱۹ آبان ۱۴۰۵" in report
+    assert "Consumer Price Index" not in report
     assert "اجماع بازار" in report
     assert "رقم واقعی" in report
 
@@ -172,3 +174,16 @@ def test_safe_headline_suppresses_market_figures_but_keeps_clean_titles():
     assert _safe_headline({"title": "How Wall Street’s all-in bet on AI blew up"}) == "How Wall Street’s all-in bet on AI blew up"
     assert _safe_headline({"title": "Bitcoin rebounds to $76,000 after selloff"}) is None
     assert _safe_headline({"title": "Oil rises 2.4% as supply concerns grow"}) is None
+
+
+def test_source_reference_list_deduplicates_by_publisher_not_aggregator_domain():
+    from daily_narrative_report import _story_refs
+    items = [
+        {"publisher": "Reuters", "domain": "news.google.com", "url": "https://news.google.com/reuters", "topics": ["geopolitics"]},
+        {"publisher": "Bloomberg", "domain": "news.google.com", "url": "https://news.google.com/bloomberg", "topics": ["energy"]},
+        {"publisher": "Reuters", "domain": "news.google.com", "url": "https://news.google.com/reuters-2", "topics": ["markets"]},
+    ]
+    refs = _story_refs(items, limit=5)
+    assert len(refs) == 2
+    assert "Reuters" in refs[0]
+    assert "Bloomberg" in refs[1]
