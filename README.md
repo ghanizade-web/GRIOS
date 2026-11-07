@@ -1,6 +1,6 @@
 # GRIOS Opportunity Scanner — MVP
 
-Small, research-only Python scanner using direct CoinGecko and CoinMarketCap REST adapters for crypto, plus OpenBB provider connectors for listed equities/ETFs, ECB FX reference data, EIA energy series, and FRED macro context. It writes a Persian, Telegram-friendly text report, a machine-readable crypto audit JSON, and local SQLite snapshots/idea outcomes. An optional authenticated publisher sends normalized observations to the GRIOS Cloudflare Data Hub when `GRIOS_DATA_HUB_URL` and `GRIOS_DATA_HUB_TOKEN` are configured; without both values, scanning continues locally and publishing reports `NOT_CONFIGURED`. A separate `market-pulse` repository also contains a Twelve Data adapter and a manual scanner-to-Data-Hub workflow; that adapter is a distinct feed and should not be confused with this scanner's CoinGecko/CMC/OpenBB/ECB/EIA/FRED coverage. The scanner itself does not place orders and does not claim validated alpha.
+Small, research-only Python scanner using direct CoinGecko and CoinMarketCap REST adapters for crypto, plus OpenBB provider connectors for listed equities/ETFs, ECB FX reference data, EIA energy series, and FRED macro context. It writes a Persian, Telegram-friendly text report, a machine-readable crypto audit JSON, and local SQLite snapshots/idea outcomes. Normalized market observations are written directly to the GRIOS Supabase Data Hub (`public.grios_market_observations`) through the Supabase REST API using server-side credentials; Cloudflare Worker/Data Hub is not part of the active architecture. A separate `market-pulse` repository contains a Twelve Data adapter that writes to the same Supabase table. The scanner itself does not place orders and does not claim validated alpha.
 
 ## Actual MVP coverage
 
@@ -28,7 +28,7 @@ cp .env.example .env
 cp watchlist.example.json watchlist.json
 ```
 
-Edit `.env` and `watchlist.json`. Set `COINGECKO_API_KEY` and `COINMARKETCAP_API_KEY` for the direct crypto adapters, `EIA_API_KEY` for EIA, and `FRED_API_KEY` for macro series. Keep all credentials in `.env` or the CI secret store; never place them in URLs, source files, audit JSON, or logs. The script loads local environment variables via `python-dotenv`; `.env` is gitignored. In GitHub Actions, the GRIOS scanner workflow supplies provider credentials as repository secrets. For optional Data Hub publishing, set `GRIOS_DATA_HUB_URL` to the deployed Worker HTTPS origin and `GRIOS_DATA_HUB_TOKEN` to the same bearer token configured on the Worker. Never place secret values in source, reports, audit JSON, or logs.
+Edit `.env` and `watchlist.json`. Set `COINGECKO_API_KEY` and `COINMARKETCAP_API_KEY` for the direct crypto adapters, `EIA_API_KEY` for EIA, and `FRED_API_KEY` for macro series. Keep all credentials in `.env` or the CI secret store; never place them in URLs, source files, audit JSON, or logs. The script loads local environment variables via `python-dotenv`; `.env` is gitignored. In GitHub Actions, the GRIOS scanner workflow supplies provider credentials as repository secrets. For persistent Data Hub publishing, set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` as server-side GitHub Actions secrets. The scanner writes directly to `public.grios_market_observations`; never expose the service-role key in client code, reports, audit JSON, or logs.
 
 Generate a report:
 

@@ -10,7 +10,6 @@ on:
       - main
     paths:
       - "data_coverage.py"
-      - "services/data-hub-worker/**"
       - "supabase/migrations/**"
       - "tests/**"
       - "scanner.py"
@@ -30,13 +29,3 @@ jobs:
       - run: python -m py_compile scanner.py data_coverage.py
       - run: python -m pytest -q
 
-  worker-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Run Worker contract tests
-        working-directory: services/data-hub-worker
-        run: npm test
