@@ -25,6 +25,11 @@ FEEDS: tuple[dict[str, str], ...] = (
     {"name": "SEC — Press Releases", "url": "https://www.sec.gov/news/pressreleases.rss", "tier": "TIER_1", "kind": "official", "focus": "regulation"},
     {"name": "EIA — Today in Energy", "url": "https://www.eia.gov/rss/todayinenergy.xml", "tier": "TIER_1", "kind": "official", "focus": "energy"},
     {"name": "BIS — Media Releases", "url": "https://www.bis.org/doclist/all_pressrels.rss", "tier": "TIER_1", "kind": "official", "focus": "macro"},
+    # BLS feed URLs are linked directly from the agency's official RSS directory.
+    {"name": "BLS — Employment Situation", "url": "https://www.bls.gov/feed/empsit.rss", "tier": "TIER_1", "kind": "official", "focus": "labor"},
+    {"name": "BLS — Consumer Price Index", "url": "https://www.bls.gov/feed/cpi.rss", "tier": "TIER_1", "kind": "official", "focus": "inflation"},
+    {"name": "BLS — Producer Price Index", "url": "https://www.bls.gov/feed/ppi.rss", "tier": "TIER_1", "kind": "official", "focus": "inflation"},
+    {"name": "BLS — Job Openings and Labor Turnover Survey", "url": "https://www.bls.gov/feed/jolts.rss", "tier": "TIER_1", "kind": "official", "focus": "labor"},
     {"name": "Bloomberg — Markets", "url": "https://feeds.bloomberg.com/markets/news.rss", "tier": "TIER_2", "kind": "news", "focus": "markets"},
     {"name": "Bloomberg — Technology", "url": "https://feeds.bloomberg.com/technology/news.rss", "tier": "TIER_2", "kind": "news", "focus": "technology"},
     {"name": "CNBC — Investing", "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=15839069", "tier": "TIER_2", "kind": "news", "focus": "markets"},
@@ -49,7 +54,7 @@ TOPIC_RULES: dict[str, tuple[str, ...]] = {
     "crypto": ("bitcoin", "ethereum", "crypto", "digital asset", "stablecoin", "tokenization", "spot etf", "blockchain"),
     "fx": ("dollar", "euro", "yen", "sterling", "pound", "forex", "currency", "exchange rate"),
     "corporate_earnings": ("earnings", "quarterly results", "revenue", "profit", "guidance", "buyback", "dividend", "merger", "acquisition", "ipo", "shares fell", "shares rose"),
-    "global_growth": ("recession", "gdp", "manufacturing", "pmi", "retail sales", "consumer spending", "china economy", "industrial production", "trade data"),
+    "global_growth": ("recession", "gdp", "manufacturing", "pmi", "retail sales", "consumer spending", "china economy", "industrial production", "trade data", "employment situation", "job openings", "jolts", "unemployment", "nonfarm payroll", "labor force", "wage growth", "jobless claims"),
     "regulation": ("sec", "regulator", "regulation", "antitrust", "lawsuit", "court ruling", "congress", "legislation", "compliance"),
     "politics": ("election", "midterm", "president", "presidential", "white house", "government", "parliament", "fiscal policy", "federal budget", "government shutdown", "tax policy", "congressional", "political party"),
 }
@@ -146,8 +151,10 @@ def _parse_feed(xml_text: str, feed: dict[str, str], now: datetime) -> list[dict
         topics = list(dict.fromkeys(classify_topics(title) + classify_topics(summary, min_matches=2)))
         if not topics:
             focus = feed.get("focus", "")
-            if focus in {"crypto", "energy", "regulation"} or feed.get("kind") == "specialist":
-                topics = [focus] if focus in TOPIC_RULES else []
+            focus_topics = {"crypto": "crypto", "energy": "energy", "regulation": "regulation", "labor": "global_growth", "inflation": "monetary_policy"}
+            if focus in focus_topics or feed.get("kind") == "specialist":
+                mapped = focus_topics.get(focus, focus)
+                topics = [mapped] if mapped in TOPIC_RULES else []
         if not topics:
             continue
         output.append({
