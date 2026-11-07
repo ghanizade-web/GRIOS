@@ -227,7 +227,7 @@ def _news_market_impact(story: dict[str, Any], market: str) -> str:
         return "اثر بر کامودیتی: مسیر اصلی از عرضه فیزیکی، هزینه حمل و تقاضای صنعتی می‌گذرد؛ بدون تغییر در یکی از این متغیرها، تیتر به‌تنهایی مبنای جهت‌گیری نیست."
     if market == "equities":
         if "ai_semiconductors" in topics or any(x in text for x in ("artificial intelligence", "semiconductor", "chip", "data center", "capex")):
-            return "اثر بر سهام: برندگان بالقوه شامل تراشه، شبکه، برق و زیرساخت دیتاسنترند؛ اما معیار تعیین‌کننده تبدیل CapEx به سفارش، درآمد و جریان نقدی است. رشد هزینه بدون بازده کافی می‌تواند به ضرر سهام AI تمام شود."
+            return "اثر بر سهام: برندگان بالقوه شامل تراشه، شبکه، برق و زیرساخت دیتاسنترند؛ اما معیار تعیین‌کننده تبدیل CapEx به سفارش، درآمد، جریان نقدی و بازده اقتصادی واقعی است. رشد هزینه بدون بازده کافی می‌تواند به ضرر سهام AI تمام شود."
         if "corporate_earnings" in topics or any(x in text for x in ("earnings", "revenue", "profit", "guidance", "buyback")):
             return "اثر بر سهام: واکنش فقط به سود تیترشده نیست؛ حاشیه سود، جریان نقدی و راهنمای مدیریت تعیین می‌کند خبر برای خود شرکت و صنعت مثبت است یا منفی. اثر شاخصی به وزن شرکت و سرایت به هم‌گروهی‌ها بستگی دارد."
         if "monetary_policy" in topics:
@@ -505,7 +505,7 @@ def _decision_brief(
         stories = [
             story for story in news
             if _news_market_relevant(story, market)
-            and str(story.get("url") or "") not in used_news
+            
         ]
         tier_rank = {"TIER_1": 0, "TIER_2": 1, "TIER_3": 2}
         stories.sort(key=lambda story: (
