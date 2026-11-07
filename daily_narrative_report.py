@@ -11,7 +11,6 @@ from report_formatting import social_footer_lines
 
 DIVIDER = "━━━━━━━━━━━━━━━━━━━━"
 PERSIAN_DIGITS = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
-TOPIC_LABELS_FOR_REPORT = {"geopolitics", "monetary_policy", "ai_semiconductors", "energy", "metals", "crypto", "fx", "corporate_earnings", "global_growth", "regulation", "politics"}
 
 
 def _fa(value: Any) -> str:
@@ -362,7 +361,7 @@ def _topic_label(topic: str) -> str:
         "ai_semiconductors": "هوش مصنوعی و نیمه‌رساناها", "energy": "انرژی و زنجیره عرضه",
         "metals": "فلزات گران‌بها و صنعتی", "crypto": "دارایی‌های دیجیتال و مقررات کریپتو",
         "fx": "ارزها و دلار", "corporate_earnings": "سود شرکت‌ها و راهنمای مدیریت",
-        "global_growth": "رشد اقتصاد جهانی", "regulation": "مقررات و سیاست‌گذاری",
+        "global_growth": "رشد اقتصاد جهانی", "regulation": "مقررات و سیاست‌گذاری", "politics": "سیاست و تصمیمات دولت",
     }.get(topic, topic)
 
 
@@ -507,8 +506,6 @@ def _decision_brief(
         ("crypto", "₿ اخبار و تحلیل کریپتو", "کریپتو"),
         ("rates", "🏦 اخبار و تحلیل اوراق و نرخ بهره", "اوراق"),
     ]
-    selected_news_for_report: list[dict[str, Any]] = []
-    selected_news_urls: set[str] = set()
     news_sections_added = 0
     for market, heading, market_label in market_news_groups:
         stories = [
@@ -525,14 +522,10 @@ def _decision_brief(
         if not stories:
             continue
         story = stories[0]
-        story_url = str(story.get("url") or "").strip()
-        if story_url and story_url not in selected_news_urls:
-            selected_news_for_report.append(story)
-            selected_news_urls.add(story_url)
         title = _safe_headline(story) or "عنوان خبر در فید موجود نیست"
         summary = " ".join(str(story.get("summary") or "").split()).strip()
         summary = summary[:360].rstrip()
-        topics = [topic for topic in (story.get("topics") or []) if topic in TOPIC_LABELS_FOR_REPORT]
+        topics = [topic for topic in (story.get("topics") or []) if topic in {"geopolitics", "monetary_policy", "ai_semiconductors", "energy", "metals", "crypto", "fx", "corporate_earnings", "global_growth", "regulation", "politics"}]
         topic_names = "، ".join(_topic_label(topic) for topic in topics)
         lines.extend(["", heading, f"**{title}**"])
         if summary:
