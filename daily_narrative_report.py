@@ -108,9 +108,9 @@ def _direction(value: float | None) -> str:
     if value is None:
         return "نامشخص"
     if value > 0.15:
-        return "رو به بهبود"
+        return "در حال تقویت"
     if value < -0.15:
-        return "رو به تضعیف"
+        return "در حال تضعیف"
     return "تقریباً باثبات"
 
 
@@ -186,17 +186,16 @@ def _safe_headline(item: dict[str, Any]) -> str | None:
 
 
 def _story_refs(items: list[dict[str, Any]], limit: int = 6) -> list[str]:
-    seen_domains: set[str] = set()
+    seen_sources: set[str] = set()
     output: list[str] = []
     for item in items:
         source = _source_name(item)
-        domain = str(item.get("domain") or source)
         url = str(item.get("url", "")).strip()
         topics = item.get("topics") or []
         topic_label = _topic_label(topics[0]) if topics else "بازارهای جهانی"
-        if not url or domain in seen_domains:
+        if not url or source in seen_sources:
             continue
-        seen_domains.add(domain)
+        seen_sources.add(source)
         safe_title = _safe_headline(item)
         label = safe_title or topic_label
         output.append(f"• {source} — {label}" + chr(10) + f"  {url}")
@@ -386,7 +385,10 @@ def render_daily_narrative_report(
     equity_items = [by_key.get(("us_equity_etf", symbol)) for symbol in ("SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE", "XLI", "SOXX", "NVDA", "MSFT", "AMD", "AVGO", "AMZN", "GOOGL", "META", "TSM", "EFA", "EEM")]
     equity_items = [item for item in equity_items if item is not None]
     if equity_items:
-        paragraphs = [_trend_text(spy), _trend_text(qqq)]
+        if spy and qqq and _trend(spy) == _trend(qqq):
+            paragraphs = [f"شاخص گسترده و فناوری هر دو {_trend(spy)} هستند؛ بنابراین جهت کلی سهام آمریکا هنوز هم‌سو است."]
+        else:
+            paragraphs = [_trend_text(spy), _trend_text(qqq)]
         if spy and qqq and _return(spy, 1) is not None and _return(qqq, 1) is not None:
             spread = _return(qqq, 1) - _return(spy, 1)
             if spread < -0.25:
@@ -458,7 +460,7 @@ def render_daily_narrative_report(
     fx = [item for item in by_key.values() if getattr(item, "asset_class", "") == "fx_reference"]
     fx = sorted(fx, key=lambda item: str(item.symbol))
     if fx:
-        paragraphs = ["نرخ‌های مرجع ارز، جهت نسبی یورو را نشان می‌دهند و جایگزین قیمت اجرایی، اسپرد یا عمق بازار نیستند."]
+        paragraphs = ["نرخ‌های مرجع ارز، جهت نسبی یورو را نشان می‌دهند؛ این داده‌ها نرخ خریدوفروش لحظه‌ای، هزینه معامله یا عمق بازار را نشان نمی‌دهند."]
         for item in fx[:4]:
             paragraphs.append(f"**{str(item.symbol).upper()}:** {_direction(_return(item, 5))} در مشاهدات اخیر؛ برای معامله، اختلاف سیاست پولی و تأیید بازار نقدی باید بررسی شود.")
         lines.extend(_section("💱 بازار ارزهای جهانی", paragraphs))
@@ -470,25 +472,25 @@ def render_daily_narrative_report(
     eia = [item for item in by_key.values() if getattr(item, "asset_class", "") == "commodity_energy"]
     paragraphs = []
     if proxies["USO"]:
-        paragraphs.append(f"**نفت:** نماینده بورسی نفت {_trend_text(proxies['USO'])}؛ برای تشخیص حرکت پایدار باید آن را با موجودی و تولید هفتگی EIA و خبرهای عرضه تطبیق داد.")
+        paragraphs.append(f"**نفت:** {_trend_text(proxies['USO']).rstrip('؛. ')}؛ برای تشخیص حرکت پایدار، روند صندوق نفت را با موجودی و تولید هفتگی EIA و خبرهای عرضه تطبیق می‌دهیم.")
     if proxies["UNG"]:
-        paragraphs.append(f"**گاز طبیعی:** {_trend_text(proxies['UNG'])}؛ این بازار به آب‌وهوا، ذخایر، تولید و تقاضای برق حساس است و با نفت الزاماً هم‌جهت نیست.")
+        paragraphs.append(f"**گاز طبیعی:** {_trend_text(proxies['UNG']).rstrip('؛. ')}؛ این بازار به آب‌وهوا، ذخایر، تولید و تقاضای برق حساس است و با نفت الزاماً هم‌جهت نیست.")
     if eia:
         paragraphs.append("داده‌های رسمی موجودی و عرضه انرژی EIA برای بررسی سمت فیزیکی بازار استفاده می‌شوند؛ این داده‌ها هفتگی‌اند و نباید به‌عنوان جریان لحظه‌ای سرمایه تعبیر شوند.")
     if proxies["GLD"]:
-        paragraphs.append(f"**طلا:** {_trend_text(proxies['GLD'])}؛ جهت آن را در کنار دلار، بازده اوراق و ریسک ژئوپلیتیک می‌سنجیم، نه فقط خبرهای پناهگاه امن.")
+        paragraphs.append(f"**طلا:** {_trend_text(proxies['GLD']).rstrip('؛. ')}؛ جهت آن را در کنار دلار، بازده اوراق و ریسک ژئوپلیتیک می‌سنجیم، نه فقط خبرهای پناهگاه امن.")
     if proxies["SLV"]:
-        paragraphs.append(f"**نقره:** {_trend_text(proxies['SLV'])}؛ هم از فلزات گران‌بها اثر می‌گیرد و هم از تقاضای صنعتی.")
+        paragraphs.append(f"**نقره:** {_trend_text(proxies['SLV']).rstrip('؛. ')}؛ هم از فلزات گران‌بها اثر می‌گیرد و هم از تقاضای صنعتی.")
     if proxies["CPER"]:
-        paragraphs.append(f"**مس و فلزات صنعتی:** {_trend_text(proxies['CPER'])}؛ این گروه برای سنجش چشم‌انداز تولید صنعتی و تقاضای چین مهم است.")
+        paragraphs.append(f"**مس و فلزات صنعتی:** {_trend_text(proxies['CPER']).rstrip('؛. ')}؛ این گروه برای سنجش چشم‌انداز تولید صنعتی و تقاضای چین مهم است.")
     if proxies["DBA"]:
-        paragraphs.append(f"**کشاورزی:** {_trend_text(proxies['DBA'])}؛ آب‌وهوا، موجودی غلات، صادرات و هزینه کود می‌توانند محرک اصلی این گروه باشند.")
+        paragraphs.append(f"**کشاورزی:** {_trend_text(proxies['DBA']).rstrip('؛. ')}؛ آب‌وهوا، موجودی غلات، صادرات و هزینه کود می‌توانند محرک اصلی این گروه باشند.")
     if proxies["DBB"]:
-        paragraphs.append(f"**فلزات پایه:** {_trend_text(proxies['DBB'])}؛ این نماینده در کنار مس برای سنجش چرخه صنعتی و تقاضای مواد اولیه استفاده می‌شود.")
+        paragraphs.append(f"**فلزات پایه:** {_trend_text(proxies['DBB']).rstrip('؛. ')}؛ این نماینده در کنار مس برای سنجش چرخه صنعتی و تقاضای مواد اولیه استفاده می‌شود.")
     if not paragraphs:
         paragraphs.append("داده کافی از نماینده‌های بورسی کالا و انرژی در دسترس نیست؛ هیچ داده نقدی یا آتی جایگزین‌سازی نمی‌شود.")
     else:
-        paragraphs.append("توجه: ابزارهای بورسی این بخش نماینده کالا هستند و ممکن است به‌دلیل ساختار صندوق، سررسید قراردادها و هزینه نگهداری با قیمت نقدی تفاوت داشته باشند.")
+        paragraphs.append("توجه: ابزارهای بورسی این بخش نماینده کالا هستند و ممکن است به‌دلیل ساختار صندوق، سررسید قراردادها و هزینه نگهداری با بازار نقدی تفاوت داشته باشند.")
     lines.extend(_section("🛢 نفت، گاز، طلا و فلزات صنعتی", paragraphs))
 
     # Crypto.
@@ -626,12 +628,25 @@ def render_daily_narrative_report(
         upcoming = []
         for event in events:
             event_date = str(event.get("event_date") or "")[:10]
-            name = str(event.get("official_release_name") or event.get("release_name") or event.get("name") or "رویداد اقتصادی")
+            raw_name = str(event.get("official_release_name") or event.get("release_name") or event.get("name") or "رویداد اقتصادی")
+            name = raw_name
+            if "Consumer Price Index" in raw_name:
+                name = "شاخص قیمت مصرف‌کننده (CPI)"
+            elif "Producer Price Index" in raw_name:
+                name = "شاخص قیمت تولیدکننده (PPI)"
+            elif "Retail and Food Services" in raw_name:
+                name = "فروش خرده‌فروشی"
+            elif "Industrial Production" in raw_name:
+                name = "تولید صنعتی و ظرفیت تولید"
             if event_date:
-                upcoming.append((event_date, name))
+                try:
+                    date.fromisoformat(event_date)
+                    upcoming.append((event_date, name))
+                except ValueError:
+                    continue
         upcoming.sort()
         paragraphs = [f"رویدادهای رسمی پیش‌رو که می‌توانند انتظارات بازار را تغییر دهند: {', '.join(name for _, name in upcoming[:6])}."]
-        paragraphs.extend(f"• {_fa(day)} — {name}" for day, name in upcoming[:6])
+        paragraphs.extend(f"• {_jalali_label(day)} — {name}" for day, name in upcoming[:6])
         paragraphs.append("پیش از انتشار، واکنش بازار به انتظارات و موقعیت‌گیری اهمیت دارد؛ پس از انتشار نیز فقط اختلاف با اجماع معتبر را غافلگیری واقعی می‌دانیم.")
         lines.extend(_section("🗓 رویدادهای اقتصادی پیش‌رو", paragraphs + ["اجماع بازار و رقم واقعی فقط در صورت دریافت از منبع معتبر گزارش می‌شود؛ در این اجرا هیچ عدد انتظاری ساخته نشده است."]))
     elif calendar_error:
