@@ -499,7 +499,8 @@ def _decision_brief(
         ("crypto", "₿ اخبار و تحلیل کریپتو", "کریپتو"),
         ("rates", "🏦 اخبار و تحلیل اوراق و نرخ بهره", "اوراق"),
     ]
-    used_news: set[str] = set()
+    selected_news_for_report: list[dict[str, Any]] = []
+    selected_news_urls: set[str] = set()
     news_sections_added = 0
     for market, heading, market_label in market_news_groups:
         stories = [
@@ -516,6 +517,10 @@ def _decision_brief(
         if not stories:
             continue
         story = stories[0]
+        story_url = str(story.get("url") or "").strip()
+        if story_url and story_url not in selected_news_urls:
+            selected_news_for_report.append(story)
+            selected_news_urls.add(story_url)
         title = _safe_headline(story) or "عنوان خبر در فید موجود نیست"
         summary = " ".join(str(story.get("summary") or "").split()).strip()
         summary = summary[:360].rstrip()
@@ -533,7 +538,6 @@ def _decision_brief(
         url = str(story.get("url") or "").strip()
         if url:
             lines.append(f"لینک راستی‌آزمایی: {url}")
-            used_news.add(url)
         news_sections_added += 1
     if not news_sections_added:
         lines.extend(["", "📰 **اخبار اثرگذار بازارها**", "در فیدهای تازه این اجرا خبر قابل اتکای کافی برای انتساب به بازارهای اصلی وجود نداشت؛ به‌جای پرکردن گزارش با تیترهای نامرتبط، پوشش خبری را ناقص اعلام می‌کنیم."])
@@ -592,7 +596,7 @@ def _decision_brief(
         "",
         "جهت‌های بالا غربال اولیه بازارند، نه دستور سفارش؛ هیچ قیمت ورود، حد ضرر یا هدف عددی در این نسخه منتشر نمی‌شود.",
     ])
-    refs = _story_refs(news, limit=3)
+    refs = _story_refs(selected_news_for_report, limit=5)
     if refs:
         lines.extend(["", "🔗 **منابع منتخب**", *refs])
     lines.extend(["", *social_footer_lines()])
