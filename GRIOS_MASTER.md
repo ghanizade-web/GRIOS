@@ -1,5 +1,7 @@
 # GRIOS — Master Project Context
 
+> **New editorial decision — 2026-11-07:** Daily GRIOS output is a concise, catalyst-driven trading opportunity brief (1–3 ranked ideas), not a broad market recap. Every idea must include a dated catalyst, explicit causal transmission, observable activation trigger, invalidation condition, horizon, risk and evidence grade. No forced trades or invented levels; use WATCH/NO TRADE when confirmation is absent. See [GRIOS_CATALYST_DRIVEN_DAILY_TRADING_BRIEF_FA.md](GRIOS_CATALYST_DRIVEN_DAILY_TRADING_BRIEF_FA.md).
+>
 > **Superseding architecture decision — 2026-11-07:** Supabase is the only GRIOS Data Hub and persistent backend. Cloudflare Worker/Wrangler is no longer active or supported in the GRIOS pipeline. Python collectors write directly to `public.grios_market_observations` through Supabase PostgREST with server-side credentials. GitHub Actions remains the scheduler/compute layer. Any Cloudflare Worker endpoint, deployment, or secret reference elsewhere in this historical document is obsolete. See [GRIOS_SUPABASE_ONLY_ARCHITECTURE.md](GRIOS_SUPABASE_ONLY_ARCHITECTURE.md).
 
 
