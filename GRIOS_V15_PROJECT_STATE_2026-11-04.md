@@ -1,3 +1,5 @@
+> **Superseding architecture decision — 2026-11-07:** Supabase is the only GRIOS Data Hub and persistent backend. Cloudflare Worker/Wrangler is no longer active or supported in the GRIOS pipeline. Python collectors write directly to `public.grios_market_observations` through Supabase PostgREST with server-side credentials. GitHub Actions remains the scheduler/compute layer. Any Cloudflare Worker endpoint, deployment, or secret reference elsewhere in this historical document is obsolete. See [GRIOS_SUPABASE_ONLY_ARCHITECTURE.md](GRIOS_SUPABASE_ONLY_ARCHITECTURE.md).
+
 # GRIOS Terminal v15
 ## Project State, Architecture & Continuity Log
 
