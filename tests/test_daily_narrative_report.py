@@ -166,11 +166,11 @@ def test_report_covers_bonds_global_equities_and_agriculture_proxies():
     assert len(report) < 5000
     assert "چرخش سرمایه میان بخش‌ها و مناطق" not in report
 
-def test_safe_headline_suppresses_market_figures_but_keeps_clean_titles():
+def test_safe_headline_preserves_material_market_figures_and_clean_titles():
     from daily_narrative_report import _safe_headline
     assert _safe_headline({"title": "How Wall Street’s all-in bet on AI blew up"}) == "How Wall Street’s all-in bet on AI blew up"
-    assert _safe_headline({"title": "Bitcoin rebounds to $76,000 after selloff"}) is None
-    assert _safe_headline({"title": "Oil rises 2.4% as supply concerns grow"}) is None
+    assert _safe_headline({"title": "Bitcoin rebounds to $76,000 after selloff"}) == "Bitcoin rebounds to $76,000 after selloff"
+    assert _safe_headline({"title": "Oil rises 2.4% as supply concerns grow"}) == "Oil rises 2.4% as supply concerns grow"
 
 
 def test_source_reference_list_deduplicates_by_publisher_not_aggregator_domain():
@@ -184,3 +184,39 @@ def test_source_reference_list_deduplicates_by_publisher_not_aggregator_domain()
     assert len(refs) == 2
     assert "Reuters" in refs[0]
     assert "Bloomberg" in refs[1]
+
+
+def test_news_section_includes_story_summary_market_impact_and_does_not_cross_tag_unrelated_politics(tmp_path):
+    now = datetime.now(timezone.utc)
+    news = tmp_path / "news.json"
+    news.write_text(json.dumps({
+        "status": "FULL",
+        "retrieved_at": now.isoformat(),
+        "items": [
+            {
+                "title": "US jobs surge raises odds of December Fed hike",
+                "summary": "Employers added more jobs than economists expected, lifting market-implied odds of another Federal Reserve rate increase.",
+                "url": "https://www.reuters.com/markets/us/jobs-fed-example",
+                "publisher": "Reuters",
+                "published_at": now.isoformat(),
+                "evidence_tier": "TIER_2",
+                "topics": ["monetary_policy"],
+            },
+            {
+                "title": "AI safety advocates make gains after midterm election fight",
+                "summary": "Campaign spending and election results changed the outlook for technology regulation.",
+                "url": "https://www.bloomberg.com/example-ai-politics",
+                "publisher": "Bloomberg",
+                "published_at": now.isoformat(),
+                "evidence_tier": "TIER_2",
+                "topics": ["politics"],
+            },
+        ],
+    }), encoding="utf-8")
+    report = render_daily_narrative_report([], [], {}, macro_calendar_path=None, news_intelligence_path=news, cftc_context_path=None)
+    assert "US jobs surge raises odds of December Fed hike" in report
+    assert "Employers added more jobs than economists expected" in report
+    assert "اثر بر فارکس" in report
+    assert "اثر بر اوراق" in report
+    assert "AI safety advocates make gains" not in report or "سهام آمریکا" in report
+    assert "لینک راستی‌آزمایی" in report
