@@ -315,6 +315,177 @@ def _section(title: str, paragraphs: list[str]) -> list[str]:
     return [DIVIDER, title, *clean] if clean else []
 
 
+
+def _decision_brief(
+    by_key: dict[tuple[str, str], Any],
+    regime: str,
+    lead: str,
+    news: list[dict[str, Any]],
+    cftc_items: list[dict[str, Any]],
+    now: datetime,
+) -> str:
+    """Compact, decision-first Telegram brief. Never fabricates execution prices."""
+    names = {
+        "SPY": "شاخص گسترده آمریکا", "QQQ": "فناوری و نزدک", "IWM": "شرکت‌های کوچک آمریکا",
+        "DIA": "سهام صنعتی آمریکا", "SOXX": "نیمه‌رساناها", "XLK": "فناوری",
+        "XLF": "بانک‌ها و مالی", "XLE": "انرژی", "XLI": "صنعت",
+        "EFA": "سهام بازارهای توسعه‌یافته", "EEM": "سهام بازارهای نوظهور",
+        "TLT": "اوراق خزانه بلندمدت", "IEF": "اوراق خزانه میان‌مدت",
+        "HYG": "اوراق شرکتی پربازده", "LQD": "اوراق شرکتی باکیفیت",
+        "GLD": "طلا", "SLV": "نقره", "USO": "نفت", "UNG": "گاز طبیعی",
+        "CPER": "مس", "DBB": "فلزات پایه", "DBA": "کشاورزی", "DBC": "سبد کالا",
+        "BTC": "بیت‌کوین", "ETH": "اتریوم",
+    }
+    candidates: list[dict[str, Any]] = []
+    for (asset_class, symbol), item in by_key.items():
+        if asset_class not in {"us_equity_etf", "commodity_proxy", "crypto", "fx_reference"}:
+            continue
+        trend = _trend(item)
+        day = _return(item, 1)
+        week = _return(item, 5)
+        if asset_class == "crypto":
+            extra = getattr(item, "extra", {}) or {}
+            day = _as_float(extra.get("change_24h"))
+            week = _as_float(extra.get("change_7d"))
+            month = _as_float(extra.get("change_30d"))
+            trend = "صعودی" if week is not None and month is not None and week > 0 and month > 0 else "نزولی" if week is not None and month is not None and week < 0 and month < 0 else "خنثی یا متناقض"
+        if day is None or week is None or trend not in {"صعودی", "نزولی"}:
+            continue
+        aligned_up = trend == "صعودی" and day > 0 and week > 0
+        aligned_down = trend == "نزولی" and day < 0 and week < 0
+        if not aligned_up and not aligned_down:
+            continue
+        closes = [_as_float(row.get("close")) for row in _points(item)]
+        closes = [v for v in closes if v is not None]
+        breakout = False
+        breakdown = False
+        if len(closes) >= 22:
+            recent = closes[-1]
+            prior = closes[-21:-1]
+            breakout = recent > max(prior)
+            breakdown = recent < min(prior)
+        direction = "خرید مشروط" if aligned_up else "فروش استقراضی مشروط"
+        trigger = (
+            "ورود فقط پس از تثبیت بالای سقف نوسان اخیر و بازآزمایی موفق."
+            if aligned_up and breakout else
+            "هنوز شکست معتبر ثبت نشده؛ فقط پس از شکست و بازآزمایی وارد شوید."
+            if aligned_up else
+            "ورود فروش فقط پس از تثبیت زیر کف نوسان اخیر و بازآزمایی ناموفق."
+            if breakdown else
+            "هنوز شکست نزولی معتبر ثبت نشده؛ فعلاً فقط زیر نظر."
+        )
+        invalidation = (
+            "ابطال: بسته‌شدن دوباره زیر محدوده شکست یا از دست‌رفتن میانگین روند."
+            if aligned_up else
+            "ابطال: بازپس‌گیری محدوده شکست یا برگشت بالای میانگین روند."
+        )
+        score = 3 + int(breakout or breakdown)
+        if symbol in {"SPY", "QQQ", "BTC", "ETH", "GLD", "USO", "CPER", "TLT", "IEF", "EFA", "EEM"}:
+            score += 1
+        candidates.append({
+            "symbol": symbol, "name": names.get(symbol, symbol), "direction": direction,
+            "trigger": trigger, "invalidation": invalidation, "score": score,
+            "ready": breakout if aligned_up else breakdown,
+            "reason": "روند میان‌مدت، حرکت هفتگی و جهت روزانه هم‌جهت‌اند."
+        })
+    candidates.sort(key=lambda x: (x["ready"], x["score"]), reverse=True)
+    # Suppress duplicate exposure to highly correlated broad-index proxies.
+    selected: list[dict[str, Any]] = []
+    seen_groups: set[str] = set()
+    for item in candidates:
+        group = "equity" if item["symbol"] in {"SPY", "QQQ", "IWM", "DIA", "EFA", "EEM"} else item["symbol"]
+        if group in seen_groups:
+            continue
+        seen_groups.add(group)
+        selected.append(item)
+        if len(selected) == 3:
+            break
+
+    jy, jm, jd = _jalali(now.date())
+    months = ("فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند")
+    weekday = {"Monday":"دوشنبه","Tuesday":"سه‌شنبه","Wednesday":"چهارشنبه","Thursday":"پنجشنبه","Friday":"جمعه","Saturday":"شنبه","Sunday":"یکشنبه"}[now.strftime("%A")]
+    lines = [
+        "🌍 **GRIOS | نقشه معاملات امروز**",
+        f"📅 {weekday} {_fa(jd)} {months[jm - 1]} {_fa(jy)}",
+        "",
+        f"🧭 **وضعیت بازار: {regime}**",
+        lead,
+        "",
+        "🎯 **تصمیم سریع**",
+    ]
+    ready = [item for item in selected if item["ready"]]
+    if ready:
+        lines.append("فرصت‌های دارای شکست تأییدشده:")
+    elif selected:
+        lines.append("فعلاً ورود فوری نداریم؛ این‌ها فقط در صورت فعال‌شدن شرط ورود قابل معامله‌اند:")
+    else:
+        lines.append("**امروز معامله اجباری نداریم.** داده‌های تازه، هم‌جهتی کافی برای یک موقعیت باکیفیت نشان نمی‌دهند.")
+    for index, item in enumerate(selected, 1):
+        lines.extend([
+            f"",
+            f"**{_fa(index)}. {item['name']} ({item['symbol']}) — {item['direction']}**",
+            f"• دلیل: {item['reason']}",
+            f"• شرط ورود: {item['trigger']}",
+            f"• حد ابطال تحلیل: {item['invalidation']}",
+        ])
+    if selected and not ready:
+        lines.extend(["", "⏳ **اقدام امروز: صبر برای فعال‌شدن شرط؛ دنبال‌کردن قیمت بدون شکست معتبر ممنوع.**"])
+    elif ready:
+        lines.extend(["", "⚠️ شکست تأییدشده به معنی ورود بدون کنترل ریسک نیست؛ اندازه موقعیت را بر اساس فاصله حد ابطال تعیین کنید."])
+    else:
+        lines.extend(["", "💵 **اقدام امروز: حفظ نقدینگی و انتظار برای موقعیت روشن.**"])
+
+    # One compact cross-asset catalyst, not a catalogue of headlines.
+    priority = ["monetary_policy", "geopolitics", "ai_semiconductors", "energy", "metals", "crypto", "global_growth"]
+    for topic in priority:
+        stories = _news_for(news, topic)
+        if stories:
+            story = stories[0]
+            title = _safe_headline(story)
+            lines.extend([
+                "",
+                "📰 **مهم‌ترین محرک امروز**",
+                f"{_topic_label(topic)}: {title or 'خبر تازه در این حوزه ثبت شده است.'} — {_source_name(story)}",
+                "اثر معاملاتی فقط وقتی معتبر است که واکنش قیمت و روند همان بازار آن را تأیید کند.",
+            ])
+            break
+
+    # Institutional positioning is a risk filter, not an independent entry signal.
+    crowding = []
+    for symbol, label in (("NQ", "نزدک"), ("GC", "طلا"), ("CL", "نفت"), ("NG", "گاز طبیعی")):
+        prefix = "cftc:tff_futures_only:" if symbol == "NQ" else "cftc:disaggregated_futures_only:"
+        item = _cftc_item(cftc_items, prefix, symbol)
+        if not item:
+            continue
+        category = item.get("categories", {}).get("leveraged_funds" if symbol == "NQ" else "managed_money", {})
+        percentile = _as_float(category.get("historical_percentile"))
+        net = _as_float(category.get("net"))
+        if percentile is not None and percentile >= 90 and net is not None and net > 0:
+            crowding.append(f"{label}: خرید معامله‌گران اهرمی/مدیریت‌شده شلوغ است؛ از تعقیب قیمت پرهیز شود")
+        elif percentile is not None and percentile <= 10 and net is not None and net < 0:
+            crowding.append(f"{label}: فروش معامله‌گران شلوغ است؛ ریسک جهش ناشی از بستن فروش‌ها وجود دارد")
+    if crowding:
+        lines.extend(["", "🏦 **هشدار موقعیت‌گیری نهادی**", *[f"• {x}" for x in crowding[:2]]])
+
+    lines.extend([
+        "",
+        "🧠 **مگاترندها و سرمایه راهبردی**",
+        "هوش مصنوعی، برق و شبکه، نیمه‌رساناها و مواد معدنی حیاتی در فهرست سرمایه‌گذاری بلندمدت باقی می‌مانند؛ بدون سند قرارداد، سفارش، رشد درآمد یا تأیید روند، آن‌ها را سیگنال معامله امروز حساب نمی‌کنیم.",
+        "",
+        "🛑 **قانون ریسک**",
+        "در هر معامله فقط بخش کوچکی از سرمایه در معرض زیان باشد؛ اگر شرط ورود یا حد ابطال روشن نیست، معامله نکنید. برای موقعیت‌های فروش، دسترسی و هزینه استقراض باید جداگانه بررسی شود.",
+        "",
+        "📌 **خلاصه نهایی:** " + (f"امروز فقط {len(ready)} موقعیت شکست‌تأییدشده داریم؛ سایر موارد در انتظار محرک‌اند." if ready else "فعلاً سیگنال ورود تأییدشده نداریم؛ صبر، تصمیم فعال و معتبر امروز است."),
+        "",
+        "این گزارش غربال فرصت‌هاست، نه توصیه شخصی یا سفارش اجرایی. قیمت ورود، حد ضرر و هدف عددی فقط وقتی منتشر می‌شود که داده OHLC/ATR و قیمت به‌روز و قابل اتکا در دسترس باشد.",
+    ])
+    refs = _story_refs(news, limit=3)
+    if refs:
+        lines.extend(["", "🔗 **منابع منتخب**", *refs])
+    lines.extend(["", *social_footer_lines()])
+    return "\n".join(lines)
+
+
 def render_daily_narrative_report(
     series_list: list[Any],
     errors: list[str],
@@ -352,6 +523,9 @@ def render_daily_narrative_report(
     if not spy or not qqq or not btc or not vix:
         regime = "رژیم ریسک با اطمینان کافی قابل تشخیص نیست"
         lead = "برای تشخیص وضعیت غالب بازار، داده تازه و هم‌زمان از سهام گسترده، فناوری، بیت‌کوین و نوسان بازار کافی نیست؛ بنابراین جهت‌گیری کلان قطعی ارائه نمی‌شود."
+
+    # Decision-first mode: keep the Telegram report concise and actionable.
+    return _decision_brief(by_key, regime, lead, news, cftc_items, now)
 
     lines = [
         "🌍 **GRIOS | گزارش روزانه هوشمندی بازار**",
