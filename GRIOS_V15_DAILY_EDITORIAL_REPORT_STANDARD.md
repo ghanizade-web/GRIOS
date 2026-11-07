@@ -27,7 +27,11 @@ Publish a concise Persian, decision-first intelligence briefing that identifies 
 - Attribute each item to its publisher and link to the original source.
 - Prefer official primary sources for policy, regulation, macro releases and supply data; use established financial journalism for reported developments.
 - Distinguish confirmed facts, reported claims and GRIOS interpretation.
-- For every selected story, print the actual RSS summary/excerpt as the news brief; never replace the story with a bare URL or generic placeholder.\n- Follow each story with a market-specific transmission analysis: what variable changes, which instruments/sectors are exposed, likely positive/negative/conditional pathways, and what market evidence would confirm the interpretation.\n- A URL is a verification link only; it is not the news content or the analysis.\n- Preserve numeric facts in headlines when they are material; do not suppress a headline merely because it contains prices, percentages or dates.\n- Do not classify generic political stories as relevant to every market. Require a direct transmission channel or explicit market relevance.
+- For every selected story, print the actual RSS summary/excerpt as the news brief; never replace the story with a bare URL or generic placeholder.
+- Follow each story with a market-specific transmission analysis: what variable changes, which instruments/sectors are exposed, likely positive/negative/conditional pathways, and what market evidence would confirm the interpretation.
+- A URL is a verification link only; it is not the news content or the analysis.
+- Preserve numeric facts in headlines when they are material; do not suppress a headline merely because it contains prices, percentages or dates.
+- Do not classify generic political stories as relevant to every market. Require a direct transmission channel or explicit market relevance.
 - Group the same story under more than one market only when its transmission is genuinely cross-asset.
 - If a market has no sufficiently relevant verified news, say so instead of inventing coverage.
 - News headlines and RSS excerpts are not represented as full-article research.
