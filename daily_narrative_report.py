@@ -139,9 +139,10 @@ def _line(item: Any, *, crypto: bool = False) -> str:
     weekly = _return(item, 5)
     last = _last(item)
     price = f"قیمت {_number(last, 4 if last is not None and abs(last) < 1 else 2)} {getattr(item, 'currency', 'USD')}" if last is not None else "قیمت ناموجود"
+    source = str(getattr(item, "provider", None) or "منبع نامشخص")
     if crypto:
-        return f"• {symbol}: {_pct(daily)} در ۲۴ ساعت؛ {_pct(weekly)} در ۷ روز؛ {price}"
-    return f"• {label} ({symbol}): {_pct(daily)} در آخرین جلسه؛ {_pct(weekly)} در ۵ جلسه؛ {price}؛ داده تا {_date_label(getattr(item, 'data_as_of', None))}"
+        return f"• {symbol}: {_pct(daily)} در ۲۴ ساعت؛ {_pct(weekly)} در ۷ روز؛ {price}؛ منبع: {source}"
+    return f"• {label} ({symbol}): {_pct(daily)} در آخرین جلسه؛ {_pct(weekly)} در ۵ جلسه؛ {price}؛ داده تا {_date_label(getattr(item, 'data_as_of', None))}؛ منبع: {source}"
 
 
 def _trend(item: Any) -> str | None:
@@ -168,7 +169,15 @@ def _calendar_events(path: str | Path | None) -> tuple[list[dict[str, Any]], str
         events = payload.get("events", []) if isinstance(payload, dict) else []
         if not isinstance(events, list):
             return [], "ساختار تقویم رویداد معتبر نیست."
-        return [event for event in events if isinstance(event, dict)], None
+        normalized = [event for event in events if isinstance(event, dict)]
+        if normalized:
+            return normalized, None
+        status = str(payload.get("status", "")) if isinstance(payload, dict) else ""
+        if status == "NO_UPCOMING_EVENTS":
+            return [], "در تقویم رسمی FRED برای بازه بررسی‌شده رویداد آینده‌ای ثبت نشده است."
+        if status == "PARTIAL":
+            return [], "تقویم رسمی FRED ناقص است؛ فهرست رویدادها کامل تلقی نمی‌شود."
+        return [], "تقویم رسمی FRED در این اجرا رویداد قابل تأییدی برنگرداند."
     except FileNotFoundError:
         return [], "فایل تقویم رسمی FRED در دسترس نبود."
     except (OSError, ValueError):
