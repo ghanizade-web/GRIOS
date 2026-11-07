@@ -1,5 +1,10 @@
 # GRIOS Durable Context Changelog
 
+## 2026-11-07
+
+- **Architecture decision:** Supabase is the sole GRIOS Data Hub and persistent backend; Cloudflare Worker/Wrangler is deprecated and removed from the active source/workflow path. GitHub Actions remains the scheduled compute/orchestration layer, with its existing daily schedule unchanged. The GRIOS Python scanner already supported direct writes to `public.grios_market_observations`; live Supabase verification on 2026-11-07 found 953 rows across 38 runs and 7 providers, latest insertion at 15:05:53 UTC. The project is ACTIVE_HEALTHY in eu-west-1; the market-observation table has RLS enabled and grants are restricted to service_role. The Supabase-only implementation is being completed in PR #68 (pending CI at time of entry); the private `market-pulse` adapter migration is in a separate PR (pending CI). Do not claim Cloudflare account resources or GitHub App integrations were deleted: those require account-level confirmation outside repository code.
+
+
 Append one concise entry whenever a lasting decision, capability, source, deployment state, or known risk changes. Use `YYYY-MM-DD`, link relevant commit/PR, and distinguish implemented from planned.
 
 ## 2026-10-24
