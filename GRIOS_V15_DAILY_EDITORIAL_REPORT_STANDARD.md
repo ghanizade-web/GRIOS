@@ -48,21 +48,29 @@ News ingestion uses a rolling 72-hour RSS window, publisher attribution, publica
 - Institutional positioning: latest validated CFTC Futures Only categories for equity-index, FX, gold, WTI and natural-gas contracts.
 - SEC 13F: include only after a verified snapshot is available; always disclose its quarterly delay and long-position reporting limitations.
 
-## Daily narrative structure
+## Daily decision-first structure
 
-1. Main message and market regime.
-2. Leading catalysts and cause/effect transmission across markets.
-3. Equities, sectors, geography and AI.
-4. Treasury yields, dollar, bonds and credit.
-5. FX.
-6. Energy, precious/industrial metals, agriculture and broad commodities.
-7. Crypto.
-8. CFTC participant positioning and SEC 13F availability.
-9. Megatrends.
-10. Bull/base/bear scenarios.
-11. Conditional investment candidates and invalidation risks.
-12. Economic calendar and what would change the view.
-13. Source links and social footer.
+1. Market regime in one sentence.
+2. Decision first: up to three cross-asset trade candidates, ranked by evidence.
+3. For each candidate: instrument, direction, plain-language reason, exact condition that activates entry, and invalidation rule.
+4. Explicitly say “no confirmed trade” when no setup passes the filters.
+5. One material catalyst only, with its market transmission.
+6. CFTC positioning only as a crowding/risk filter, never as a standalone entry signal.
+7. Megatrend watchlist in one short paragraph; long-term themes must not be presented as today's trade without a current catalyst and price confirmation.
+8. Risk rule, concise source links and social footer.
+
+## Output limits and execution discipline
+
+- Target 1,800–3,000 Persian characters; hard cap 3,500 characters before source/footer expansion.
+- No market-by-market encyclopedic descriptions, repeated conclusions, generic bull/base/bear paragraphs, raw observation counts, or routine prices/percentages.
+- Show at most three trade candidates across all markets, not three per asset class.
+- Rank candidates by multi-timeframe alignment and a confirmed breakout/breakdown; correlated instruments must not occupy multiple slots.
+- A setup without a confirmed breakout/retest is “wait”, not “enter now”.
+- Entry and invalidation must be conditions that can be checked. Do not fabricate exact prices, stops, targets, ATR, volume, order flow, or executable levels when those fields are absent.
+- If OHLC/ATR and reliable current quotes are unavailable, say that numeric execution levels cannot be responsibly supplied.
+- Distinguish long-only investment candidates from short-selling setups; short-selling requires broker access, borrow availability and cost checks.
+- If no candidate qualifies, the top-line recommendation is to stay in cash/wait. Never force a trade to fill the report.
+- Keep strategic capital, critical minerals, AI infrastructure and institutional ownership as a separate long-horizon watchlist unless there is a current, verified catalyst and market confirmation.
 
 ## Opportunity discipline
 
