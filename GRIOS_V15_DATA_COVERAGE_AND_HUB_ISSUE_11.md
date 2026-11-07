@@ -16,12 +16,12 @@
 ## Live database verification
 
 Read-only SQL verification on 2026-11-07 returned:
-- 953 rows
-- 38 distinct ingestion runs
+- 1,073 rows
+- 40 distinct ingestion runs
 - 7 provider labels
-- Latest insertion: 2026-11-07 15:05:53 UTC
+- Latest insertion: 2026-11-07 15:52:08 UTC
 
-Provider labels observed: CoinGecko + CoinMarketCap, OpenBB Cboe, OpenBB ECB, OpenBB FRED, CFTC, OpenBB EIA, and EIA.
+Provider labels observed: CoinGecko + CoinMarketCap (346 rows), OpenBB Cboe (376), OpenBB ECB (113), OpenBB FRED (100), CFTC (61), OpenBB EIA (50), and EIA (27).
 
 These counts confirm persistence only. They do not imply that every feed is real-time, complete, or suitable for execution.
 
