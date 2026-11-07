@@ -39,11 +39,13 @@ def test_daily_report_is_narrative_not_a_raw_score_dump():
         _series("EURUSD", "fx_reference", [1.1 + index * 0.001 for index in range(60)]),
     ]
     report = render_daily_narrative_report(series, [], {}, macro_calendar_path=None)
-    assert "نمای کلان بازار" in report
-    assert "سناریوی صعودی" in report
+    assert "نقشه معاملات امروز" in report
+    assert "وضعیت بازار" in report
+    assert "تصمیم سریع" in report
+    assert "قانون ریسک" in report
+    assert len(report) < 5000
     assert "جمع‌بندی پوشش داده" not in report
     assert "امتیاز آزمایشی" not in report
-    assert "توصیه شخصی خرید/فروش" in report
     assert "https://t.me/drghanizade" in report
 
 
@@ -66,12 +68,10 @@ def test_official_calendar_events_are_included_without_inventing_consensus(tmp_p
         "release_id": 10,
     }]}), encoding="utf-8")
     report = render_daily_narrative_report([], [], {}, macro_calendar_path=calendar)
-    assert "رویدادهای اقتصادی پیش‌رو" in report
+    assert "رویدادی که می‌تواند معامله را تغییر دهد" in report
     assert "شاخص قیمت مصرف‌کننده (CPI)" in report
     assert "۱۹ آبان ۱۴۰۵" in report
     assert "Consumer Price Index" not in report
-    assert "اجماع بازار" in report
-    assert "رقم واقعی" in report
 
 
 def test_stale_data_does_not_create_a_directional_market_story():
@@ -110,11 +110,11 @@ def test_report_hides_routine_market_numbers_and_explains_verified_catalysts(tmp
     report = render_daily_narrative_report(series, [], {}, macro_calendar_path=None, news_intelligence_path=news)
     assert "علت" not in report or "علت‌ومعلولی" in report
     assert "هوش مصنوعی" in report
-    assert "بازده سرمایه‌گذاری" in report
+    assert "بازده اقتصادی" in report
     assert "Reuters" in report
     assert "https://www.reuters.com/technology/example" in report
-    assert "فرصت‌های سرمایه‌گذاری" in report
-    assert "سناریوی صعودی" in report
+    assert "تصمیم سریع" in report
+    assert "سناریوی صعودی" not in report
     assert "قیمت " not in report
     assert "٪" not in report
 
@@ -140,7 +140,7 @@ def test_report_explains_weekly_cftc_positioning_without_printing_position_numbe
         }],
     }), encoding="utf-8")
     report = render_daily_narrative_report([], [], {}, macro_calendar_path=None, news_intelligence_path=None, cftc_context_path=cftc)
-    assert "موقعیت‌گیری معامله‌گران حرفه‌ای" in report or "موقعیت‌گیری معامله‌گران حرفه‌ای | CFTC" in report
+    assert "هشدار موقعیت‌گیری نهادی" in report
     assert "مدیران سرمایه" in report
     assert "خالص خرید" in report
     assert "در حال کاهش" in report
@@ -164,10 +164,10 @@ def test_report_covers_bonds_global_equities_and_agriculture_proxies():
         _series("DBB", "commodity_proxy", [100 + index * 0.1 for index in range(60)]),
     ]
     report = render_daily_narrative_report(series, [], {}, macro_calendar_path=None, news_intelligence_path=None, cftc_context_path=None)
-    assert "اوراق قرضه و بازار اعتبار" in report
-    assert "چرخش سرمایه میان بخش‌ها و مناطق" in report
-    assert "کشاورزی" in report
-    assert "بازارهای توسعه‌یافته" in report
+    assert "نقشه معاملات امروز" in report
+    assert "تصمیم سریع" in report
+    assert len(report) < 5000
+    assert "چرخش سرمایه میان بخش‌ها و مناطق" not in report
 
 def test_safe_headline_suppresses_market_figures_but_keeps_clean_titles():
     from daily_narrative_report import _safe_headline
