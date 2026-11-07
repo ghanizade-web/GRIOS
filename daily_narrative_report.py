@@ -399,7 +399,7 @@ def _decision_brief(
             continue
         seen_groups.add(group)
         selected.append(item)
-        if len(selected) == 3:
+        if len(selected) == 5:
             break
 
     jy, jm, jd = _jalali(now.date())
@@ -421,14 +421,8 @@ def _decision_brief(
         lines.append("فعلاً ورود فوری نداریم؛ این‌ها فقط در صورت فعال‌شدن شرط ورود قابل معامله‌اند:")
     else:
         lines.append("**امروز معامله اجباری نداریم.** داده‌های تازه، هم‌جهتی کافی برای یک موقعیت باکیفیت نشان نمی‌دهند.")
-    for index, item in enumerate(selected, 1):
-        lines.extend([
-            f"",
-            f"**{_fa(index)}. {item['name']} ({item['symbol']}) — {item['direction']}**",
-            f"• دلیل: {item['reason']}",
-            f"• شرط ورود: {item['trigger']}",
-            f"• حد ابطال تحلیل: {item['invalidation']}",
-        ])
+    for item in selected:
+        lines.append(f"• **{item['symbol']} — {item['direction']}**")
     if selected and not ready:
         lines.extend(["", "⏳ **اقدام امروز: صبر برای فعال‌شدن شرط؛ دنبال‌کردن قیمت بدون شکست معتبر ممنوع.**"])
     elif ready:
@@ -436,20 +430,40 @@ def _decision_brief(
     else:
         lines.extend(["", "💵 **اقدام امروز: حفظ نقدینگی و انتظار برای موقعیت روشن.**"])
 
-    # One compact cross-asset catalyst, not a catalogue of headlines.
-    priority = ["monetary_policy", "geopolitics", "ai_semiconductors", "energy", "metals", "crypto", "global_growth"]
-    for topic in priority:
-        stories = _news_for(news, topic)
-        if stories:
-            story = stories[0]
-            title = _safe_headline(story)
-            lines.extend([
-                "",
-                "📰 **مهم‌ترین محرک امروز**",
-                f"{_topic_label(topic)}: {title or 'خبر تازه در این حوزه ثبت شده است.'} — {_source_name(story)}",
-                "اثر معاملاتی فقط وقتی معتبر است که واکنش قیمت و روند همان بازار آن را تأیید کند.",
-            ])
-            break
+    # Market-specific political, economic, monetary, geopolitical and corporate news.
+    market_news_groups = [
+        ("💱 اخبار اثرگذار بر فارکس", ("fx", "monetary_policy", "global_growth", "geopolitics", "politics")),
+        ("🥇 اخبار اثرگذار بر کامودیتی و انرژی", ("energy", "metals", "global_growth", "geopolitics", "politics")),
+        ("📈 اخبار اثرگذار بر سهام آمریکا", ("corporate_earnings", "ai_semiconductors", "monetary_policy", "global_growth", "regulation", "politics", "geopolitics")),
+        ("₿ اخبار اثرگذار بر کریپتو", ("crypto", "regulation", "monetary_policy", "geopolitics", "politics")),
+        ("🏦 اخبار اثرگذار بر اوراق و نرخ بهره", ("monetary_policy", "global_growth", "politics", "geopolitics")),
+    ]
+    used_news: set[str] = set()
+    news_sections_added = 0
+    for heading, topics in market_news_groups:
+        stories = [
+            story for story in news
+            if set(story.get("topics") or []).intersection(topics)
+            and str(story.get("url") or "") not in used_news
+        ]
+        stories.sort(key=lambda story: str(story.get("published_at") or ""), reverse=True)
+        if not stories:
+            continue
+        lines.extend(["", heading])
+        for story in stories[:2]:
+            title = _safe_headline(story) or "خبر تازه و مرتبط در این حوزه"
+            topic_names = "، ".join(_topic_label(topic) for topic in (story.get("topics") or []) if topic in topics)
+            lines.append(f"• {title} — {_source_name(story)}")
+            if topic_names:
+                lines.append(f"  حوزه اثر: {topic_names}")
+            url = str(story.get("url") or "").strip()
+            if url:
+                lines.append(f"  {url}")
+            used_news.add(url)
+        lines.append("  برداشت GRIOS: اثر نهایی خبر باید با واکنش قیمت و داده‌های همان بازار تأیید شود؛ تیتر به‌تنهایی سیگنال نیست.")
+        news_sections_added += 1
+    if not news_sections_added:
+        lines.extend(["", "📰 **اخبار اثرگذار بازارها**", "در فیدهای تازه و معتبر این اجرا، خبر قابل اتکای کافی برای انتساب به بازارهای اصلی ثبت نشد؛ از ساختن محرک خبری خودداری می‌کنیم."])
 
     events, _calendar_error = _calendar_events(macro_calendar_path)
     upcoming = []
@@ -503,7 +517,7 @@ def _decision_brief(
         "",
         "📌 **خلاصه نهایی:** " + (f"امروز فقط {len(ready)} موقعیت شکست‌تأییدشده داریم؛ سایر موارد در انتظار محرک‌اند." if ready else "فعلاً سیگنال ورود تأییدشده نداریم؛ صبر، تصمیم فعال و معتبر امروز است."),
         "",
-        "این گزارش غربال فرصت‌هاست، نه توصیه شخصی یا سفارش اجرایی. قیمت ورود، حد ضرر و هدف عددی فقط وقتی منتشر می‌شود که داده OHLC/ATR و قیمت به‌روز و قابل اتکا در دسترس باشد.",
+        "جهت‌های بالا غربال اولیه بازارند، نه دستور سفارش؛ هیچ قیمت ورود، حد ضرر یا هدف عددی در این نسخه منتشر نمی‌شود.",
     ])
     refs = _story_refs(news, limit=3)
     if refs:
