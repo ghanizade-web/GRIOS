@@ -2,91 +2,68 @@
 
 ## Mission
 
-Replace numeric market dumps with a readable Persian daily intelligence briefing that explains what changed, why it may matter, how the effect can transmit across asset classes, what evidence supports the interpretation, and which investment candidates merit further work.
+Publish a concise Persian, decision-first intelligence briefing that identifies the most relevant daily market directions and explains the political, economic, monetary, corporate and geopolitical news affecting each asset class.
 
-## Editorial rules
+## Required daily structure
 
-- Do not publish routine prices, percentages, raw scores, factor tables, contract counts, or technical indicator values in the Telegram body.
-- Keep calculations internal. Translate their results into plain-language descriptions such as strengthening, weakening, crowded positioning, divergence, trend confirmation, or insufficient evidence.
-- A news headline is not proof of causality. Distinguish verified facts, reported claims, market observations, and GRIOS interpretation.
-- Never infer an institutional flow from a price move or from weekly CFTC positioning.
+1. Market regime and one-sentence global capital-flow read.
+2. **Daily symbol radar:** a compact list of symbols with directional bias only (bullish / bearish / neutral / wait). No per-symbol entry checklist, trigger, invalidation, stop, target, timeframe or trade-management card.
+3. **Market-specific news intelligence**, grouped separately for:
+   - FX: central banks, interest-rate expectations, inflation, employment, fiscal policy, elections, currency policy and geopolitical developments affecting currencies.
+   - Commodities and energy: supply disruptions, sanctions, OPEC, inventories, production, shipping routes, industrial demand, China and critical-mineral policy.
+   - US equities: earnings, guidance, AI/semiconductor capex and monetization, regulation, antitrust, fiscal/tax policy, trade restrictions and sector developments.
+   - Crypto: regulation, ETF/market-structure developments, institutional adoption, exchange/custody risks, monetary/liquidity conditions and geopolitical risk.
+   - Bonds and rates: central-bank decisions, inflation, labor data, Treasury issuance/auctions, fiscal policy and credit conditions.
+4. Cross-market synthesis: explain how material headlines may transmit through rates, USD, liquidity, energy, earnings and risk appetite.
+5. Institutional positioning and capital flows only where verified, with publication lag and data limitations disclosed.
+6. Megatrends and strategic capital themes as a separate long-horizon watchlist.
+7. Economic calendar and key upcoming political, monetary and corporate events.
+8. Concise final assessment: where attention should focus and whether the evidence supports action or waiting.
+
+## News selection and editorial discipline
+
+- Prioritize news with a plausible, material transmission channel to a covered market; do not fill sections with generic headlines.
+- Cover political, economic, monetary, geopolitical, regulatory and company-specific catalysts when relevant.
+- Attribute each item to its publisher and link to the original source.
+- Prefer official primary sources for policy, regulation, macro releases and supply data; use established financial journalism for reported developments.
+- Distinguish confirmed facts, reported claims and GRIOS interpretation.
+- Explain why the news matters to the specific market; do not treat a headline as a trade signal.
+- Group the same story under more than one market only when its transmission is genuinely cross-asset.
+- If a market has no sufficiently relevant verified news, say so instead of inventing coverage.
+- News headlines and RSS excerpts are not represented as full-article research.
+
+## Signal presentation
+
+- Show the symbol and directional bias only, for example: EUR/USD — صعودی, XAU/USD — نزولی, BTC/USD — خنثی.
+- Do not publish per-symbol entry conditions, breakout/retest instructions, invalidation levels, targets, stop-losses, risk/reward ratios or timeframe labels.
+- Do not fabricate directional signals when market data is stale, incomplete or contradictory.
+- A neutral / wait / no-trade outcome is valid and should be explicit.
+- Avoid duplicated correlated exposures dominating the shortlist.
+- Keep the daily shortlist selective and cross-asset; rank by evidence quality rather than by the magnitude of the latest price move.
+
+## Data and source integrity
+
+- Do not publish routine prices, percentages, raw scores, factor tables or raw observation counts in the Telegram body.
+- Never infer institutional flows from price movement or weekly CFTC positioning.
 - Never call an ETF proxy an underlying spot or futures contract.
-- If data is missing, stale, contradictory, or unavailable, say so and suppress the related opportunity.
-- Every investment candidate must include its rationale, confirmation condition, and key invalidation/risk. Labels are research candidates, not personalized orders.
-- Do not fabricate consensus, earnings, valuation multiples, release times, ETF flows, order-book data, or 13F holdings.
+- Do not fabricate consensus, earnings, valuation multiples, release times, ETF flows, order-book data or 13F holdings.
+- If data is missing, stale, contradictory or unavailable, disclose the limitation and suppress the related conclusion.
+- CFTC Futures Only is weekly positioning, not real-time flow.
+- SEC 13F holdings are delayed and partial disclosures, not real-time institutional activity.
+- The current synthesis is deterministic and rule-based; RSS headlines/excerpts are not full-text analysis unless a separately approved full-text research pipeline is added.
 
-## Source hierarchy
+## Output limits
 
-### Primary / official
-
-- Federal Reserve monetary-policy releases.
-- SEC press releases and verified Company Facts / 13F records.
-- EIA Today in Energy and official petroleum data.
-- BIS media releases.
-- CFTC Commitments of Traders datasets and stored, validated Futures Only snapshots.
-- FRED official release-date calendar and macro observations.
-
-### Established financial journalism
-
-- Reuters, Bloomberg, CNBC, Wall Street Journal, Financial Times and Associated Press.
-
-### Specialist context
-
-- CoinDesk for digital-asset industry coverage.
-
-News ingestion uses a rolling 72-hour RSS window, publisher attribution, publication timestamps, topic classification and duplicate suppression. A feed outage is non-blocking but reduces the report's evidence coverage. Headlines and RSS excerpts are not represented as full-article research; source links are provided for verification.
-
-## Required market coverage
-
-- Global equities: broad US indices, sectors, small caps, developed and emerging market proxies.
-- Technology and AI infrastructure: semiconductors, cloud, data centers, networks, power and capex returns.
-- Fixed income and credit: Treasury-duration ETFs, investment-grade and high-yield credit proxies, plus FRED yields.
-- FX: ECB EUR crosses and the broad dollar reference series; no executable bid/ask claims.
-- Commodities: gold, silver, copper/base metals, broad commodities and agriculture ETF proxies.
-- Energy: oil/gas proxies and official EIA supply, stocks, refinery and product-supplied context.
-- Digital assets: validated crypto universe and breadth; do not infer ETF flows without a verified flow source.
-- Institutional positioning: latest validated CFTC Futures Only categories for equity-index, FX, gold, WTI and natural-gas contracts.
-- SEC 13F: include only after a verified snapshot is available; always disclose its quarterly delay and long-position reporting limitations.
-
-## Daily decision-first structure
-
-1. Market regime in one sentence.
-2. Decision first: up to three cross-asset trade candidates, ranked by evidence.
-3. For each candidate: instrument, direction, plain-language reason, exact condition that activates entry, and invalidation rule.
-4. Explicitly say “no confirmed trade” when no setup passes the filters.
-5. One material catalyst only, with its market transmission.
-6. CFTC positioning only as a crowding/risk filter, never as a standalone entry signal.
-7. Megatrend watchlist in one short paragraph; long-term themes must not be presented as today's trade without a current catalyst and price confirmation.
-8. Risk rule, concise source links and social footer.
-
-## Output limits and execution discipline
-
-- Target 1,800–3,000 Persian characters; hard cap 3,500 characters before source/footer expansion.
-- No market-by-market encyclopedic descriptions, repeated conclusions, generic bull/base/bear paragraphs, raw observation counts, or routine prices/percentages.
-- Show at most three trade candidates across all markets, not three per asset class.
-- Rank candidates by multi-timeframe alignment and a confirmed breakout/breakdown; correlated instruments must not occupy multiple slots.
-- A setup without a confirmed breakout/retest is “wait”, not “enter now”.
-- Entry and invalidation must be conditions that can be checked. Do not fabricate exact prices, stops, targets, ATR, volume, order flow, or executable levels when those fields are absent.
-- If OHLC/ATR and reliable current quotes are unavailable, say that numeric execution levels cannot be responsibly supplied.
-- Distinguish long-only investment candidates from short-selling setups; short-selling requires broker access, borrow availability and cost checks.
-- If no candidate qualifies, the top-line recommendation is to stay in cash/wait. Never force a trade to fill the report.
-- Keep strategic capital, critical minerals, AI infrastructure and institutional ownership as a separate long-horizon watchlist unless there is a current, verified catalyst and market confirmation.
-
-## Opportunity discipline
-
-- A trend alone is not a buy thesis.
-- A headline alone is not a buy thesis.
-- CFTC positioning is weekly exposure, not real-time flow; extreme positioning can be a crowding warning or a squeeze setup, not an automatic reversal signal.
-- A proxy ETF's behavior is not the same as the underlying instrument.
-- Without valuation and issuer-level fundamentals, equity ideas remain watchlist candidates, not valuation-backed buy recommendations.
-- If evidence does not converge, cash / waiting is a valid conclusion.
+- Target 1,800–3,000 Persian characters where news volume permits; prioritize completeness of material market news over an artificial character cap.
+- Keep each market's news section to the most material items, normally one or two headlines.
+- Avoid market-by-market encyclopedic prose, repetitive explanations and generic bull/base/bear scenarios.
+- Keep megatrends separate from today's directional symbol radar unless a current catalyst and market evidence support inclusion.
+- If no market has a defensible directional bias, explicitly say that no high-conviction direction is identified and waiting is appropriate.
 
 ## Technical implementation
 
-- `market_news.py`: RSS news retrieval and evidence metadata.
-- `cftc_context.py`: read-only, service-role Supabase query for fresh CFTC Futures Only records.
-- `daily_narrative_report.py`: Persian editorial synthesis and conditional opportunity screen.
-- `scanner.py`: passes the current macro calendar, news and CFTC context to the renderer.
-- `market-pulse/.github/workflows/grios-data-hub-scan.yml`: builds news and CFTC context before the daily scan; collectors are non-blocking; the integrated report is published once.
-
-The current synthesis is deterministic and rule-based. It does not scrape paywalled article bodies or call a hosted generative model. This limitation is intentional until a separately approved model service and credentials are available.
+- market_news.py: curated RSS retrieval, topic classification, publisher attribution and evidence metadata.
+- daily_narrative_report.py: Persian synthesis, market-specific news grouping and concise symbol radar.
+- cftc_context.py: read-only, validated CFTC Futures Only positioning context.
+- scanner.py: passes market observations, calendar, news and positioning to the renderer.
+- market-pulse/.github/workflows/grios-data-hub-scan.yml: builds contexts and publishes the integrated report once.
