@@ -111,3 +111,20 @@ Use WATCH when the catalyst is real but price/flow has not confirmed. Use NO TRA
 - Farcaster: https://farcaster.xyz/drghanizade
 - GitHub: https://github.com/ghanizade-web
 - Telegram: https://t.me/drghanizade
+
+
+## 11. Daily visual identity and Instagram Story assets
+Every daily brief must be accompanied by a compact Persian infographic set for Telegram and Instagram Stories:
+- Canvas: vertical 9:16; target export 1080 × 1920 px.
+- Background: light cream / warm ivory, minimal and uncluttered.
+- Typography: large, serious, high-legibility black headlines; concise dark text; muted gray for secondary data.
+- Accent: saturated orange reserved for the selected signal, material changes and key numbers.
+- Blue: identity accent or very limited detail only.
+- Charts: simple, restrained, clearly labelled; generous negative space; no decorative clutter, gradients or unnecessary ornaments.
+- Keep all text, labels, chart marks and key figures inside a generous central safe area so Telegram/Instagram overlays and cropping do not obscure them.
+- Main slide: daily Top 3 only. Add supporting slides when needed rather than compressing many signals into one image.
+- All Persian copy must be right-to-left, readable, correctly spelled and short. Ticker symbols and numeric values must remain unambiguous.
+- Every number, direction, date and instrument shown in an image must match the same-day written report and cited data. If exact image typography or 1080 × 1920 export cannot be verified, do not fabricate a finished graphic; state the limitation.
+
+## 12. Megatrend and strategic-capital context
+Use the separate GRIOS daily megatrend report as a source of contextual leads, not as permission to expand the eligible trading universe. Monitor strategic materials and supply bottlenecks (including copper, uranium, lithium, rare earths, gallium, germanium, antimony, tungsten and platinum-group metals), AI/data-centre power demand, grid capacity, nuclear energy, defense/aerospace and robotics. Track verifiable institutional/public capital flows, public disclosures, long-term offtake/supply contracts, capex, inventories, mine/refining constraints and regulatory changes. Distinguish an actual purchase, executed contract, capex commitment, managed client holding, ETF/AUM change and mere stated interest. Treat CFTC, ETF and regulatory disclosures according to their reporting lags. These themes may inform a crypto, FX or directly tradable commodity thesis only where the transmission mechanism and market evidence are explicit. **No equities, listed-company shares or equity ETFs may appear as candidates, even when a company is central to a megatrend.**
