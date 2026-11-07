@@ -60,85 +60,18 @@ def test_data_hub_publish_is_explicitly_not_configured_without_credentials():
     assert result["accepted"] == 0
 
 
-def test_data_hub_publish_posts_versioned_payload_without_logging_token():
-    captured = {}
-    class FakeResponse:
-        status = 202
-        def __enter__(self): return self
-        def __exit__(self, *args): return False
-        def read(self): return b'{"status":"accepted","accepted":1}'
-    def fake_urlopen(request, timeout):
-        captured["url"] = request.full_url
-        captured["headers"] = dict(request.header_items())
-        captured["payload"] = json.loads(request.data.decode())
-        return FakeResponse()
-    with patch.dict("os.environ", {"GRIOS_DATA_HUB_URL":"https://hub.example", "GRIOS_DATA_HUB_TOKEN":"never-log-this"}):
-        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
-            result = publish_market_series([Item("BTC", "crypto")], "commit-sha")
-    assert result["status"] == "CONNECTED"
-    assert result["accepted"] == 1
-    assert captured["payload"]["schema_version"] == "1.0"
-    assert captured["payload"]["source_revision"] == "commit-sha"
-    assert "never-log-this" not in json.dumps(result)
-
-
-
-def test_data_hub_publish_classifies_cloudflare_403_challenge_without_leaking_body():
-    from email.message import Message
-    from urllib.error import HTTPError
-
-    headers = Message()
-    headers["Server"] = "cloudflare"
-    headers["Content-Type"] = "text/html; charset=UTF-8"
-    headers["cf-mitigated"] = "challenge"
-
-    def fail_urlopen(request, timeout):
-        raise HTTPError(
-            request.full_url,
-            403,
-            "Forbidden",
-            hdrs=headers,
-            fp=None,
-        )
-
+def test_worker_only_configuration_is_ignored():
     with patch.dict("os.environ", {
-        "GRIOS_DATA_HUB_URL": "https://hub.example",
-        "GRIOS_DATA_HUB_TOKEN": "never-log-this",
-    }):
-        with patch("urllib.request.urlopen", side_effect=fail_urlopen):
-            result = publish_market_series([Item("BTC", "crypto")])
-
-    assert result["status"] == "FAILED"
-    assert result["error"] == "HTTP_403:CF_CHALLENGE"
-    assert "never-log-this" not in json.dumps(result)
+        "GRIOS_DATA_HUB_URL": "https://worker.example",
+        "GRIOS_DATA_HUB_TOKEN": "worker-token",
+    }, clear=True):
+        result = publish_market_series([Item("BTC", "crypto")])
+    assert result["status"] == "NOT_CONFIGURED"
+    assert result["accepted"] == 0
+    assert "worker-token" not in json.dumps(result)
 
 
-def test_data_hub_publish_reports_worker_http_error_code_without_credentials():
-    from urllib.error import HTTPError
-    from io import BytesIO
-
-    def fail_urlopen(request, timeout):
-        raise HTTPError(
-            request.full_url,
-            401,
-            "Unauthorized",
-            hdrs=None,
-            fp=BytesIO(b'{"error":"UNAUTHORIZED"}'),
-        )
-
-    with patch.dict("os.environ", {
-        "GRIOS_DATA_HUB_URL": "https://hub.example",
-        "GRIOS_DATA_HUB_TOKEN": "never-log-this",
-    }):
-        with patch("urllib.request.urlopen", side_effect=fail_urlopen):
-            result = publish_market_series([Item("BTC", "crypto")])
-
-    assert result["status"] == "FAILED"
-    assert result["error"] == "HTTP_401:UNAUTHORIZED"
-    assert "never-log-this" not in json.dumps(result)
-
-
-def test_direct_supabase_ingestion_is_preferred_and_includes_required_columns():
+def test_supabase_is_the_only_data_hub_and_includes_required_columns():
     captured = {}
     class FakeResponse:
         status = 201
