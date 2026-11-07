@@ -128,3 +128,15 @@ Every daily brief must be accompanied by a compact Persian infographic set for T
 
 ## 12. Megatrend and strategic-capital context
 Use the separate GRIOS daily megatrend report as a source of contextual leads, not as permission to expand the eligible trading universe. Monitor strategic materials and supply bottlenecks (including copper, uranium, lithium, rare earths, gallium, germanium, antimony, tungsten and platinum-group metals), AI/data-centre power demand, grid capacity, nuclear energy, defense/aerospace and robotics. Track verifiable institutional/public capital flows, public disclosures, long-term offtake/supply contracts, capex, inventories, mine/refining constraints and regulatory changes. Distinguish an actual purchase, executed contract, capex commitment, managed client holding, ETF/AUM change and mere stated interest. Treat CFTC, ETF and regulatory disclosures according to their reporting lags. These themes may inform a crypto, FX or directly tradable commodity thesis only where the transmission mechanism and market evidence are explicit. **No equities, listed-company shares or equity ETFs may appear as candidates, even when a company is central to a megatrend.**
+
+
+## 13. Signal-dense story layout (user refinement)
+The user prefers **more signals and their catalysts visible per image, using smaller typography** than the original Top-3-only concept. Apply this layout:
+- Use a compact editorial dashboard/grid with approximately 6–8 qualified signals per slide when the content remains legible; create additional slides for the remaining candidates rather than omitting them.
+- For each signal show, at minimum: ticker/instrument, LONG/SHORT/WATCH, one-line catalyst/driver, and a short trigger or confirmation note where space allows.
+- Use smaller but still clearly readable Persian typography for signal rows and catalyst descriptions; reserve large type for the report title, date and section labels. Do not make body text microscopic.
+- Keep the cream/ivory, black, muted gray and orange palette; orange marks the strongest signal or key catalyst, not every row. Blue remains a restrained identity accent.
+- Prioritize information density over decorative whitespace, while retaining clear row separation, alignment and generous outer safe margins.
+- Main slide may contain Top 3 plus several additional signals; supporting slides should cover the rest and may group Crypto, FX and Commodities separately.
+- If 6–8 rows cannot fit legibly at 1080 × 1920, reduce the number per slide and add slides. Legibility and factual accuracy outrank a fixed count.
+- Catalyst text must be concise and specific (e.g. data release, policy change, supply disruption, ETF/derivatives/on-chain evidence), not generic labels such as “positive fundamentals.”
