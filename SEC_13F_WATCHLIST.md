@@ -4,7 +4,7 @@
 
 The watchlist workflow runs the existing SEC EDGAR discovery, XML parsing, amendment reconciliation, SQLite persistence and Data Hub publication pipeline for multiple 13F filers in one manually initiated batch.
 
-The workflow is intentionally manual. Do not enable a recurring schedule until the Cloudflare Worker deployment, authenticated Data Hub readback, and at least one real SEC filing ingestion have been accepted operationally.
+The workflow is intentionally manual. The persistent Data Hub is Supabase; ingestion writes directly to the secured Supabase database.
 
 ## Current watchlist
 
@@ -24,9 +24,9 @@ Add managers only after verifying the filer CIK against an official SEC filing d
 ## Run
 
 1. Configure repository variable `SEC_USER_AGENT` with a descriptive application name and monitored contact email.
-2. Configure repository variable `GRIOS_DATA_HUB_URL` with the deployed HTTPS Worker origin.
-3. Configure repository secret `GRIOS_INGEST_TOKEN` with the Worker bearer token.
-4. Ensure the GRIOS Data Hub Worker is deployed and the 13F Supabase schema is available.
+2. Configure repository secret `SUPABASE_URL` with the existing Supabase project URL.
+3. Configure repository secret `SUPABASE_SERVICE_ROLE_KEY` with the server-side service key.
+4. Ensure the 13F Supabase schema migrations are applied.
 5. Open Actions → Ingest SEC 13F Institutional Watchlist → Run workflow.
 6. Enter the report period as `YYYY-MM-DD` (normally a quarter-end date).
 
