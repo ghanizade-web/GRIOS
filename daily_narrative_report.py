@@ -215,6 +215,10 @@ def _news_market_impact(story: dict[str, Any], market: str) -> str:
     text = f"{story.get('title', '')} {story.get('summary', '')}".lower()
     if market == "fx":
         if "monetary_policy" in topics or any(x in text for x in ("federal reserve", "central bank", "interest rate", "inflation", "payroll")):
+            if any(x in text for x in ("fed hike", "rate hike", "raises odds", "higher for longer", "jobs surge", "strong jobs")):
+                return "اثر بر فارکس: اگر داده قوی‌تر احتمال افزایش نرخ فدرال رزرو را بالا ببرد، بازده دوساله و دلار آمریکا حمایت می‌شوند؛ EUR/USD و GBP/USD ممکن است تحت فشار قرار گیرند. طلا و سهام رشدی نیز از مسیر نرخ تنزیل آسیب‌پذیرند. تأیید: بازده دوساله و DXY."
+            if any(x in text for x in ("rate cut", "cuts rates", "dovish", "lower rates", "weak jobs", "slowing inflation")):
+                return "اثر بر فارکس: افزایش احتمال کاهش نرخ یا لحن انبساطی فدرال رزرو می‌تواند بازده دوساله و دلار را تضعیف کند و به EUR/USD و GBP/USD فضا بدهد؛ تأیید را در بازده دوساله و DXY بسنجید."
             return "اثر بر فارکس: تغییر انتظارات نرخ بهره ابتدا بازده اوراق و سپس ارز مربوطه را جابه‌جا می‌کند؛ لحن انقباضی‌تر معمولاً به نفع ارز همان بانک مرکزی و لحن انبساطی‌تر به زیان آن است. تأیید را در بازده دوساله و شاخص دلار بسنجید."
         if "geopolitics" in topics or "politics" in topics:
             return "اثر بر فارکس: تشدید ریسک می‌تواند تقاضای کوتاه‌مدت برای ارزهای امن را بالا ببرد؛ اثر پایدار به دامنه درگیری، تحریم‌ها و واکنش بازده اوراق بستگی دارد."
@@ -241,6 +245,10 @@ def _news_market_impact(story: dict[str, Any], market: str) -> str:
         return "اثر بر کریپتو: خبر باید به تقاضای نقدی، ETF، دسترسی صرافی‌ها یا ریسک نگه‌داری دارایی وصل شود؛ بدون تأیید جریان نقدی، آن را سیگنال جهت‌دار تلقی نمی‌کنیم."
     if market == "rates":
         if "monetary_policy" in topics or any(x in text for x in ("federal reserve", "central bank", "inflation", "payroll", "interest rate")):
+            if any(x in text for x in ("fed hike", "rate hike", "raises odds", "jobs surge", "strong jobs")):
+                return "اثر بر اوراق: افزایش احتمال انقباض فدرال رزرو معمولاً بازده دوساله را بالا و قیمت اوراق کوتاه‌مدت را پایین می‌برد؛ اگر انتظارات تورمی هم بالا برود فشار می‌تواند به سررسید ده‌ساله منتقل شود."
+            if any(x in text for x in ("rate cut", "cuts rates", "dovish", "weak jobs", "slowing inflation")):
+                return "اثر بر اوراق: افزایش احتمال کاهش نرخ می‌تواند بازده دوساله را پایین و قیمت اوراق را بالا ببرد؛ اگر علت افت نرخ‌ها ترس از رکود باشد، منحنی بازده و اعتبار شرکتی ممکن است پیام متفاوتی بدهند."
             return "اثر بر اوراق: داده/اظهارنظر انقباضی معمولاً بازده اوراق را بالا و قیمت اوراق را پایین می‌برد؛ خبر انبساطی برعکس است. واکنش سررسید دوساله برای انتظارات سیاستی و ده‌ساله برای تورم/رشد مهم است."
         return "اثر بر اوراق: کسری بودجه و عرضه بیشتر اوراق می‌تواند فشار عرضه و صرف سررسید را بالا ببرد؛ داده رشد و تورم مشخص می‌کند بازار این عرضه را با چه بازدهی جذب می‌کند."
     return "اثر بازار هنوز به شواهد بیشتری نیاز دارد."
@@ -510,9 +518,9 @@ def _decision_brief(
         ]
         tier_rank = {"TIER_1": 0, "TIER_2": 1, "TIER_3": 2}
         stories.sort(key=lambda story: (
-            tier_rank.get(str(story.get("evidence_tier") or "TIER_3"), 9),
             -datetime.fromisoformat(str(story.get("published_at")).replace("Z", "+00:00")).timestamp()
             if story.get("published_at") else 0,
+            tier_rank.get(str(story.get("evidence_tier") or "TIER_3"), 9),
         ))
         if not stories:
             continue
@@ -596,9 +604,6 @@ def _decision_brief(
         "",
         "جهت‌های بالا غربال اولیه بازارند، نه دستور سفارش؛ هیچ قیمت ورود، حد ضرر یا هدف عددی در این نسخه منتشر نمی‌شود.",
     ])
-    refs = _story_refs(selected_news_for_report, limit=5)
-    if refs:
-        lines.extend(["", "🔗 **منابع منتخب**", *refs])
     lines.extend(["", *social_footer_lines()])
     return "\n".join(lines)
 
