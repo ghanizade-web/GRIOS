@@ -32,7 +32,7 @@ The user's recurring use cases include `/start`, `/menu`, `/trades`, `/alpha`, `
 
 ## Storage decision and free-tier limits
 
-- Supabase Postgres is the sole active persistence/backend platform. The project was verified `ACTIVE_HEALTHY` on 2026-11-07; Python ingestion writes directly through PostgREST, without a Cloudflare Worker proxy. Replacing it now adds migration risk without removing all free-tier limits.
+- Supabase Postgres is the sole active persistence/backend platform. The project was verified `ACTIVE_HEALTHY` on 2026-11-07; Python ingestion writes directly through PostgREST, without a Cloudflare Worker proxy.
 - Supabase Free is not unlimited: current published limits include 500 MB database size/project, 5 GB egress, two active projects, and automatic pausing after low activity for a week. Automatic database backups are not included. The daily GitHub Actions scan writes observations directly to Supabase; verify each run's accepted count and latest database timestamps. Keep versioned schema migrations and a separate tested database export; GitHub source archives do not back up live database rows.
 - Cloudflare D1 and Workers are not part of the selected GRIOS architecture. Supabase Postgres remains the sole persistent backend; monitor its quota, egress, inactivity and backup constraints.
 - The active GRIOS daily market scan is scheduled through GitHub Actions at 12:00 UTC. Provider-specific rate limits and data freshness gates remain enforced; a missed or failed scan must be surfaced as stale/degraded data, not silently substituted.
