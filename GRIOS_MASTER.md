@@ -1,5 +1,8 @@
 # GRIOS — Master Project Context
 
+> **Superseding architecture decision — 2026-11-07:** Supabase is the only GRIOS Data Hub and persistent backend. Cloudflare Worker/Wrangler is no longer active or supported in the GRIOS pipeline. Python collectors write directly to `public.grios_market_observations` through Supabase PostgREST with server-side credentials. GitHub Actions remains the scheduler/compute layer. Any Cloudflare Worker endpoint, deployment, or secret reference elsewhere in this historical document is obsolete. See [GRIOS_SUPABASE_ONLY_ARCHITECTURE.md](GRIOS_SUPABASE_ONLY_ARCHITECTURE.md).
+
+
 _Last reviewed: 2026-10-24_
 
 ## Mission
@@ -10,11 +13,11 @@ The user's recurring use cases include `/start`, `/menu`, `/trades`, `/alpha`, `
 
 ## Current code state
 
-- `services/data-hub-worker/` is the Cloudflare Worker data hub.
+- The active Data Hub is Supabase Postgres (`public.grios_market_observations`); the Cloudflare Worker source and deploy workflow were removed on 2026-11-07.
 - CoinGecko and CoinMarketCap connectors ingest normalized crypto-market data into Supabase on the configured schedule.
 - Codex hourly market briefs can query the connected TickerLayer MCP for covered cross-market prices/history, Token Terminal MCP for crypto protocol fundamentals, and Stocktwits MCP for retail sentiment. These MCP connections do not automatically become Cloudflare Worker integrations; the recurring Codex brief is the current way to use them without copying credentials or violating provider terms.
-- The `latest_market_snapshots` view feeds `/v1/markets/latest` and the deterministic research council at `/v1/intelligence`.
-- `/v1/status` reports provider health and marks observations stale after 15 minutes.
+- Market observations are read directly from Supabase tables/views; legacy `/v1/markets/latest` and `/v1/intelligence` Worker routes are not active endpoints.
+- Data freshness is evaluated by the Python reporting/scanner pipeline against Supabase observation timestamps; the former Worker `/v1/status` route is obsolete.
 - `/v1/intelligence` and `/v1/opportunities` suppress candidate rankings when no latest asset observation is within the same 15-minute window; coverage includes stale-record count, threshold, and age of the freshest usable record.
 - `/v1/opportunities?horizon=day|week|month|year|long` is being added. Current stored history supports 24h/7d/30d only. Year and long horizons must return `insufficient_history` until longer history and fundamental/catalyst evidence exist.
 - `apps/opportunity_scanner/` is a local Python/OpenBB V5 research prototype: GRIOS crypto snapshots plus Cboe daily US equity history, ECB reference rates, EIA Brent/Henry Hub published series, FRED macro context, a Telegram-format text file, and a local SQLite idea/checkpoint journal. It is not a deployed multi-asset feed, has no live FX or underlying metal prices, and emits WATCH-only technical heuristics pending catalyst/fundamental/flow integrations and validation.
@@ -29,7 +32,7 @@ The user's recurring use cases include `/start`, `/menu`, `/trades`, `/alpha`, `
 
 ## Storage decision and free-tier limits
 
-- Keep the existing Supabase Postgres project for now. The organization and project were verified on the Free plan and `ACTIVE_HEALTHY`; the database measured about 11 MB on 2026-10-13, well below the documented 500 MB/project database quota. Its relational schema and migrations are in place, and a Supabase PostgREST adapter exists in Worker source. Replacing it now adds migration risk without removing all free-tier limits.
+- Supabase Postgres is the sole active persistence/backend platform. The project was verified `ACTIVE_HEALTHY` on 2026-11-07; Python ingestion writes directly through PostgREST, without a Cloudflare Worker proxy. Replacing it now adds migration risk without removing all free-tier limits.
 - Supabase Free is not unlimited: current published limits include 500 MB database size/project, 5 GB egress, two active projects, and automatic pausing after low activity for a week. Automatic database backups are not included. The configured 10-minute Worker ingestion should generate regular activity once deployed, but this must be verified in production. Keep versioned schema migrations and a separate tested database export; GitHub source archives do not back up live database rows.
 - Cloudflare D1 is a plausible future fit because it runs next to the Worker and avoids Supabase's inactivity pause, but it is not unlimited either: the current Workers Free allowance is 5 GB total storage, 5 million rows read/day, and 100,000 rows written/day. At the configured 10-minute schedule and 250 assets from each of two sources, raw snapshot inserts alone could reach about 72,000 rows/day; indexes, audit rows, and journal writes add load. This is a theoretical maximum, not measured usage. D1 would still require PostgreSQL-to-SQLite migration and runtime changes before it could replace Supabase safely.
 - The Worker poll schedule is set to every 10 minutes to leave free API quota headroom while staying inside the 15-minute freshness gate. At 250 returned assets per source each cycle, this is about 4,320 requests/month per provider; CoinMarketCap's additional row-based credit cost must still be watched in its account usage dashboard. A missed or failed poll remains visible as stale/degraded data, not silently substituted.
