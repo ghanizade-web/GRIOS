@@ -323,6 +323,7 @@ def _decision_brief(
     news: list[dict[str, Any]],
     cftc_items: list[dict[str, Any]],
     now: datetime,
+    macro_calendar_path: str | Path | None = None,
 ) -> str:
     """Compact, decision-first Telegram brief. Never fabricates execution prices."""
     names = {
@@ -450,6 +451,31 @@ def _decision_brief(
             ])
             break
 
+    events, _calendar_error = _calendar_events(macro_calendar_path)
+    upcoming = []
+    for event in events:
+        event_date = str(event.get("event_date") or "")[:10]
+        raw_name = str(event.get("official_release_name") or event.get("release_name") or event.get("name") or "رویداد اقتصادی")
+        name = raw_name
+        if "Consumer Price Index" in raw_name:
+            name = "شاخص قیمت مصرف‌کننده (CPI)"
+        elif "Producer Price Index" in raw_name:
+            name = "شاخص قیمت تولیدکننده (PPI)"
+        elif "Retail and Food Services" in raw_name:
+            name = "فروش خرده‌فروشی"
+        elif "Industrial Production" in raw_name:
+            name = "تولید صنعتی و ظرفیت تولید"
+        try:
+            if event_date and date.fromisoformat(event_date) >= now.date():
+                upcoming.append((event_date, name))
+        except ValueError:
+            continue
+    upcoming.sort()
+    if upcoming:
+        lines.extend(["", "🗓 **رویدادی که می‌تواند معامله را تغییر دهد**",
+                      f"{_jalali_label(upcoming[0][0])}: {upcoming[0][1]}",
+                      "نزدیک رویداد مهم، اندازه موقعیت را کاهش دهید و از ورود بدون حد ابطال خودداری کنید."])
+
     # Institutional positioning is a risk filter, not an independent entry signal.
     crowding = []
     for symbol, label in (("NQ", "نزدک"), ("GC", "طلا"), ("CL", "نفت"), ("NG", "گاز طبیعی")):
@@ -525,7 +551,7 @@ def render_daily_narrative_report(
         lead = "برای تشخیص وضعیت غالب بازار، داده تازه و هم‌زمان از سهام گسترده، فناوری، بیت‌کوین و نوسان بازار کافی نیست؛ بنابراین جهت‌گیری کلان قطعی ارائه نمی‌شود."
 
     # Decision-first mode: keep the Telegram report concise and actionable.
-    return _decision_brief(by_key, regime, lead, news, cftc_items, now)
+    return _decision_brief(by_key, regime, lead, news, cftc_items, now, macro_calendar_path)
 
     lines = [
         "🌍 **GRIOS | گزارش روزانه هوشمندی بازار**",
