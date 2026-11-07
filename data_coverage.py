@@ -224,64 +224,8 @@ def publish_market_series(
     source_revision: str = "UNKNOWN",
     timeout: int = 20,
 ) -> dict[str, Any]:
+    """Publish normalized observations directly to Supabase; no external Data Hub proxy."""
     rows = [serialize_market_series(item) for item in series]
     if not rows:
         return {"status": "NO_DATA", "accepted": 0, "error": None}
-    if os.getenv("SUPABASE_URL", "").strip() and os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip():
-        return _publish_direct_to_supabase(rows, source_revision, timeout)
-
-    endpoint = os.getenv("GRIOS_DATA_HUB_URL", "").strip().rstrip("/")
-    token = os.getenv("GRIOS_DATA_HUB_TOKEN", "").strip()
-    if not endpoint or not token:
-        return {"status": "NOT_CONFIGURED", "accepted": 0, "error": None}
-    if not endpoint.startswith("https://"):
-        return {"status": "CONFIG_ERROR", "accepted": 0, "error": "INVALID_ENDPOINT"}
-    accepted = 0
-    try:
-        for offset in range(0, len(rows), 500):
-            payload = {
-                "schema_version": "1.0",
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-                "source_revision": source_revision,
-                "observations": rows[offset:offset + 500],
-            }
-            request = urllib.request.Request(
-                endpoint + "/v1/ingest",
-                data=json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8"),
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(request, timeout=timeout) as response:
-                result = json.loads(response.read().decode("utf-8"))
-                if response.status not in (200, 202) or result.get("status") != "accepted":
-                    return {"status": "REJECTED", "accepted": accepted, "error": "UNEXPECTED_RESPONSE"}
-                accepted += int(result.get("accepted", 0))
-        return {"status": "CONNECTED", "accepted": accepted, "error": None}
-    except urllib.error.HTTPError as exc:
-        # Keep diagnostics safe: never log request headers, response bodies, or credentials.
-        detail = f"HTTP_{exc.code}"
-        headers = exc.headers or {}
-        server = str(headers.get("server", "")).lower()
-        content_type = str(headers.get("content-type", "")).lower()
-        mitigation = str(headers.get("cf-mitigated", "")).lower()
-        if "challenge" in mitigation:
-            detail += ":CF_CHALLENGE"
-        elif "cloudflare" in server and "text/html" in content_type:
-            detail += ":CF_EDGE_HTML"
-        elif "cloudflare" in server:
-            detail += ":CF_EDGE"
-        else:
-            try:
-                body = json.loads(exc.read().decode("utf-8"))
-                worker_code = body.get("error") if isinstance(body, dict) else None
-                if isinstance(worker_code, str) and worker_code.replace("_", "").isalnum():
-                    detail += f":{worker_code[:80]}"
-            except (UnicodeDecodeError, ValueError, TypeError):
-                pass
-        return {"status": "FAILED", "accepted": accepted, "error": detail}
-    except Exception as exc:
-        return {"status": "FAILED", "accepted": accepted, "error": type(exc).__name__}
+    return _publish_direct_to_supabase(rows, source_revision, timeout)
