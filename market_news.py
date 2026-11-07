@@ -51,6 +51,7 @@ TOPIC_RULES: dict[str, tuple[str, ...]] = {
     "corporate_earnings": ("earnings", "quarterly results", "revenue", "profit", "guidance", "buyback", "dividend", "merger", "acquisition", "ipo", "shares fell", "shares rose"),
     "global_growth": ("recession", "gdp", "manufacturing", "pmi", "retail sales", "consumer spending", "china economy", "industrial production", "trade data"),
     "regulation": ("sec", "regulator", "regulation", "antitrust", "lawsuit", "court ruling", "congress", "legislation", "compliance"),
+    "politics": ("election", "midterm", "president", "presidential", "white house", "government", "parliament", "fiscal policy", "federal budget", "government shutdown", "tax policy", "congressional", "political party"),
 }
 
 
