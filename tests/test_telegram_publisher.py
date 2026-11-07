@@ -44,6 +44,7 @@ def test_send_uses_chat_and_plain_text(monkeypatch):
     publisher._send("dummy", "@grios", "daily report")
     assert seen["payload"]["chat_id"] == "@grios"
     assert seen["payload"]["text"] == "daily report"
+    assert seen["payload"]["parse_mode"] == "HTML"
     assert seen["timeout"] == 20
 
 
@@ -125,3 +126,12 @@ def test_publish_report_measures_rtl_isolates_and_emoji_before_chunking(tmp_path
     assert len(sent) > 1
     assert all(publisher.utf16_units(chunk) <= publisher.TELEGRAM_SAFE_TEXT_UNITS for chunk in sent)
     assert all(chunk.startswith("\u2067") and chunk.endswith("\u2069") for chunk in sent)
+
+
+def test_publish_report_converts_bold_markup_and_escapes_html(tmp_path, monkeypatch):
+    report = tmp_path / "report.txt"
+    report.write_text("**نمای بازار** & BTC: 100", encoding="utf-8")
+    sent = []
+    monkeypatch.setattr(publisher, "_send", lambda token, chat_id, text: sent.append(text))
+    assert publisher.publish_report(report, "dummy", "@grios") == 1
+    assert "<b>نمای بازار</b> &amp; BTC: 100" in sent[0]

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import html
 import json
+import re
 import os
 import time
 import urllib.error
@@ -56,6 +58,16 @@ def chunk_message(message: str, limit: int = TELEGRAM_SAFE_TEXT_UNITS) -> list[s
     return chunks
 
 
+
+def format_telegram_html(message: str) -> str:
+    """Escape report text and translate the limited **bold** markup to Telegram HTML."""
+    rendered = []
+    for line in message.splitlines():
+        escaped = html.escape(line, quote=False)
+        escaped = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", escaped)
+        rendered.append(escaped)
+    return "\n".join(rendered)
+
 def apply_rtl_direction(message: str) -> str:
     """Isolate Persian-containing lines so mixed RTL/LTR text renders predictably."""
     rendered = []
@@ -71,6 +83,7 @@ def _send(token: str, chat_id: str, text: str, timeout: int = 20) -> None:
     body = json.dumps({
         "chat_id": chat_id,
         "text": text,
+        "parse_mode": "HTML",
         "disable_web_page_preview": True,
     }).encode("utf-8")
     request = urllib.request.Request(
@@ -110,7 +123,7 @@ def _send(token: str, chat_id: str, text: str, timeout: int = 20) -> None:
 def publish_report(report_path: str | Path, token: str, chat_id: str) -> int:
     report = Path(report_path).read_text(encoding="utf-8")
     # Add RTL isolates before measuring length; they count toward Telegram's limit.
-    rendered = apply_rtl_direction(report)
+    rendered = apply_rtl_direction(format_telegram_html(report))
     chunks = chunk_message(rendered)
     for chunk in chunks:
         _send(token, chat_id, chunk)

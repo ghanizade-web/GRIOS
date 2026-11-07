@@ -60,3 +60,16 @@ The owner's broader operating blueprint is recorded in [`GRIOS_OPERATING_MANUAL_
 Use a compact footer by default: Telegram, Instagram, X, LinkedIn, and TradingView; add other profiles only when relevant or requested. Link directly to relevant TradingView charts in the body when useful.
 
 The supplied broker/exchange referral URLs are not part of the recurring market-report footer; include them only when the user explicitly asks for a broker/exchange promotional post.
+
+
+## Daily Telegram editorial contract (v15)
+
+- Publish one integrated daily Persian market-intelligence report, not a stream of standalone quote tables or raw scanner diagnostics.
+- Lead with the cross-asset risk regime, then explain US equities/technology, crypto breadth, commodities/energy, USD/rates, FX and source-confirmed upcoming macro releases when fresh data exists.
+- Every section must connect the observed move to why it matters, identify what would confirm or weaken the interpretation, and distinguish observed data from interpretation. Price co-movement is not proof of causation.
+- Include concise bullish/bearish or continuation/reversal scenarios where the available series support them. Do not invent technical levels, consensus, ETF flows, liquidations, order-book activity, institutional accumulation or geopolitical catalysts.
+- Use the official FRED calendar only for source-confirmed release names and dates; do not infer release times, consensus, actuals or surprises from the calendar.
+- Keep detailed provider errors, record counts, coverage JSON and ingestion diagnostics in GitHub Actions artifacts. The Telegram reader-facing report may disclose data-quality limitations in plain Persian, but must not expose raw record counts or implementation telemetry.
+- The daily workflow should publish the integrated report once. Do not publish the same FRED calendar as a second standalone daily Telegram message.
+- If a market segment lacks fresh evidence, omit its directional narrative or explicitly say evidence is insufficient. A shorter evidence-backed report is preferable to filler.
+- Current daily scanner feeds do not include a complete newswire, ETF-flow, liquidation or order-book feed. Never imply those are monitored; do not attribute a price move to a headline unless a separately verified source is added to the pipeline.
