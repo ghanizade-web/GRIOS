@@ -1,5 +1,8 @@
 # GRIOS v15 — Data Coverage & Data Hub Implementation
 
+> **Current architecture decision — 2026-11-07:** Supabase is the sole GRIOS Data Hub and persistent backend. Cloudflare Worker/Wrangler is deprecated and is not part of the active pipeline. Python collectors publish directly to Supabase PostgREST using server-side `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. GitHub Actions remains the scheduled compute/orchestration layer; the existing daily schedule is unchanged. See [GRIOS_SUPABASE_ONLY_ARCHITECTURE.md](GRIOS_SUPABASE_ONLY_ARCHITECTURE.md) for the current verified state.
+
+
 Date: 2026-11-04
 Scope: GitHub Issue #11, Data Coverage and Cloudflare Data Hub.
 
