@@ -1,54 +1,63 @@
-# GRIOS v15 — Data Coverage & Data Hub Implementation
+# GRIOS v15 — Data Coverage & Supabase Data Hub
 
-> **Current architecture decision — 2026-11-07:** Supabase is the sole GRIOS Data Hub and persistent backend. Cloudflare Worker/Wrangler is deprecated and is not part of the active pipeline. Python collectors publish directly to Supabase PostgREST using server-side `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. GitHub Actions remains the scheduled compute/orchestration layer; the existing daily schedule is unchanged. See [GRIOS_SUPABASE_ONLY_ARCHITECTURE.md](GRIOS_SUPABASE_ONLY_ARCHITECTURE.md) for the current verified state.
+**Current status:** Supabase-only architecture, verified 2026-11-07. This document supersedes the earlier Cloudflare Worker deployment plan recorded below in historical commits.
 
+## Active architecture
 
-Date: 2026-11-04
-Scope: GitHub Issue #11, Data Coverage and Cloudflare Data Hub.
+- Supabase project `ouzayspfyhkhktntonxd`, region `eu-west-1`, status `ACTIVE_HEALTHY`, PostgreSQL 17.6.
+- Primary table: `public.grios_market_observations`; latest view: `public.grios_latest_market_observations`.
+- Market scanner writes directly to Supabase PostgREST using `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+- CFTC context reads directly from the same table.
+- SEC 13F ingestion writes directly to Supabase tables/RPCs.
+- The private `market-pulse` Twelve Data adapter now writes directly to the same observation table.
+- GitHub Actions remains the compute and scheduling layer. The daily schedule remains `0 12 * * *` UTC.
+- Cloudflare Worker source, Wrangler configuration, deployment workflow and Worker fallback were removed from active repository code. No Worker URL/token is required.
 
-## Verified starting state
+## Live database verification
 
-- The GRIOS main branch contains a direct-provider Python scanner, but no executable Cloudflare Worker source or Wrangler configuration.
-- The scanner reads crypto from CoinGecko and CoinMarketCap; equities and ETF proxies from OpenBB/Cboe; FX reference history from ECB; energy series from EIA; and macro context from FRED.
-- The live acceptance record documents TON as missing from both crypto provider pages and Henry Hub as unavailable from the EIA/OpenBB path.
-- The private market-pulse repository currently contains a Twelve Data daily time-series client for FX, XAU/XAG, WTI, crypto and selected equity indices. It does not currently contain a FRED or EIA adapter in the inspected source file. Its API key is a server-side environment variable.
-- The connected Supabase project currently reports INACTIVE. Database inspection failed because the database was not accessible. The schema must not be described as applied until the project is active and verified.
-- No Cloudflare account/deployment connector is available in this session. Worker deployment and secret binding cannot be claimed complete.
+Read-only SQL verification on 2026-11-07 returned:
+- 953 rows
+- 38 distinct ingestion runs
+- 7 provider labels
+- Latest insertion: 2026-11-07 15:05:53 UTC
 
-## Implemented in this branch
+Provider labels observed: CoinGecko + CoinMarketCap, OpenBB Cboe, OpenBB ECB, OpenBB FRED, CFTC, OpenBB EIA, and EIA.
 
-1. Added an authenticated Cloudflare Worker with:
-   - GET /v1/status
-   - POST /v1/ingest
-   - GET /v1/markets/latest
-   - bearer-token authentication, payload size/row limits, schema validation, and sanitized upstream errors.
-2. Added a Supabase migration for provider-attributed append-only observations, RLS, restricted grants, indexes, and a latest-observation view.
-3. Added a Python Data Hub client using standard-library HTTPS requests; no new Python runtime dependency.
-4. Connected scanner output to optional Data Hub ingestion. If URL/token are absent, the scanner reports NOT_CONFIGURED and continues operating against direct providers.
-5. Added a JSON coverage report that records requested/received/missing symbols, freshness, feed errors, and unsupported capabilities.
-6. Added Worker contract tests and Python coverage/client tests.
+These counts confirm persistence only. They do not imply that every feed is real-time, complete, or suitable for execution.
 
-## Data coverage model
+## Security model
 
-| Feed | Expected universe | Source | Current limitation |
-|---|---|---|---|
-| Crypto spot | Configured watchlist | CoinGecko + CoinMarketCap | Provider top-page limits; native asset is now GRAM (formerly TON), with pinned-ID fallback |
-| US shares/ETFs | User watchlist | OpenBB/Cboe daily history | Not executable real-time quotes |
-| Commodity proxies | User watchlist | OpenBB/Cboe ETF proxies | Proxy exposure, not underlying spot/futures |
-| FX reference | User watchlist | ECB | Reference rates, not bid/ask or market depth |
-| Energy spot | Brent and Henry Hub | EIA via OpenBB | Henry Hub path has a live OpenBBError |
-| Macro | DGS10, DGS2, DTWEXBGS, VIXCLS | FRED via OpenBB | Published observations, not intraday feeds |
+- RLS is enabled on the market observation table.
+- Public, anon and authenticated grants are revoked.
+- Backend ingestion uses the service-role credential only.
+- Never place the service-role key in client code, reports, artifacts or logs.
+- The database advisor's informational no-policy findings are consistent with this restricted service-role-only access model; do not add public policies merely to silence those notices.
 
-The report separately flags as NOT IMPLEMENTED: underlying gold/silver and industrial-metal prices, crypto OHLCV beyond provider snapshots, order-book spread/depth, verified institutional fund flows, dated catalyst feeds, and point-in-time walk-forward calibration.
+## Provider coverage and limitations
 
-## Required production activation
+| Feed | Provider | Semantics / limitations |
+|---|---|---|
+| Crypto spot | CoinGecko + CoinMarketCap | Provider top-page coverage; identity and freshness validation required |
+| US equities / ETFs | OpenBB Cboe | Daily history, not executable real-time quotes |
+| Commodity proxies | OpenBB Cboe | ETF proxies, not underlying spot/futures |
+| FX reference | OpenBB ECB | Reference rates, not bid/ask or market depth |
+| Energy | EIA / OpenBB EIA | Published series, not intraday futures |
+| Macro | OpenBB FRED | Published observations, not intraday feeds |
+| Futures positioning | CFTC | Weekly aggregate positioning, not transaction-level institutional flow |
+| Twelve Data | Private market-pulse adapter | Daily candle history; plan entitlement and session caveats retained |
+| SEC 13F | SEC EDGAR + Supabase | Delayed reported holdings, not live positions or proof of manager proprietary capital |
 
-1. Restore/activate the existing Supabase project and verify the database is reachable.
-2. Apply the migration in this branch and verify the table/view and RLS grants.
-3. Deploy the Worker from services/data-hub-worker using Wrangler.
-4. Set Worker secrets: GRIOS_INGEST_TOKEN, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
-5. Set scanner-side secrets: GRIOS_DATA_HUB_URL and GRIOS_DATA_HUB_TOKEN.
-6. Run a live scan with Telegram disabled; verify Worker status, accepted row count, provider provenance, freshness and latest endpoint output.
-7. Only then classify the Data Hub as INTEGRATION_VERIFIED or PRODUCTION_VALIDATED.
+The report separately flags as not implemented: underlying gold/silver and industrial-metal spot/futures coverage, order-book depth, verified institutional fund flows, and point-in-time walk-forward score calibration.
 
-No secret values belong in GitHub, audit JSON, reports or logs.
+## Operational acceptance
+
+For each production run:
+1. Confirm GitHub Actions completed.
+2. Confirm the publisher reports `DIRECT_SUPABASE` with a non-zero accepted count when valid data exists.
+3. Verify latest rows by `inserted_at`, `run_id`, provider, asset class and source timestamp.
+4. Confirm data freshness independently of insertion success.
+5. Confirm Telegram publication only when logs explicitly contain `TELEGRAM_PUBLISH: SENT`.
+
+## Cloudflare account boundary
+
+Repository code and active workflows no longer use Cloudflare. Removing repository files does not delete a previously deployed Cloudflare account resource or disconnect an external Cloudflare GitHub App/Workers Builds integration. Those account-level actions require Cloudflare dashboard access and separate verification.
