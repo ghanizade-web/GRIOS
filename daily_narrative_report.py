@@ -179,10 +179,78 @@ def _source_name(item: dict[str, Any]) -> str:
 
 
 def _safe_headline(item: dict[str, Any]) -> str | None:
-    title = str(item.get("title", "")).strip()
-    if not title or any(char.isdigit() for char in title) or any(char in title for char in "$€£%٪"):
-        return None
-    return title
+    # Financial figures are valid parts of a headline; suppressing them erased real news.
+    title = " ".join(str(item.get("title", "")).split()).strip()
+    return title[:240] or None
+
+
+def _news_market_relevant(story: dict[str, Any], market: str) -> bool:
+    title = str(story.get("title") or "")
+    summary = str(story.get("summary") or "")
+    text = f" {title} {summary} ".lower()
+    topics = set(story.get("topics") or [])
+    terms = {
+        "fx": ("dollar", "euro", "yen", "sterling", "currency", "forex", "exchange rate", "central bank", "federal reserve", "ecb", "boj", "interest rate", "treasury yield", "inflation", "payroll", "jobs report"),
+        "commodities": ("oil", "crude", "brent", "wti", "natural gas", "lng", "opec", "eia", "pipeline", "shipping", "strait of hormuz", "gold", "silver", "copper", "lithium", "uranium", "critical minerals", "mining", "inventory", "production cut", "supply disruption"),
+        "equities": ("earnings", "revenue", "profit", "guidance", "shares", "stock", "semiconductor", "chip", "artificial intelligence", "data center", "capex", "buyback", "merger", "acquisition", "antitrust", "sec", "tariff", "export control", "corporate"),
+        "crypto": ("bitcoin", "ethereum", "crypto", "digital asset", "stablecoin", "spot etf", "blockchain", "exchange", "custody", "token"),
+        "rates": ("federal reserve", "fomc", "central bank", "treasury", "bond yield", "bond auction", "government debt", "deficit", "inflation", "consumer price", "payroll", "jobs report", "gdp", "pce", "interest rate"),
+    }
+    if market == "fx":
+        return bool(topics.intersection({"fx", "monetary_policy", "global_growth"})) or any(term in text for term in terms[market])
+    if market == "commodities":
+        return bool(topics.intersection({"energy", "metals"})) or any(term in text for term in terms[market])
+    if market == "equities":
+        return bool(topics.intersection({"corporate_earnings", "ai_semiconductors", "regulation"})) or any(term in text for term in terms[market])
+    if market == "crypto":
+        return "crypto" in topics or ("regulation" in topics and any(term in text for term in terms[market])) or any(term in text for term in terms[market])
+    if market == "rates":
+        return bool(topics.intersection({"monetary_policy", "global_growth"})) or any(term in text for term in terms[market])
+    return False
+
+
+def _news_market_impact(story: dict[str, Any], market: str) -> str:
+    topics = set(story.get("topics") or [])
+    text = f"{story.get('title', '')} {story.get('summary', '')}".lower()
+    if market == "fx":
+        if "monetary_policy" in topics or any(x in text for x in ("federal reserve", "central bank", "interest rate", "inflation", "payroll")):
+            if any(x in text for x in ("fed hike", "rate hike", "raises odds", "higher for longer", "jobs surge", "strong jobs")):
+                return "اثر بر فارکس: اگر داده قوی‌تر احتمال افزایش نرخ فدرال رزرو را بالا ببرد، بازده دوساله و دلار آمریکا حمایت می‌شوند؛ EUR/USD و GBP/USD ممکن است تحت فشار قرار گیرند. طلا و سهام رشدی نیز از مسیر نرخ تنزیل آسیب‌پذیرند. تأیید: بازده دوساله و DXY."
+            if any(x in text for x in ("rate cut", "cuts rates", "dovish", "lower rates", "weak jobs", "slowing inflation")):
+                return "اثر بر فارکس: افزایش احتمال کاهش نرخ یا لحن انبساطی فدرال رزرو می‌تواند بازده دوساله و دلار را تضعیف کند و به EUR/USD و GBP/USD فضا بدهد؛ تأیید را در بازده دوساله و DXY بسنجید."
+            return "اثر بر فارکس: تغییر انتظارات نرخ بهره ابتدا بازده اوراق و سپس ارز مربوطه را جابه‌جا می‌کند؛ لحن انقباضی‌تر معمولاً به نفع ارز همان بانک مرکزی و لحن انبساطی‌تر به زیان آن است. تأیید را در بازده دوساله و شاخص دلار بسنجید."
+        if "geopolitics" in topics or "politics" in topics:
+            return "اثر بر فارکس: تشدید ریسک می‌تواند تقاضای کوتاه‌مدت برای ارزهای امن را بالا ببرد؛ اثر پایدار به دامنه درگیری، تحریم‌ها و واکنش بازده اوراق بستگی دارد."
+        return "اثر بر فارکس: خبر از مسیر رشد نسبی، تجارت و تقاضای ارز منتقل می‌شود؛ باید دید کدام اقتصاد یا ارز در مقایسه با طرف مقابل مزیت می‌گیرد."
+    if market == "commodities":
+        if "energy" in topics or any(x in text for x in ("oil", "crude", "gas", "opec", "pipeline", "shipping")):
+            return "اثر بر کامودیتی: کاهش عرضه یا اختلال حمل‌ونقل به پریمیوم نفت و گاز اضافه می‌کند؛ افزایش تولید یا موجودی اثر معکوس دارد. سهام انرژی معمولاً از قیمت فروش بالاتر حمایت می‌گیرد، اما مصرف‌کنندگان انرژی با فشار هزینه روبه‌رو می‌شوند."
+        if "metals" in topics or any(x in text for x in ("gold", "silver", "copper", "lithium", "uranium")):
+            return "اثر بر فلزات: طلا به دلار و بازده واقعی حساس است؛ مس و فلزات صنعتی به تقاضای چین، تولید صنعتی و موجودی انبارها. بنابراین خبر را باید به فلز مشخص و زنجیره مصرف آن وصل کرد، نه کل گروه فلزات."
+        return "اثر بر کامودیتی: مسیر اصلی از عرضه فیزیکی، هزینه حمل و تقاضای صنعتی می‌گذرد؛ بدون تغییر در یکی از این متغیرها، تیتر به‌تنهایی مبنای جهت‌گیری نیست."
+    if market == "equities":
+        if "ai_semiconductors" in topics or any(x in text for x in ("artificial intelligence", "semiconductor", "chip", "data center", "capex")):
+            return "اثر بر سهام: برندگان بالقوه شامل تراشه، شبکه، برق و زیرساخت دیتاسنترند؛ اما معیار تعیین‌کننده تبدیل CapEx به سفارش، درآمد، جریان نقدی و بازده اقتصادی واقعی است. رشد هزینه بدون بازده کافی می‌تواند به ضرر سهام AI تمام شود."
+        if "corporate_earnings" in topics or any(x in text for x in ("earnings", "revenue", "profit", "guidance", "buyback")):
+            return "اثر بر سهام: واکنش فقط به سود تیترشده نیست؛ حاشیه سود، جریان نقدی و راهنمای مدیریت تعیین می‌کند خبر برای خود شرکت و صنعت مثبت است یا منفی. اثر شاخصی به وزن شرکت و سرایت به هم‌گروهی‌ها بستگی دارد."
+        if "monetary_policy" in topics:
+            return "اثر بر سهام: افزایش بازده اوراق معمولاً فشار بیشتری بر ارزش‌گذاری سهام رشدی و فناوری می‌گذارد؛ کاهش بازده می‌تواند حمایت ایجاد کند، مگر آنکه علت افت نرخ‌ها ترس از رکود باشد."
+        return "اثر بر سهام: پیامد اصلی از هزینه سرمایه، تقاضای نهایی، تعرفه/مقررات و حاشیه سود شرکت‌های درگیر عبور می‌کند؛ جهت شاخص را از واکنش بخش مربوطه و breadth بازار تأیید کنید."
+    if market == "crypto":
+        if "monetary_policy" in topics or any(x in text for x in ("federal reserve", "interest rate", "inflation", "treasury yield")):
+            return "اثر بر کریپتو: دلار و بازده واقعی بالاتر معمولاً نقدینگی و اشتهای ریسک را محدود می‌کند؛ چرخش به سیاست انبساطی می‌تواند کمک‌کننده باشد. تأیید لازم، ورود تقاضای نقدی و جریان ETF است، نه صرفاً رشد قیمت."
+        if "regulation" in topics or "politics" in topics:
+            return "اثر بر کریپتو: مقررات روشن و دسترسی نهادی می‌تواند به نفع صرافی‌ها، متولیان و دارایی‌های دارای مسیر قانونی باشد؛ محدودیت یا ابهام نظارتی ریسک دسترسی و ارزش‌گذاری را بالا می‌برد."
+        return "اثر بر کریپتو: خبر باید به تقاضای نقدی، ETF، دسترسی صرافی‌ها یا ریسک نگه‌داری دارایی وصل شود؛ بدون تأیید جریان نقدی، آن را سیگنال جهت‌دار تلقی نمی‌کنیم."
+    if market == "rates":
+        if "monetary_policy" in topics or any(x in text for x in ("federal reserve", "central bank", "inflation", "payroll", "interest rate")):
+            if any(x in text for x in ("fed hike", "rate hike", "raises odds", "jobs surge", "strong jobs")):
+                return "اثر بر اوراق: افزایش احتمال انقباض فدرال رزرو معمولاً بازده دوساله را بالا و قیمت اوراق کوتاه‌مدت را پایین می‌برد؛ اگر انتظارات تورمی هم بالا برود فشار می‌تواند به سررسید ده‌ساله منتقل شود."
+            if any(x in text for x in ("rate cut", "cuts rates", "dovish", "weak jobs", "slowing inflation")):
+                return "اثر بر اوراق: افزایش احتمال کاهش نرخ می‌تواند بازده دوساله را پایین و قیمت اوراق را بالا ببرد؛ اگر علت افت نرخ‌ها ترس از رکود باشد، منحنی بازده و اعتبار شرکتی ممکن است پیام متفاوتی بدهند."
+            return "اثر بر اوراق: داده/اظهارنظر انقباضی معمولاً بازده اوراق را بالا و قیمت اوراق را پایین می‌برد؛ خبر انبساطی برعکس است. واکنش سررسید دوساله برای انتظارات سیاستی و ده‌ساله برای تورم/رشد مهم است."
+        return "اثر بر اوراق: کسری بودجه و عرضه بیشتر اوراق می‌تواند فشار عرضه و صرف سررسید را بالا ببرد؛ داده رشد و تورم مشخص می‌کند بازار این عرضه را با چه بازدهی جذب می‌کند."
+    return "اثر بازار هنوز به شواهد بیشتری نیاز دارد."
 
 
 def _story_refs(items: list[dict[str, Any]], limit: int = 6) -> list[str]:
@@ -293,7 +361,7 @@ def _topic_label(topic: str) -> str:
         "ai_semiconductors": "هوش مصنوعی و نیمه‌رساناها", "energy": "انرژی و زنجیره عرضه",
         "metals": "فلزات گران‌بها و صنعتی", "crypto": "دارایی‌های دیجیتال و مقررات کریپتو",
         "fx": "ارزها و دلار", "corporate_earnings": "سود شرکت‌ها و راهنمای مدیریت",
-        "global_growth": "رشد اقتصاد جهانی", "regulation": "مقررات و سیاست‌گذاری",
+        "global_growth": "رشد اقتصاد جهانی", "regulation": "مقررات و سیاست‌گذاری", "politics": "سیاست و تصمیمات دولت",
     }.get(topic, topic)
 
 
@@ -430,40 +498,50 @@ def _decision_brief(
     else:
         lines.extend(["", "💵 **اقدام امروز: حفظ نقدینگی و انتظار برای موقعیت روشن.**"])
 
-    # Market-specific political, economic, monetary, geopolitical and corporate news.
+    # News is presented as a researched brief: what happened, what it means, and which assets transmit the effect.
     market_news_groups = [
-        ("💱 اخبار اثرگذار بر فارکس", ("fx", "monetary_policy", "global_growth", "geopolitics", "politics")),
-        ("🥇 اخبار اثرگذار بر کامودیتی و انرژی", ("energy", "metals", "global_growth", "geopolitics", "politics")),
-        ("📈 اخبار اثرگذار بر سهام آمریکا", ("corporate_earnings", "ai_semiconductors", "monetary_policy", "global_growth", "regulation", "politics", "geopolitics")),
-        ("₿ اخبار اثرگذار بر کریپتو", ("crypto", "regulation", "monetary_policy", "geopolitics", "politics")),
-        ("🏦 اخبار اثرگذار بر اوراق و نرخ بهره", ("monetary_policy", "global_growth", "politics", "geopolitics")),
+        ("fx", "💱 اخبار و تحلیل فارکس", "فارکس"),
+        ("commodities", "🥇 اخبار و تحلیل کامودیتی و انرژی", "کامودیتی"),
+        ("equities", "📈 اخبار و تحلیل سهام آمریکا", "سهام آمریکا"),
+        ("crypto", "₿ اخبار و تحلیل کریپتو", "کریپتو"),
+        ("rates", "🏦 اخبار و تحلیل اوراق و نرخ بهره", "اوراق"),
     ]
-    used_news: set[str] = set()
     news_sections_added = 0
-    for heading, topics in market_news_groups:
+    for market, heading, market_label in market_news_groups:
         stories = [
             story for story in news
-            if set(story.get("topics") or []).intersection(topics)
-            and str(story.get("url") or "") not in used_news
+            if _news_market_relevant(story, market)
+            
         ]
-        stories.sort(key=lambda story: str(story.get("published_at") or ""), reverse=True)
+        tier_rank = {"TIER_1": 0, "TIER_2": 1, "TIER_3": 2}
+        stories.sort(key=lambda story: (
+            -datetime.fromisoformat(str(story.get("published_at")).replace("Z", "+00:00")).timestamp()
+            if story.get("published_at") else 0,
+            tier_rank.get(str(story.get("evidence_tier") or "TIER_3"), 9),
+        ))
         if not stories:
             continue
-        lines.extend(["", heading])
-        for story in stories[:2]:
-            title = _safe_headline(story) or "خبر تازه و مرتبط در این حوزه"
-            topic_names = "، ".join(_topic_label(topic) for topic in (story.get("topics") or []) if topic in topics)
-            lines.append(f"• {title} — {_source_name(story)}")
-            if topic_names:
-                lines.append(f"  حوزه اثر: {topic_names}")
-            url = str(story.get("url") or "").strip()
-            if url:
-                lines.append(f"  {url}")
-            used_news.add(url)
-        lines.append("  برداشت GRIOS: اثر نهایی خبر باید با واکنش قیمت و داده‌های همان بازار تأیید شود؛ تیتر به‌تنهایی سیگنال نیست.")
+        story = stories[0]
+        title = _safe_headline(story) or "عنوان خبر در فید موجود نیست"
+        summary = " ".join(str(story.get("summary") or "").split()).strip()
+        summary = summary[:360].rstrip()
+        topics = [topic for topic in (story.get("topics") or []) if topic in {"geopolitics", "monetary_policy", "ai_semiconductors", "energy", "metals", "crypto", "fx", "corporate_earnings", "global_growth", "regulation", "politics"}]
+        topic_names = "، ".join(_topic_label(topic) for topic in topics)
+        lines.extend(["", heading, f"**{title}**"])
+        if summary:
+            lines.append(f"📰 **چه اتفاقی افتاده؟** {summary}")
+        else:
+            lines.append("📰 **چه می‌دانیم؟** فید منبع فقط تیتر را ارائه کرده و متن توضیحی قابل اتکایی در دسترس نیست؛ جزئیات فراتر از تیتر را قطعی فرض نمی‌کنیم.")
+        if topic_names:
+            lines.append(f"حوزه خبر: {topic_names}")
+        lines.append(f"🧠 **تحلیل و اثر بر {market_label}:** {_news_market_impact(story, market)}")
+        lines.append(f"منبع: {_source_name(story)}")
+        url = str(story.get("url") or "").strip()
+        if url:
+            lines.append(f"لینک راستی‌آزمایی: {url}")
         news_sections_added += 1
     if not news_sections_added:
-        lines.extend(["", "📰 **اخبار اثرگذار بازارها**", "در فیدهای تازه و معتبر این اجرا، خبر قابل اتکای کافی برای انتساب به بازارهای اصلی ثبت نشد؛ از ساختن محرک خبری خودداری می‌کنیم."])
+        lines.extend(["", "📰 **اخبار اثرگذار بازارها**", "در فیدهای تازه این اجرا خبر قابل اتکای کافی برای انتساب به بازارهای اصلی وجود نداشت؛ به‌جای پرکردن گزارش با تیترهای نامرتبط، پوشش خبری را ناقص اعلام می‌کنیم."])
 
     events, _calendar_error = _calendar_events(macro_calendar_path)
     upcoming = []
@@ -519,9 +597,6 @@ def _decision_brief(
         "",
         "جهت‌های بالا غربال اولیه بازارند، نه دستور سفارش؛ هیچ قیمت ورود، حد ضرر یا هدف عددی در این نسخه منتشر نمی‌شود.",
     ])
-    refs = _story_refs(news, limit=3)
-    if refs:
-        lines.extend(["", "🔗 **منابع منتخب**", *refs])
     lines.extend(["", *social_footer_lines()])
     return "\n".join(lines)
 
