@@ -86,7 +86,7 @@ def test_official_bls_macro_feeds_are_registered_and_classified():
     now = datetime.now(timezone.utc)
     published = (now - timedelta(hours=1)).strftime("%a, %d %b %Y %H:%M:%S GMT")
     xml = f"""<rss><channel><item>
-      <title>Employment Situation</title>
+      <title>Employment Situation Summary</title>
       <link>https://www.bls.gov/news.release/empsit.htm</link>
       <description>Monthly labor market release.</description>
       <pubDate>{published}</pubDate>
