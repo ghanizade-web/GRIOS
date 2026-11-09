@@ -140,3 +140,31 @@ The user prefers **more signals and their catalysts visible per image, using sma
 - Main slide may contain Top 3 plus several additional signals; supporting slides should cover the rest and may group Crypto, FX and Commodities separately.
 - If 6–8 rows cannot fit legibly at 1080 × 1920, reduce the number per slide and add slides. Legibility and factual accuracy outrank a fixed count.
 - Catalyst text must be concise and specific (e.g. data release, policy change, supply disruption, ETF/derivatives/on-chain evidence), not generic labels such as “positive fundamentals.”
+
+## 14. Persian Telegram editorial format — mandatory user correction (2026-11-09)
+The user rejected the previous output as cluttered, poorly aligned, lacking visual hierarchy, emojis, concise reasoning and clear catalysts. Apply this as a hard publication standard:
+- Write in natural Persian with right-to-left sentence flow. Keep each signal in a compact, consistently structured block; do not mix long English paragraphs with Persian analysis. Keep symbols, prices and timestamps on clearly separated labels.
+- Use a small, purposeful set of emojis as visual navigation: 🟠 for Top/priority, 🟢 LONG, 🔴 SHORT, 🟡 WATCH, ⚪ NO TRADE, ⚡ catalyst, 🎯 trigger, 🛑 invalidation, ⏱ horizon, ⚠️ risk, 📅 calendar. Do not decorate every sentence.
+- Begin with a one-line header containing date, cut-off and market-open/closed status. Then show eligible count and Top 3.
+- Each Top-3 item must be concise and decision-useful: **instrument + direction + quote/time**; **⚡ چرا اکنون؟** one specific fresh catalyst and its causal link; **🎯 فعال‌سازی** one precise observable trigger; **🛑 ابطال**; **⏱ افق / ⚠️ ریسک / evidence grade**. State clearly when no active entry exists before trigger confirmation.
+- Other qualifying items must be compressed into short rows with instrument, direction, catalyst and trigger. No long repeated Fact/Interpretation/Scenario essays. Keep fact and interpretation distinguishable through wording/labels, but prioritize readability.
+- Every opportunity must state the actual reason and specific catalyst. Never use generic filler such as “positive fundamentals”, “market sentiment”, “macro uncertainty” without a dated event, measurable flow, supply-demand fact or observable market confirmation.
+- The daily report must be easy to scan on a phone: short paragraphs, consistent spacing, clear separators, limited nesting, no giant unbroken blocks, no raw RSS excerpts, no raw source URLs in Telegram body. Source citations/URLs remain in audit metadata.
+- Use concise Persian headings and RTL-friendly text. Avoid tables in Telegram messages where mixed RTL/LTR columns become difficult to read.
+- Do not print DIL/HTML/XML tags or layout code in the Telegram message. Deliver plain Telegram-compatible text with restrained Markdown and emojis.
+- Keep the social footer compact and at the end.
+
+## 15. Explicitly excluded news formats and sections
+- Do not include generic feed items such as “Basic Materials Roundup: Market Talk” or other broad materials-sector roundups unless they contain a fresh, verifiable catalyst tied to a specific eligible commodity and a tradeable market expression. Generic sector commentary with no actionable commodity linkage is excluded.
+- Remove the standalone section/category “اخبار و تحلیل سهام آمریکا” entirely. Do not include US equity indices, listed-company shares, equity ETFs, company stock ideas or generic stock-market commentary in the report.
+- Strategic themes (AI, data centres, semiconductors, defense, grid, nuclear) are context only and must connect to a specific eligible crypto/FX/commodity instrument through an evidenced causal chain. If no such connection exists, omit the news item.
+- The uploaded megatrend report is a background research input, not a separate daily news digest. Filter out all equity recommendations and company-share opportunities from it.
+
+## 16. Daily visual deliverable — no silent omission
+- A daily report is not considered fully delivered unless its matching visual slide set has actually been generated and attached/delivered, or the image-generation failure is explicitly disclosed.
+- Produce one or more 9:16 Persian story slides with target 1080×1920 output, following the approved cream/ivory, black, muted gray, restrained orange and limited blue identity.
+- Target 6–8 concise signal rows per slide where legible; each row shows instrument, direction, specific catalyst and trigger/confirmation. Use multiple slides rather than omit qualified signals or shrink text below readability.
+- Slide 1: Top 3 plus further highest-ranked items; subsequent slides cover remaining candidates, optionally grouped by Crypto / FX / Commodities.
+- Use readable Persian RTL hierarchy, small-but-legible signal typography, date/cut-off, safe margins and clear separators. Match every displayed value exactly to the same-day report.
+- Do not claim an image was created, attached, or published unless an actual image artifact exists and is delivered. If generation, exact sizing or Telegram photo upload fails, state exactly which step failed. Never silently omit the image.
+- The Telegram send sequence remains: send report text, then each image to the verified channel using the authorized Telegram connection; record each returned message_id. Report text and image delivery statuses separately. Only call the full package SENT when all expected components are confirmed.
