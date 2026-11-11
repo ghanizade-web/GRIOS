@@ -168,3 +168,17 @@ The user rejected the previous output as cluttered, poorly aligned, lacking visu
 - Use readable Persian RTL hierarchy, small-but-legible signal typography, date/cut-off, safe margins and clear separators. Match every displayed value exactly to the same-day report.
 - Do not claim an image was created, attached, or published unless an actual image artifact exists and is delivered. If generation, exact sizing or Telegram photo upload fails, state exactly which step failed. Never silently omit the image.
 - The Telegram send sequence remains: send report text, then each image to the verified channel using the authorized Telegram connection; record each returned message_id. Report text and image delivery statuses separately. Only call the full package SENT when all expected components are confirmed.
+
+
+## 17. Final daily Story visual standard — one Top-3 image (2026-11-11)
+This section supersedes any conflicting visual quantity or density instructions in Sections 11, 13 and 16.
+- Default deliverable: **one vertical 9:16 image containing all three Top-3 signals together**, arranged as three distinct, spacious, clearly separated cards/sections. Do not create three separate images by default.
+- Each signal card contains only: instrument/ticker, direction (LONG/SHORT/WATCH), one short specific catalyst/reason, and one concise trigger/confirmation condition.
+- Keep detailed quote/time, invalidation, horizon, risk and evidence grade in the accompanying Telegram text report, not on the image unless a single detail is essential for immediate interpretation.
+- Visual identity: cobalt/royal blue as the principal accent or panel color (approximately #2F45B5), warm bone/ivory background (approximately #F2F0EA), white cards, dark navy/black text, muted gray secondary information. Orange is a rare accent only for one genuinely important value or point; it is no longer the dominant color.
+- Typography: modern, professional Persian display type for headlines and a clean, highly legible Persian sans-serif for information. Ensure correct RTL shaping, adequate line spacing, strong contrast and mobile readability. Avoid decorative or handwritten fonts for small text.
+- Composition: uncluttered, deliberate hierarchy, controlled negative space, fine separators, soft card corners, generous Story safe margins and no unnecessary ornaments. Prioritize one-glance comprehension over information density.
+- Target export 1080 × 1920 px; verify actual dimensions before claiming exact compliance. Every displayed fact must match that day's report.
+- Only add a separate supplementary slide when a fourth or later candidate has genuine visual value and can be shown without compromising readability. Never compress the Top 3 or add weak signals merely to fill space.
+- If fewer than three candidates qualify, show only the qualifying candidates. If image generation or delivery fails, disclose the exact failure and do not claim completion.
+- Quality over quantity: when resource or token limits apply, the single high-quality Top-3 image is the mandatory visual priority.
