@@ -182,3 +182,29 @@ This section supersedes any conflicting visual quantity or density instructions 
 - Only add a separate supplementary slide when a fourth or later candidate has genuine visual value and can be shown without compromising readability. Never compress the Top 3 or add weak signals merely to fill space.
 - If fewer than three candidates qualify, show only the qualifying candidates. If image generation or delivery fails, disclose the exact failure and do not claim completion.
 - Quality over quantity: when resource or token limits apply, the single high-quality Top-3 image is the mandatory visual priority.
+
+
+## 18. User-approved Persian readability and Dr. Ghanizadeh brand mark (2026-11-12)
+This section records the user's explicit approval and supersedes any conflicting earlier instructions about Telegram text formatting or image branding. It does not alter the eligible asset universe, research methodology, evidence thresholds, or the final one-image Top-3 visual standard in Section 17.
+
+### Telegram text — mandatory presentation standard
+- The complete report body must be Persian-first, correctly right-to-left and visually right-aligned wherever the publishing surface supports alignment.
+- Use fluent, natural Persian with short, coherent sentences. Keep paragraphs brief; each paragraph should communicate one main point.
+- Apply consistent paragraphing, line breaks, spacing, headings and compact signal blocks. The report must be easy to scan and read on a mobile screen.
+- Use purposeful emojis as navigation and status markers, with restrained frequency and consistent meaning: 🟠 priority, 🟢 LONG, 🔴 SHORT, 🟡 WATCH, ⚪ NO TRADE, ⚡ catalyst, 🎯 trigger, 🛑 invalidation, ⏱ horizon, ⚠️ risk, 📅 calendar.
+- Avoid dense unbroken text, excessive English prose, wide tables and decorative emoji clutter. Keep ticker symbols, prices and timestamps unambiguous without disrupting Persian RTL flow.
+
+### Daily Top-3 image — personal brand mark
+- Use the user's supplied portrait/logo reference as a **very small, symbolic brand signature** on the single vertical 9:16 Top-3 image.
+- Reference asset: `sediment://file_00000000121481f6acecfa224e1c6183`.
+- Place it discreetly within a Story-safe corner, preferably near the bottom or brand signature area. It must remain secondary to the three signal cards and must not reduce the readability of trading information.
+- Where appropriate, pair the mark with a restrained label such as **“Dr. Ghanizadeh”** or **“تحلیل و پژوهش دکتر غنی‌زاده”** to identify the personal brand behind the report.
+- Use the supplied reference itself; do not invent a substitute logo, unrelated portrait or caricature. If the reference asset is unavailable in a future run or cannot be incorporated accurately, do not fabricate a brand mark; disclose the limitation.
+- Preserve Section 17's single-image Top-3 layout, cobalt/ivory/white palette, mobile readability, exact data matching and 1080 × 1920 target.
+
+### Change-control and durable project record
+- Treat explicit user approvals and corrections in the GRIOS project conversation as authoritative project decisions, unless the user later supersedes them.
+- **Every future user-approved change to GRIOS editorial standards, report layout, visual identity, data universe, automation behavior, publishing destination or schedule must be recorded in this GitHub standard with a dated entry.**
+- When a change affects scheduled execution, update the corresponding GRIOS automation prompt in the same change cycle and verify the saved automation state. Do not report completion until the relevant GitHub commit and automation update have succeeded.
+- GitHub repository `ghanizade-web/GRIOS` is the durable, auditable source of truth for project standards and approvals. Preserve prior decisions and add dated amendments rather than silently erasing history.
+- ChatGPT's account-level Memory summary is managed by the user and cannot be directly edited by the assistant in chat. Continue to apply the available conversation/project context, and do not claim that account Memory settings were changed unless the user performs that action in Settings.
