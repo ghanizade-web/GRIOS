@@ -224,3 +224,12 @@ This section records the user's explicit instruction: **produce and publish the 
 - Do not overwrite the complete research and publication instructions with a short amendment. The automation prompt must retain the full current GitHub editorial standard plus these execution and delivery requirements.
 - Keep the established daily schedule at 08:30 Europe/Amsterdam. The user's instruction is daily publication, not weekday-only publication.
 - This incident is recorded because the Nov 13, 2026 scheduled run failed, the automation was found disabled, the saved prompt had been reduced to only a short amendment, and Telegram delivery remained unknown. The previous generated content included an unverified image link and is not evidence of publication.
+
+
+## 20. Nov 13, 2026 recovery execution record
+- The saved automation was found disabled and its latest scheduled execution had recorded status `failed`; delivery status was `unknown`. The saved prompt had been overwritten by a short amendment, so the complete current GitHub standard was restored into the automation prompt and the automation was re-enabled.
+- Telegram channel identity was verified via `TELEGRAM_GET_CHAT`: `Dr | Ghanizade Capital`, `@drghanizade`, chat ID `-1001337870499`.
+- Publishing bot `@DrGhanizade_bot` (ID `8641647234`) was verified as channel administrator with `can_post_messages=true`.
+- A Persian daily report for Nov 13, 2026 was successfully sent as Telegram text message ID `15343`. Confirmed channel post URL: https://t.me/drghanizade/15343
+- A matching Top-3 image was generated, including the supplied Dr. Ghanizadeh portrait mark. However, the Telegram photo-send attempt returned an internal tool failure; no photo message ID was returned. Therefore **text delivery is confirmed, image delivery is not confirmed, and the complete text+image package remains partially delivered**.
+- Do not represent this date as fully delivered until the image is successfully sent and its Telegram message ID is recorded. Preserve this distinction in future delivery reporting.
