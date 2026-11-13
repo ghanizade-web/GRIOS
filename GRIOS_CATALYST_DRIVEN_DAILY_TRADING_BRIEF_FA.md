@@ -208,3 +208,19 @@ This section records the user's explicit approval and supersedes any conflicting
 - When a change affects scheduled execution, update the corresponding GRIOS automation prompt in the same change cycle and verify the saved automation state. Do not report completion until the relevant GitHub commit and automation update have succeeded.
 - GitHub repository `ghanizade-web/GRIOS` is the durable, auditable source of truth for project standards and approvals. Preserve prior decisions and add dated amendments rather than silently erasing history.
 - ChatGPT's account-level Memory summary is managed by the user and cannot be directly edited by the assistant in chat. Continue to apply the available conversation/project context, and do not claim that account Memory settings were changed unless the user performs that action in Settings.
+
+
+## 19. Daily publication is mandatory — incident correction (2026-11-13)
+This section records the user's explicit instruction: **produce and publish the GRIOS daily report in the designated Telegram channel every calendar day.** A report that is merely generated, saved, or prepared is not delivered.
+
+### Daily execution and delivery
+- Every scheduled run must produce and publish that day's Persian report to the authorized Telegram channel `Dr | Ghanizade Capital` (`@drghanizade`, chat ID `-1001337870499`) using the authorized bot connection.
+- Deliver the text report and the single Top-3 visual image. Verify the text send and image send separately; record the Telegram message IDs for each. The package is complete only when both are confirmed by Telegram.
+- A valid no-trade day is still a report and must be published. Do not suppress ordinary daily reports because no trade qualifies, the market is quiet, or the same broad regime persists. State the actual number of qualifying candidates and explain when fewer than three qualify.
+- Never substitute a fabricated sandbox/download link, DIL markup, placeholder image, or unverified URL for an actual image artifact and confirmed Telegram photo upload.
+- Do not claim publication based on automation completion, a generated report, a scheduled run, or an unknown delivery status. Only Telegram's successful response and message IDs prove delivery.
+- If report generation, image generation, Telegram connection, or either send fails, preserve the report and exact error/status, attempt only safe retries, and surface an explicit failure notification to the user. Never silently mark the day complete or silently skip a date.
+- At the beginning of every run, verify that the automation is enabled and that the Telegram publishing connection and channel permissions are available. If disabled or disconnected, report the failure and restore only when authorized and technically possible.
+- Do not overwrite the complete research and publication instructions with a short amendment. The automation prompt must retain the full current GitHub editorial standard plus these execution and delivery requirements.
+- Keep the established daily schedule at 08:30 Europe/Amsterdam. The user's instruction is daily publication, not weekday-only publication.
+- This incident is recorded because the Nov 13, 2026 scheduled run failed, the automation was found disabled, the saved prompt had been reduced to only a short amendment, and Telegram delivery remained unknown. The previous generated content included an unverified image link and is not evidence of publication.
