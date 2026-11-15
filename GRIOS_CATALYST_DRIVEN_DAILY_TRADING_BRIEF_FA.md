@@ -233,3 +233,62 @@ This section records the user's explicit instruction: **produce and publish the 
 - A Persian daily report for Nov 13, 2026 was successfully sent as Telegram text message ID `15343`. Confirmed channel post URL: https://t.me/drghanizade/15343
 - A matching Top-3 image was generated, including the supplied Dr. Ghanizadeh portrait mark. However, the Telegram photo-send attempt returned an internal tool failure; no photo message ID was returned. Therefore **text delivery is confirmed, image delivery is not confirmed, and the complete text+image package remains partially delivered**.
 - Do not represent this date as fully delivered until the image is successfully sent and its Telegram message ID is recorded. Preserve this distinction in future delivery reporting.
+
+
+## 21. New GRIOS daily intelligence format and source stack — user approval (2026-11-15)
+This section is the latest user-approved editorial override. It supersedes conflicting instructions in earlier sections on report length, numerical density, signal presentation and the old long-form technical-analysis style. It does not change the eligible universe: crypto, FX and commodities only; no equities or equity ETFs.
+
+### A. Approved source stack and role of each source
+Use these sources as complementary research inputs. Verify access, freshness, definitions and coverage at each run; a homepage or static cached extract is not proof of live data availability.
+- **FinFab (https://finfab.pro/):** cross-asset market overview, currencies/FX, commodities, rates, macro indicators, economic calendar, market news and technical/market context. Use only eligible FX, commodity, crypto and macro data; exclude its stock, ETF and equity research modules from GRIOS.
+- **DeFiLlama (https://defillama.com/):** DeFi TVL, stablecoin supply and dominance, DEX/perpetual volumes, open interest, protocol fees/revenue, chain flows and unlock dashboards. Treat TVL as a liquidity/usage metric, not automatically as net capital inflow or token demand.
+- **SoSoValue (https://sosovalue.com/):** crypto ETF daily net flows, assets and trading value, crypto market snapshots, sector indices, macro calendar, news and fundraising. Observe its T+1 settlement and market-holiday limitations; do not treat unsettled latest rows as zero or final flows.
+- **DropsTab (https://dropstab.com/):** crypto market snapshots, token unlocks/vesting, funding rounds, investors, accumulation/activities and project supply context. Verify the underlying event and dates; unlock size alone is not proof of a sell-off.
+- **CryptoRank (https://cryptorank.io/):** crypto market data, funding rounds, fund/investor context, token unlocks and vesting schedules. Distinguish a funding announcement from actual token purchases or spot-market demand.
+- **X (https://x.com/):** real-time discovery of official announcements, expert commentary, policy/geopolitical developments and emerging catalysts. Social posts are leads only. Verify material claims through the original official source or credible independent reporting; label unverified narratives as WATCH or omit them.
+- Continue to use primary sources (central banks, statistical agencies, regulators, exchanges, protocol teams, commodity agencies and official inventory reports) and high-quality newswires to confirm the catalyst and date. The six user-specified sources supplement rather than replace primary-source verification.
+
+### B. New editorial format — short, tweet-like, causal
+The report must read like a compact series of high-signal market posts, not an institutional research paper. Write simple, direct, natural Persian with correct RTL flow, short paragraphs, clear spacing and restrained purposeful emojis. Avoid long technical essays, repeated labels, wide tables, excessive decimal precision, indicator dumps and large blocks of numbers.
+- Open with one compact title/date line and one sentence describing the dominant market regime.
+- Then publish a larger set of **independent qualified signals across Crypto, FX and Commodities**. Aim for 10 or more only when evidence supports them; never manufacture signals to hit a count. Show the actual number that passed screening.
+- Give every signal one compact block, normally 2–4 short lines:
+  1. **Asset + direction:** ticker/instrument and LONG / SHORT / WATCH / NO TRADE.
+  2. **⚡ Catalyst → impact:** identify the specific dated news/data/event and explain in plain language why it affects this exact asset.
+  3. **🎯 Confirmation:** one observable condition to activate or upgrade the signal. No invented numeric levels.
+  4. Add 🛑 invalidation or ⏱ horizon only when it materially changes the decision.
+- The central editorial test is explicit causality: **what happened → transmission mechanism → named asset → likely directional effect → confirmation condition**. If the link to the asset is vague, omit the item.
+- Use fewer numbers. Include only a number that materially proves the catalyst or disambiguates the instrument; avoid routine prices, multi-decimal quotes, indicator values, targets and percentage lists unless essential. If a quote is included, identify provider/time and whether market is open, closed or delayed.
+- Separate facts from interpretation through precise wording, not lengthy “Fact/Interpretation/Scenario” sections.
+- Keep the signal count high through broader eligible-market screening, not through duplicate expressions of the same macro trade. One shared catalyst may support multiple assets only when each asset has a distinct, evidence-backed transmission path.
+- Group signals by **رمزارزها / فارکس / کالاها** for quick scanning. Top-ranked items come first within each group; do not create a large standalone Top-3 essay.
+- Finish with a very short “جمع‌بندی / بدون معامله” note and the compact social footer. Source URLs/citations remain in audit metadata and are not pasted into the Telegram body.
+
+### C. Signal quality and cross-market breadth
+- Screen liquid crypto spot/perpetual instruments, DeFi and on-chain signals; major/minor and selected EM FX pairs; precious/industrial metals, energy, agriculture and strategic commodities with reliable tradable expressions.
+- Expand breadth across all three asset classes each day. Do not allow crypto to crowd out FX and commodities merely because its feeds are more active.
+- Prefer catalysts such as ETF flow regime changes, stablecoin supply/flows, DeFi liquidity/volume changes, derivatives positioning, verified exploits, dated token unlocks, protocol events, central-bank repricing, inflation/employment releases, intervention warnings, inventory/supply changes, weather disruptions and commodity production/logistics events.
+- Every item needs a named asset and an explicit reason. Avoid generic market sentiment, vague “risk-off” commentary or thematic narratives with no observable transmission path.
+- WATCH is appropriate when a credible catalyst exists but the price/flow response is not yet confirmed. LONG/SHORT expresses a directional scenario, not permission to enter immediately. State the trigger in plain language.
+- A weekend or holiday is not a reason to omit a report. State that FX/futures are closed where applicable; crypto can still be screened. Do not imply a live tradable quote for a closed market.
+
+### D. Visual and brand continuity
+- Preserve the current single vertical 9:16 Top-3 image and the small, discreet supplied Dr. Ghanizadeh portrait/brand mark, with the approved cobalt/ivory/white identity.
+- Simplify the graphic to ticker, direction, one-line catalyst and concise confirmation. Do not crowd the image with detailed prices, technical indicators or dense numeric data.
+- The text report can contain more qualified signals than the Top-3 image. The image remains a visual summary, not a complete signal list.
+- Verify that the actual image artifact exists and that Telegram photo delivery returns a message ID. Text and image statuses must be reported separately.
+
+### E. Night report removed; one daily publication only
+- The user has explicitly requested removal of the separate nighttime report. GRIOS must operate with **one daily report only**, not a second evening/night digest.
+- Preserve the single daily publication at 08:30 Europe/Amsterdam, every calendar day, to Telegram `@drghanizade` (`-1001337870499`).
+- Every daily run publishes the short-form text and its matching Top-3 visual. A no-trade day is still published.
+- Do not create a new evening/night automation or duplicate daily report.
+- If a distinct night-report automation is discovered, disable it and record its ID/status. Do not disable unrelated GRIOS workflows merely because they are not the daily Telegram report.
+- On 2026-11-15, the automation inventory exposed the daily report task `Automation_89e353d28a0c8191a58e50c94eee1723` and a separate disabled task titled `GRIOS Megatrend Flows` (`6aeb969472cc8191a0f669b885adc6d2`). No separate nighttime report task was exposed in that inventory. Do not mislabel the megatrend task as a night report.
+
+### F. Delivery and evidence rules
+- Publish only after current catalyst verification and concise editorial review.
+- Record the date, eligible signal count, sources consulted, text Telegram message ID and image Telegram message ID.
+- A report is fully delivered only when both Telegram sends return successful message IDs. Otherwise mark it partially delivered or failed with the exact missing component.
+- Do not claim a source was integrated into an authenticated API pipeline unless access/API credentials and a successful data read have been verified. Public website review does not imply API integration.
+- Never expose API keys or secrets. If a source requires authentication, use only an authorized connected integration; otherwise use public pages or omit inaccessible data.
