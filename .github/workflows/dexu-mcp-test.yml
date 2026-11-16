@@ -1,0 +1,30 @@
+
+name: Dexu MCP Connection Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-dexu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install MCP SDK
+        run: pip install "mcp"
+
+      - name: Test Dexu MCP
+        env:
+          DEXU_MCP_KEY: ${{ secrets.DEXU_MCP_KEY }}
+        run: python scripts/dexu_smoke_test.py
