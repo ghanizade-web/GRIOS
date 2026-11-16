@@ -497,3 +497,35 @@ The user supplied the endpoint https://mcp.dexu.ai/mcp and requested that it be 
 - Every published opportunity must have a credible news/event basis and an explicit causal relationship to its target asset.
 - When a causal relationship or confirmation is insufficient, use WATCH or NO TRADE rather than manufacturing a recommendation.
 - Preserve this standard in the complete GRIOS GitHub source-of-truth file and, when authorized and technically possible, synchronize the complete standard with the existing daily automation without changing its schedule or destination.
+
+
+
+
+## 29. Operational Baseline — 2026-11-16
+
+- Daily GRIOS automation:
+  ID: Automation_89e353d28a0c8191a58e50c94eee1723
+  Status: ENABLED
+  Schedule: Daily, 08:30 Europe/Amsterdam
+  Telegram: @drghanizade
+
+- Daily publication consists of two components:
+  1. Catalyst-driven trading and investment opportunities.
+  2. Separate strategic capital-flow and megatrend narrative.
+  Both are published in the same daily window.
+  No separate night report.
+
+- Images are optional. Text publication does not depend on image generation.
+
+- November 16, 2026 publication:
+  Trading brief: Telegram message 15369
+  Capital-flow narrative: Telegram message 15370
+  Both confirmed by Telegram API.
+
+- Dexu MCP:
+  Endpoint: https://mcp.dexu.ai/mcp
+  Status: PROPOSED / UNVERIFIED
+  Not an approved operational data source until authentication,
+  tool discovery, real data retrieval and validation succeed.
+
+- No GitHub deployment or Supabase write is implied by this record.
