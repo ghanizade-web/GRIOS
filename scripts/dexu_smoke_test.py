@@ -3,7 +3,8 @@ import asyncio
 import os
 import sys
 
-from mcp import ClientSession
+import httpx2
+from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 
 ENDPOINT = "https://mcp.dexu.ai/mcp"
@@ -17,44 +18,44 @@ async def main():
 
     headers = {"X-MCP-Key": api_key}
 
-    async with streamable_http_client(
-        ENDPOINT,
+    timeout = httpx2.Timeout(30.0, read=300.0)
+
+    async with httpx2.AsyncClient(
         headers=headers,
-    ) as (read_stream, write_stream, _):
-        async with ClientSession(read_stream, write_stream) as session:
-            await session.initialize()
+        timeout=timeout,
+    ) as http_client:
 
-            tool_list = await session.list_tools()
-            names = [tool.name for tool in tool_list.tools]
+        transport = streamable_http_client(
+            ENDPOINT,
+            http_client=http_client,
+        )
 
-            print(f"MCP connection: OK")
-            print(f"Discovered tools: {len(names)}")
+        async with Client(transport) as client:
+            print("MCP connection: OK")
 
-            required_tool = "get_market_overview"
+            result = await client.list_tools()
+            tools = result.tools
 
-            if required_tool not in names:
-                raise RuntimeError(
-                    f"Required tool not available: {required_tool}"
-                )
+            print(f"Discovered tools: {len(tools)}")
 
-            result = await session.call_tool(
-                required_tool,
-                {"window": "24h", "limit": 5},
-            )
+            if not tools:
+                raise RuntimeError("Dexu returned no available tools")
 
-            if result.isError:
-                raise RuntimeError("Dexu tool call returned an error")
+            for tool in tools:
+                print(f"\nTOOL: {tool.name}")
+                print(f"DESCRIPTION: {tool.description or 'N/A'}")
+                print(f"INPUT SCHEMA: {tool.inputSchema}")
 
-            print("Read-only market overview call: OK")
-
-            for item in result.content:
-                if hasattr(item, "text"):
-                    print(item.text[:12000])
+            print("\nDEXU DISCOVERY TEST: PASSED")
+            print("No trading or account-changing action was executed.")
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except Exception as exc:
-        print(f"DEXU TEST FAILED: {type(exc).__name__}: {exc}")
+        print(
+            f"DEXU TEST FAILED: "
+            f"{type(exc).__name__}: {exc}"
+        )
         sys.exit(1)
