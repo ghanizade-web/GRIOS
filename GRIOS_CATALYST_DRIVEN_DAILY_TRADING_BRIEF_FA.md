@@ -529,3 +529,59 @@ The user supplied the endpoint https://mcp.dexu.ai/mcp and requested that it be 
   tool discovery, real data retrieval and validation succeed.
 
 - No GitHub deployment or Supabase write is implied by this record.
+
+
+---
+
+## 30. November 16, 2026 — Daily multi-channel publishing standard
+
+This section records the user's approved multi-channel publishing workflow. It supplements Sections 23–29 and does not replace the existing Telegram, catalyst, asset-universe, source, or quality requirements.
+
+### A. Canonical research and cross-platform consistency
+- Produce one canonical daily research dataset and one set of analytical conclusions.
+- Create platform-specific editorial adaptations from that same evidence base. Do not alter factual claims, event dates, instrument names, quotes, signal direction, confidence, scores, or risk conclusions between platforms.
+- The daily editorial components remain: (1) catalyst-driven trading/investment opportunity brief; and (2) a separate strategic capital-flow/megatrend narrative. They are prepared in the same daily publication window, not as a night report.
+- Do not publish identical copy across platforms. Adapt headline, length, framing, structure and CTA to each platform while preserving the canonical facts and conclusions.
+
+### B. Destinations and editorial formats
+Use the authenticated Narrareach connector and verified current destination identifiers. Recheck account connections and destination permissions during each run; historical connection status is not a permanent guarantee.
+
+1. **LinkedIn Article — personal profile Dr Ghanizade**
+   - Expert-led professional analysis with a clear opening thesis, concise causal chain, implications, risk/counterargument, actionable monitoring checklist and restrained CTA.
+   - Target length: 600–1,000 words.
+   - Use the verified LinkedIn author URN returned by Narrareach.
+   - LinkedIn Articles may require a separate active article browser session. If resynchronization is required, save a draft or report the action required; do not claim it is scheduled or published.
+
+2. **Medium story — personal profile**
+   - Search-friendly analytical article with descriptive title/subtitle, context, evidence, causal mechanism, affected instruments, scenarios, risks and source notes.
+   - Target length: 900–1,500 words.
+   - Use the personal profile unless a refreshed verified Medium publication with publishing permission is returned. An empty publication list means personal-profile delivery only.
+
+3. **Substack newsletter — Dr.Ghanizade’s Newsletter / @drghanizade**
+   - Most complete editorial version, with strong opening, detailed event-to-capital-flow narrative, trading/investment implications, facts vs inference vs scenarios, risks and source notes.
+   - Target length: 1,000–1,800 words.
+   - Use only the connected publication verified by Narrareach; do not guess a destination.
+   - Send to newsletter subscribers when supported and not blocked by verification. Do not claim email delivery when verification is pending.
+   - Do not add paywalls or Freewalls by default. Do not send paid-only content without explicit authorization.
+
+### C. Scheduling
+- Existing daily research and Telegram window remains 08:30 Europe/Amsterdam.
+- Target Narrareach article schedule: 09:00 Europe/Amsterdam. Always pass the IANA timezone explicitly; do not rely on the Narrareach account timezone or saved queue slots.
+- If execution occurs too late for 09:00, or a platform requires additional lead time, use the earliest valid same-day slot and report the actual scheduled time. Never claim a scheduled article is already live.
+- Do not alter the user's general Narrareach cadence or timezone.
+- Do not create duplicate automations or a separate evening report.
+
+### D. Draft and publishing controls
+- Use one saved article draft per platform when content differs. Create each draft once, then schedule using its exact draftId. Do not create duplicate copies by resending title/body for an already saved draft.
+- Use only current verified platform destinations and session state.
+- A schedule or publishing state is not a live publication. A post is confirmed published only when the connector reports writerState=published and supplies a liveUrl.
+- Capture each platform independently: draft ID, scheduled item ID, scheduled time/timezone, writerState/status, liveUrl when published, warnings/advisories and required user action.
+- If a platform fails, continue other verified destinations where safe, preserve the exact error and retry only when safe. Never silently mark a failed platform complete.
+- Routine daily publication is authorized; do not request repeated confirmation for each scheduled report.
+
+### E. Audit and status reporting
+- Record Telegram message IDs and links separately for the two Telegram components.
+- Record Narrareach draft IDs, scheduled item IDs, destination, actual scheduled time, writerState, live URLs, Substack email-delivery state and platform-specific warnings.
+- Distinguish connected, draft-saved, scheduled, publishing, in-review, waiting-for-user, published and failed states.
+- Report only connector-confirmed outcomes. A connected account is not proof of publication.
+- Preserve the existing Dexu status as PROPOSED / UNVERIFIED until independent MCP authentication, tool discovery and successful data-read validation.
