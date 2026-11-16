@@ -303,3 +303,197 @@ The report must read like a compact series of high-signal market posts, not an i
 - A matching three-card Top-3 infographic was generated with the Dr. Ghanizadeh brand mark. However, a publicly reachable photo URL or Telegram file_id was not available to the photo-send action in this run; no Telegram photo message ID was returned. Therefore **sample text publication is confirmed; sample image publication is not confirmed**. Do not claim the full text+image package was delivered.
 - Current date market catalysts used in the sample included SoSoValue-reported U.S. spot crypto ETF outflows through Nov 13; the Nov 14 Kava Lend exploit; Reuters reporting on the dollar, Fed repricing and yen near 160; and the IEA Nov 13 oil balance outlook. Market numbers were minimized in the Telegram body; source details remain in research metadata.
 - The user's request to “save in memory” is recorded in the project standard and active project context. Account-level ChatGPT Memory Summary cannot be directly modified by the assistant in chat.
+
+
+ 
+
+## 23. November 16, 2026 — News-driven causal opportunity analysis (latest user-approved rule)
+
+This section establishes the primary analytical principle for all future GRIOS daily reports. It supersedes any conflicting earlier wording that permits generic market recaps, chart-led speculation or opportunities without a current, identifiable catalyst.
+
+### A. Core analytical mandate
+
+- Daily trading and investment opportunities must be identified and evaluated primarily through **news, events, decisions, announcements, economic releases and measurable developments occurring on the relevant reporting day or still materially affecting the market**.
+- The report must not merely summarize market prices, technical indicators or headlines. It must explain how a specific event can change the fundamental, liquidity, supply-demand or capital-flow outlook of a named eligible asset.
+- Every published opportunity must have an explicit causal chain:
+
+  **Dated event/news → economic or financial mechanism → transmission channel → named asset → expected impact → observable confirmation.**
+
+- A headline without a credible and identifiable transmission path to an eligible asset is not a qualified opportunity.
+- Historical events may be included only when their consequences remain active and materially affect the current market. Clearly identify the original event date and the new development, if any.
+- Technical analysis and market positioning are confirmation tools. They must not replace the event-driven analytical foundation.
+
+### B. Mandatory analysis for each opportunity
+
+For each qualified signal or investment thesis, identify:
+
+1. **Event:** What happened? Identify the event date, publication date, actor and primary source.
+2. **Significance:** Why can this event change market expectations or capital allocation?
+3. **Causal mechanism:** Explain how the event affects supply, demand, liquidity, financing costs, inventories, production, regulation, risk appetite or capital flows.
+4. **Target asset:** Name the exact crypto instrument, FX pair, commodity or eligible tokenized share instrument.
+5. **Expected impact:** Explain the potential positive or negative directional effect. Do not present an inference as an established fact.
+6. **Trading or investment expression:** LONG, SHORT, WATCH or NO TRADE, with the appropriate time horizon.
+7. **Confirmation:** Identify an observable event, price response, volume change, flow, positioning change or fundamental data point required to validate the thesis.
+8. **Invalidation:** State what evidence or development would disprove the thesis.
+9. **Risk and counterargument:** Identify the main uncertainty, opposing evidence and the most important alternative scenario.
+
+Do not invent entry prices, stop-losses, targets, order-flow data or institutional activity.
+
+### C. Mandatory separation of evidence and inference
+
+Use three clearly distinguishable evidence categories:
+
+- **CONFIRMED FACT:** Supported by an official primary source, regulatory filing, exchange data, company disclosure or credible independent reporting.
+- **ANALYTICAL INFERENCE:** A reasoned interpretation of how the confirmed event may affect a specific asset. Explain the mechanism and acknowledge uncertainty.
+- **SCENARIO:** A conditional future outcome that requires additional confirmation. Never describe it as an event that has already happened.
+
+A confirmed corporate investment, an announced financing target, a signed supply contract, a capacity reservation, an expected downstream beneficiary and a speculative market narrative are different categories. Never present them as equivalent.
+
+### D. Trading versus investment horizons
+
+**Daily trading opportunities:**
+- Focus on fresh catalysts and their near-term market transmission.
+- Identify the expected direction, observable activation condition, invalidation and relevant trading horizon.
+- Distinguish a directional thesis from an immediately executable entry.
+- Use WATCH when the event is credible but market confirmation is incomplete.
+- Use NO TRADE when evidence is conflicting, the instrument is illiquid, the market is closed or the catalyst is already fully priced without a fresh confirmation.
+
+**Investment opportunities:**
+- Identify structural changes in demand, supply constraints, technology adoption, regulation, capital expenditure, financing, resource scarcity and long-term capital allocation.
+- Explain why the event may create a persistent change rather than a temporary price reaction.
+- Identify the relevant asset or instrument, investment horizon, structural thesis, valuation or supply risks where reliable data exists, and conditions that would invalidate the thesis.
+- Do not confuse a short-term price reaction with a durable investment opportunity.
+
+### E. No artificial signal limits
+
+- There is **no fixed maximum** for the number of daily signals, qualified news items or narrative stories.
+- Publish every independently qualified opportunity that passes the evidence and relevance thresholds.
+- Do not impose a target count that encourages fabricated or duplicated opportunities.
+- Multiple assets may be linked to one event only when each has a distinct and evidence-supported transmission mechanism.
+- State the actual number of qualified opportunities. If no opportunity passes the threshold, publish a valid WATCH/NO TRADE report and explain why.
+
+---
+
+## 24. November 16, 2026 — Daily narrative capital-flow publication
+
+This section establishes a second editorial component alongside the daily trading and investment opportunity report. It is not a nighttime report or a separate evening publication.
+
+### A. Separate narrative post
+
+In addition to the daily signal report, prepare a separate Persian narrative post explaining one or more important developments and how capital, demand or investment commitments may propagate through the economy and eligible markets.
+
+Both components belong to the same established daily publication window. Do not create a second nighttime schedule.
+
+### B. Narrative structure
+
+Each story should explain:
+
+1. **The event:** What did a major company, executive, institution, government, investor or regulator do or announce?
+2. **The capital-allocation mechanism:** What financing, procurement, investment, construction, capacity reservation, contract, acquisition or demand change does the event represent?
+3. **Direct recipients:** Which entities are explicitly identified in verified contracts, investments, financing arrangements or official disclosures?
+4. **Downstream beneficiaries and affected sectors:** Which suppliers, materials, infrastructure providers, energy sources or industries may benefit or face pressure?
+5. **Eligible market expressions:** Which crypto assets, FX pairs, commodities or verified tokenized share instruments may be affected?
+6. **Confirmation:** What future announcements, contract execution, production data, inventories, flows or market behavior would validate the thesis?
+7. **Counterargument and risk:** What could prevent the expected capital flow or weaken the thesis?
+
+### C. Capital-flow attribution discipline
+
+- Do not claim that money has entered a company or asset unless an actual investment, purchase, financing transaction or executed commitment is documented.
+- Distinguish direct investment, signed contracts, announced financing targets, procurement commitments, capacity reservations, managed client assets, expected downstream demand and analytical inference.
+- A company's announcement of a large financing target is not proof that the entire amount has been raised or deployed.
+- Institutional ownership or asset management does not automatically mean proprietary investment by the asset manager.
+- A supplier's potential benefit from a megatrend is not proof that it has received a contract or capital.
+- Clearly label the difference between documented recipients and potential beneficiaries.
+
+### D. Eligible asset universe and corporate references
+
+- Companies may be discussed as corporate actors, counterparties, suppliers, customers or beneficiaries in a narrative.
+- Do not recommend conventional listed-company shares or equity ETFs as trade candidates.
+- Tokenized shares may be considered only under the separately defined tokenized-share eligibility and verification requirements.
+- Strategic narratives involving AI, semiconductors, data centers, power grids, nuclear energy, defense, robotics, aerospace and critical materials must connect to an eligible asset through a specific, evidence-supported mechanism.
+- A corporate story without a reliable eligible market expression may remain a contextual narrative, but must not be presented as a trading signal.
+
+---
+
+## 25. November 16, 2026 — Optional visual production and resource efficiency
+
+This section records the user's latest instruction and supersedes conflicting mandatory-image requirements in earlier sections.
+
+- Images and infographic slides are **optional**, not mandatory.
+- Text quality, evidence quality, causal analysis and timely publication take priority over image generation.
+- Do not generate an image when its informational value is low or the token/resource cost is disproportionate.
+- A text-only report is a valid completed editorial deliverable.
+- If a visual materially improves comprehension and can be produced efficiently, use the approved GRIOS visual identity and verify that all displayed facts match the written report.
+- Never claim that an image was generated, attached or published without an actual artifact and confirmed delivery.
+- Telegram text and image delivery statuses must be recorded separately whenever an image is attempted.
+
+---
+
+## 26. November 16, 2026 — Tokenized share instruments: conditional eligibility
+
+This section updates the eligible universe only for tokenized share instruments. It does not authorize conventional listed-company shares or equity ETFs as direct trade recommendations.
+
+### A. Classification
+
+Tokenized shares must be listed as a separate asset category: **TOKENIZED SHARES**.
+
+Do not conflate:
+- Direct ownership of a conventional share.
+- A token representing a beneficial or legal claim on an underlying security.
+- A synthetic token tracking a share price.
+- A derivative or contractual exposure.
+- A token issued by a third party with no verified redemption or ownership rights.
+
+### B. Mandatory verification before inclusion
+
+For each tokenized share instrument, verify as much of the following as possible from official issuer, custodian, legal and platform documentation:
+
+- Exact token name, ticker and issuer.
+- Underlying share or reference asset.
+- Legal structure and jurisdiction.
+- Whether the holder receives legal or beneficial ownership, a contractual claim, or only synthetic price exposure.
+- Custody arrangement and identity of the custodian where disclosed.
+- Redemption rights, transfer restrictions and applicable conditions.
+- Voting, dividend and corporate-action rights, if any.
+- Platform availability and jurisdictional restrictions.
+- Liquidity, trading venues, spreads and market depth.
+- Tracking error, counterparty risk and issuer risk.
+
+If these details cannot be verified, classify the instrument as WATCH or exclude it. Do not describe it as direct share ownership without documentary support.
+
+### C. Recommendation restrictions
+
+- Conventional equities and equity ETFs remain excluded from direct GRIOS trade recommendations.
+- Tokenized share instruments may be included only when the instrument itself is verified and tradable for the relevant user jurisdiction.
+- Explicitly state that tokenized share exposure may not provide the same rights or protections as conventional share ownership.
+- Apply the same catalyst, causal-chain, confirmation, invalidation and evidence standards used for other eligible instruments.
+
+---
+
+## 27. November 16, 2026 — Additional source candidate: Dexu MCP
+
+The user supplied the endpoint https://mcp.dexu.ai/mcp and requested that it be considered for GRIOS analysis.
+
+- Treat Dexu MCP as a **candidate research/data source**, not as an operationally connected source until the MCP endpoint, available tools, authentication requirements and successful data retrieval have been verified.
+- Inspect its actual tool coverage, supported assets, data definitions, timestamps, update frequency and source provenance before relying on it.
+- Use it only for data categories that are demonstrably supported and relevant to the GRIOS eligible universe.
+- Cross-check material data and claims with primary sources or independent providers.
+- Never claim authenticated integration, live access or successful API retrieval without a successful test.
+- Do not expose credentials, access tokens or secrets.
+- If the endpoint is inaccessible or requires credentials that are not available, record the limitation and continue using verified existing sources.
+
+---
+
+## 28. November 16, 2026 — Priority and conflict-resolution rule
+
+- Sections 23–27 are the latest user-approved amendments and supersede earlier conflicting requirements on catalyst selection, signal count, narrative publication, image production and tokenized share eligibility.
+- All non-conflicting earlier requirements remain in force, including source verification, Telegram readability, publication destination, daily schedule, auditability, no fabricated data and preservation of project history.
+- The daily output consists of:
+  1. The daily catalyst-driven trading and investment opportunity report.
+  2. A separate narrative capital-flow post.
+- Both are prepared for the same established daily publication window. No separate nighttime report is authorized.
+- Images are optional.
+- No fixed maximum applies to independently qualified signals or narrative stories.
+- Every published opportunity must have a credible news/event basis and an explicit causal relationship to its target asset.
+- When a causal relationship or confirmation is insufficient, use WATCH or NO TRADE rather than manufacturing a recommendation.
+- Preserve this standard in the complete GRIOS GitHub source-of-truth file and, when authorized and technically possible, synchronize the complete standard with the existing daily automation without changing its schedule or destination.
