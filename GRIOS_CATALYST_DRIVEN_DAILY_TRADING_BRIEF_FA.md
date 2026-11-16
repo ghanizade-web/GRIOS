@@ -585,3 +585,32 @@ Use the authenticated Narrareach connector and verified current destination iden
 - Distinguish connected, draft-saved, scheduled, publishing, in-review, waiting-for-user, published and failed states.
 - Report only connector-confirmed outcomes. A connected account is not proof of publication.
 - Preserve the existing Dexu status as PROPOSED / UNVERIFIED until independent MCP authentication, tool discovery and successful data-read validation.
+
+
+---
+
+## 31. November 16, 2026 — Publication execution log
+
+### Telegram — confirmed published
+- Channel: Dr | Ghanizade Capital (@drghanizade)
+- Trading / opportunity brief: message_id 15373 — https://t.me/drghanizade/15373
+- Strategic capital-flow / megatrend narrative: message_id 15372 — https://t.me/drghanizade/15372
+- Both sends returned Telegram API success (ok=true). Text-only delivery; no images were attempted.
+
+### Narrareach — status at execution check
+- LinkedIn personal profile: two article items scheduled, but LinkedIn session refresh/resync is required. Connector advisory: LINKEDIN_SESSION_REFRESH_REQUIRED / RESYNC_LINKEDIN_ARTICLES. They are not confirmed published.
+  - Oil catalyst article item: cmwjernap00ppl908cdt7keky
+  - Strategic materials article item: cmwjes3x300rfl908q62s8klb
+- Medium personal profile: oil catalyst article entered PUBLISHING with remote receipt confirmed; no live URL yet.
+  - Article item: cmwjerv0v00prl908gk1fe2t3
+  - Strategic materials article draft remains DRAFT after Medium returned an ambiguous acceptance warning. No retry was made to avoid duplicate publication.
+  - Draft: cmwjerclr00pll90818u2m9tm
+- Substack publication @drghanizade: both oil catalyst and strategic capital-flow articles entered PUBLISHING; newsletter email delivery is enabled; both are free/public (no paywall). No live URLs were available at the status check.
+  - Oil article item: cmwjes0nr00ptl9087i10yzy1
+  - Strategic capital-flow item: cmwjesig104tikt08jlfg2wq8
+- Narrareach items in PUBLISHING or SCHEDULED are not counted as published. Update this log only after provider-confirmed writerState=published and a liveUrl is returned.
+
+### Research basis
+- User-provided file: گزارش روزانه مگاترندها.txt, used as the strategic-materials and capital-flow framework.
+- Current dated catalyst sources: Reuters, 16 Nov 2026 (Urenco–Blykalla HALEU supply agreement; oil supply-surplus outlook) and American Tungsten & Antimony Ltd ASX announcement, 16 Nov 2026 (AT4–Mammoth tungsten framework and exclusive future offtake right).
+- No unsupported spot-market purchase, delivered volume, institutional buying or immediate trade entry was claimed.
