@@ -69,7 +69,7 @@ def score_history(rows: list[dict], max_age_days: int) -> dict | None:
     if age < 0 or age > max_age_days or latest.get("trading_state") == "halted":
         return None
     closes = [float(row["close_rial"]) for row in ordered if row.get("close_rial") is not None]
-    if len(closes) < 60 or any(not math.isfinite(x) or x <= 0 for x in closes):
+    if len(closes) < 30 or any(not math.isfinite(x) or x <= 0 for x in closes):
         return None
     last = closes[-1]
     sma5, sma20 = mean(closes[-5:]), mean(closes[-20:])
