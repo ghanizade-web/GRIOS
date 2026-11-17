@@ -28,11 +28,12 @@ def load_env() -> None:
         os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
 
 
-def request(path: str, token: str, params: dict[str, str] | None = None) -> dict:
+def request(path: str, token: str, params: dict[str, str] | None = None, body: dict | None = None) -> dict:
     query = "?" + urllib.parse.urlencode(params) if params else ""
     req = urllib.request.Request(
         f"{API}{path}{query}",
-        headers={"Authorization": f"Bearer {token}", "Accept": "application/json", "User-Agent": "GRIOS-Iran-Research/1.0"},
+        headers={"Authorization": f"Bearer {token}", "Accept": "application/json", "Content-Type": "application/json", "User-Agent": "GRIOS-Iran-Research/1.0"},
+        data=json.dumps(body).encode("utf-8") if body is not None else None,
     )
     with urllib.request.urlopen(req, timeout=20) as response:
         payload = json.loads(response.read())
@@ -49,10 +50,10 @@ def valid_rows(payload: dict) -> list[dict]:
 
 
 def estimate_credits(symbol_count: int, sessions: int = 30) -> int:
-    # FundAI docs: adjusted daily prices cost 6 credits per started block of 30 sessions.
+    # Screener: 25 credits per 20 results; adjusted daily prices: 6 per 30 sessions;
+    # market money flow: 15 per 30 sessions.
     per_symbol = math.ceil(sessions / 30) * 6
-    # Market money-flow endpoint costs 15 credits per started block of 30 sessions.
-    return symbol_count * per_symbol + 15
+    return 25 + symbol_count * per_symbol + 15
 
 
 def score_history(rows: list[dict], max_age_days: int) -> dict | None:
@@ -94,7 +95,6 @@ def score_history(rows: list[dict], max_age_days: int) -> dict | None:
 def main() -> int:
     load_env()
     token = os.getenv("FUNDAI_API_KEY", "").strip()
-    symbols = [s.strip() for s in os.getenv("IRAN_EQUITY_SYMBOLS", "").split(",") if s.strip()]
     max_credits = int(os.getenv("FUNDAI_MAX_DAILY_CREDITS", "0"))
     now = datetime.now(TEHRAN).isoformat(timespec="seconds")
     print(f"گزارش پایش سهام ایران | زمان اجرا: {now} Asia/Tehran")
@@ -106,10 +106,11 @@ def main() -> int:
     if not token:
         print("وضعیت: بدون سیگنال؛ FUNDAI_API_KEY در فایل محلی .env تنظیم نشده است.")
         return 2
-    if not symbols:
-        print("وضعیت: بدون سیگنال؛ فهرست نمادهای IRAN_EQUITY_SYMBOLS خالی است. پوشش کل بازار فعال نیست.")
+    validation_count = int(os.getenv("IRAN_CANDIDATE_VALIDATION_COUNT", "3"))
+    if not 1 <= validation_count <= 5:
+        print("وضعیت: بدون سیگنال؛ IRAN_CANDIDATE_VALIDATION_COUNT باید بین ۱ تا ۵ باشد.")
         return 2
-    estimate = estimate_credits(len(symbols), sessions=30)
+    estimate = estimate_credits(validation_count, sessions=30)
     if max_credits < estimate:
         print(f"وضعیت: بدون فراخوانی پولی؛ سقف روزانه {max_credits} اعتبار است و برآورد این اجرا {estimate} اعتبار است.")
         return 2
@@ -129,17 +130,46 @@ def main() -> int:
             print("وضعیت: کلید Sandbox است؛ داده نمونه برای سیگنال روزانه پذیرفته نمی‌شود.")
             return 2
         state_path.write_text(json.dumps({"date_tehran": today_tehran, "estimated_credits": estimate}), encoding="utf-8")
+        # Broad-market first pass: positive latest-session net real-money flow.
+        # This private-use screener costs 25 credits for its 20-result page.
+        screen_payload = request("/screener/", token, body={
+            "filters": [{"step": "technical", "params": {
+                "market": "real_cash_flow", "operator": "gt", "value": 0,
+            }}],
+            "sort": "-real_cash_flow",
+            "limit": 20,
+        })
+        screen_rows = valid_rows(screen_payload)
+        screen_updated_at = screen_payload.get("meta", {}).get("updated_at")
+        # Include distinct symbols only; the API's screener universe is broad but
+        # the paid 20-result page is not claimed to be an exhaustive ranking.
+        shortlist = []
+        seen = set()
+        for item in screen_rows:
+            symbol = str(item.get("symbol") or "").strip()
+            slug = str(item.get("slug") or "").strip()
+            figures = item.get("figures") or {}
+            if symbol and slug and symbol not in seen and not item.get("is_trading_halted"):
+                seen.add(symbol)
+                shortlist.append({"symbol": symbol, "slug": slug, "figures": figures, "board": item.get("board")})
+        shortlist.sort(key=lambda item: float(item["figures"].get("step_1_value", item["figures"].get("real_cash_flow", 0)) or 0), reverse=True)
+        shortlist = shortlist[:validation_count]
         flow_payload = request("/market/money-flow/", token, {"limit": "1"})
         flow_rows = valid_rows(flow_payload)
         candidates = []
         errors = []
-        for symbol in symbols:
+        for item in shortlist:
+            symbol = item["symbol"]
             try:
-                payload = request(f"/companies/{urllib.parse.quote(symbol, safe='')}/prices/", token, {"limit": "30", "adjusted": "true"})
+                company = urllib.parse.quote(item["slug"], safe="")
+                payload = request(f"/companies/{company}/prices/", token, {"limit": "30", "adjusted": "true"})
                 rows = valid_rows(payload)
                 result = score_history(rows, int(os.getenv("IRAN_MAX_SESSION_AGE_DAYS", "5")))
                 if result:
-                    result.update({"symbol": symbol, "source_updated_at": payload.get("meta", {}).get("updated_at")})
+                    result.update({"symbol": symbol, "slug": item["slug"], "board": item.get("board"),
+                                   "screen_net_flow_billion_toman": item["figures"].get("step_1_value", item["figures"].get("real_cash_flow")),
+                                   "screen_updated_at": screen_updated_at,
+                                   "source_updated_at": payload.get("meta", {}).get("updated_at")})
                     candidates.append(result)
                 else:
                     errors.append(f"{symbol}: تاریخچه کمتر از ۳۰ جلسه، کهنه، متوقف یا نامعتبر")
@@ -147,18 +177,21 @@ def main() -> int:
                 errors.append(f"{symbol}: خطای منبع/داده ({type(exc).__name__})")
         candidates.sort(key=lambda row: row["score"], reverse=True)
         flow = flow_rows[0] if flow_rows else None
+        print(f"غربال اولیه‌ی کل بازار: {len(screen_rows)} نتیجه از غربال ورود پول حقیقی مثبت؛ زمان منبع {screen_updated_at}؛ تأیید تاریخچه برای {len(shortlist)} نامزد")
         print(f"آخرین به‌روزرسانی جریان بازار: {flow_payload.get('meta', {}).get('updated_at')}")
         if flow:
             print(f"عرض بازار: صعودی {flow.get('advancers')} | نزولی {flow.get('decliners')} | خالص جریان حقیقی {flow.get('individual_net_flow_rial')} ریال | جلسه {flow.get('date')} / {flow.get('date_jalali')}")
         qualified = [row for row in candidates if row["score"] >= 65]
         if not qualified:
             print("هیچ نامزد واجد آستانه پایش تکنیکال نیست؛ این مدل به تنهایی فرصت سرمایه‌گذاری را تأیید نمی‌کند.")
-        for rank, row in enumerate(qualified[:5], 1):
-            print(f"{rank}. {row['symbol']} | امتیاز آزمایشی {row['score']}/100 | پایانی {row['close_rial']:,.0f} ریال | ۵جلسه {row['momentum5_pct']:+.1f}% | ۲۰جلسه {row['momentum20_pct']:+.1f}% | داده {row['session']} ({row.get('date_jalali')}) | منبع‌به‌روزرسانی {row.get('source_updated_at')}")
+        for rank, row in enumerate(qualified[:3], 1):
+            print(f"{rank}. {row['symbol']} | امتیاز آزمایشی {row['score']}/100 | پایانی {row['close_rial']:,.0f} ریال | ۵جلسه {row['momentum5_pct']:+.1f}% | ۲۰جلسه {row['momentum20_pct']:+.1f}% | جریان حقیقی غربال {row.get('screen_net_flow_billion_toman')} میلیارد تومان | تابلو {row.get('board')} | داده {row['session']} ({row.get('date_jalali')}) | منبع‌به‌روزرسانی {row.get('source_updated_at')}")
             print("   شرط بازبینی: شکست روند SMA5/SMA20 یا تغییر معنادار جریان/عرض بازار؛ قیمت هدف تعیین نشده.")
         if errors:
             print("موارد کنارگذاشته‌شده: " + "; ".join(errors[:10]))
-        print("محدودیت: امتیاز غربال تکنیکال آزمایشی با ۳۰ جلسه تاریخچه است؛ صورت‌های مالی، اطلاعیه‌های Codal، ارزش‌گذاری و بک‌تست در این نسخه وارد نشده‌اند.")
+        if len(qualified) < 3:
+            print(f"تنها {len(qualified)} نماد از ۳ جایگاه دروازه‌های داده و امتیاز را گذراند؛ برای رسیدن به عدد ثابت، نامزد ساختگی اضافه نمی‌شود.")
+        print("محدودیت: غربال‌گر صفحه‌ی ۲۰تایی دارد و این گزارش را رتبه‌بندی جامع همه‌ی نمادها نمی‌نامد؛ امتیاز با ۳۰ جلسه تاریخچه آزمایشی است و صورت‌های مالی، کدال، ارزش‌گذاری و بک‌تست کامل نیستند. خروجی برای بازبینی پژوهشی است، نه دستور خرید شخصی.")
         return 0
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError, KeyError, TypeError) as exc:
         print(f"وضعیت: بدون سیگنال؛ فراخوانی FundAI موفق/قابل‌اعتبارسنجی نبود ({type(exc).__name__}).")
