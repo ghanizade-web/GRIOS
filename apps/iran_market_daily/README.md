@@ -1,16 +1,16 @@
 # Daily Iran Equity Watchlist
 
-Local research-only pilot using the documented FundAI API. It keeps Iranian shares separate from GRIOS's global trade universe. The output is a technical watchlist, not a validated investment signal or personal buy/sell instruction.
+Private research-only pilot using the documented FundAI API. Iranian shares remain separate from GRIOS's global trade universe. The report aims to return up to three daily candidates from a broad-market screen; it never fabricates names to guarantee a count and does not place orders or issue personalized buy instructions.
 
 ## Setup
 
 1. Copy `.env.example` to `.env` and set `FUNDAI_API_KEY` locally. Never commit `.env` or paste the key into chat.
-2. Add symbols/slugs to `IRAN_EQUITY_SYMBOLS`. This is a watchlist, not whole-market coverage.
-3. The pilot uses three representative symbols and 30 adjusted sessions. FundAI documents 6 credits per symbol plus 15 credits for market flow: 33 credits per run. The local cap is set to 33, and a Tehran-date state file prevents a second paid scan on the same day. Thursday and Friday skip the data calls because the exchange is closed.
+2. The scan screens for positive latest-session individual net money flow, then validates up to three distinct, non-halted symbols using 30 adjusted daily sessions. It is not a whole-market technical ranking: only the screener's first 20 results are considered, and score/freshness gates can leave fewer than three.
+3. The expected ceiling is 58 credits per Tehran trading day: 25 for a 20-result screener page, 18 for three adjusted 30-session histories and 15 for one market-flow row. Set `FUNDAI_MAX_DAILY_CREDITS` explicitly. If the cap is lower, no paid call is made. The local Tehran-date state file blocks duplicate paid scans; Thursday and Friday skip API calls.
 4. Run `python3 scanner.py` from this folder.
 
-The script checks `/me/`, refuses sample Sandbox data, retains dates/units and provider update times, excludes stale/halted/malformed symbols, and fails closed. A live first run exposed and a local synthetic check verified a fixed mismatch between the 30-session pilot and its old 60-close filter; the next trading-day run is needed to validate live candidate parsing. It only emits an experimental technical watchlist, not a validated or actionable buy/sell signal. Confirm permission for publishing derived analysis through monetized channels before public release. This pilot does not fetch Codal fundamentals or authorize social posting.
+The script checks `/me/`, refuses Sandbox data, preserves source/update/session dates and Rial units, and fails closed on stale, halted, malformed or unavailable data. Current implementation changes have not yet been live-tested against the screener endpoint, so it must not claim that broad-market ingestion is operational until a successful run verifies the response and credit charge. The technical score is experimental, has no backtest or full fundamental/Codal join, and is a research watchlist only. The provider's commercial-use exception does not explicitly include the screener; do not publish screener-derived recommendations to monetized channels without written permission.
 
 ## Daily Codex report
 
-The Codex automation runs at 09:00 Asia/Tehran in this conversation. Local settings currently use a 33-credit ceiling per Tehran trading day for فولاد, فملی and شپنا. It reports no candidates when history is stale, halted, malformed or below the experimental score threshold. It does not publish to social accounts. API keys, local environment files and the daily idempotency state file are excluded from Git.
+The existing Codex automation is intended to run at 09:00 Asia/Tehran in this conversation. It should report up to three qualified candidates after evidence checks; if fewer pass, it should say how many passed instead of padding the list. It does not publish to Telegram, Instagram, X, LinkedIn, Medium or Substack. API keys, local environment files and the daily idempotency state are excluded from Git.
