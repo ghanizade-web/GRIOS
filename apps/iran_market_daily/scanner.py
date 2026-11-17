@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import math
 import os
-import sys
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -49,7 +48,7 @@ def valid_rows(payload: dict) -> list[dict]:
     return rows
 
 
-def estimate_credits(symbol_count: int, sessions: int = 60) -> int:
+def estimate_credits(symbol_count: int, sessions: int = 30) -> int:
     # FundAI docs: adjusted daily prices cost 6 credits per started block of 30 sessions.
     per_symbol = math.ceil(sessions / 30) * 6
     # Market money-flow endpoint costs 15 credits per started block of 30 sessions.
@@ -58,7 +57,7 @@ def estimate_credits(symbol_count: int, sessions: int = 60) -> int:
 
 def score_history(rows: list[dict], max_age_days: int) -> dict | None:
     ordered = sorted(rows, key=lambda row: str(row.get("date", "")))
-    if len(ordered) < 60:
+    if len(ordered) < 30:
         return None
     latest = ordered[-1]
     session = latest.get("date")
@@ -73,20 +72,20 @@ def score_history(rows: list[dict], max_age_days: int) -> dict | None:
     if len(closes) < 60 or any(not math.isfinite(x) or x <= 0 for x in closes):
         return None
     last = closes[-1]
-    sma20, sma50 = mean(closes[-20:]), mean(closes[-50:])
+    sma5, sma20 = mean(closes[-5:]), mean(closes[-20:])
+    momentum5 = (last / closes[-6] - 1) * 100
     momentum20 = (last / closes[-21] - 1) * 100
-    momentum60 = (last / closes[-60] - 1) * 100
     returns = [closes[i] / closes[i-1] - 1 for i in range(len(closes)-20, len(closes)) if closes[i-1] > 0]
     vol = pstdev(returns) * math.sqrt(252) * 100 if len(returns) >= 10 else None
     score = 0
-    score += 35 if last > sma20 > sma50 else 20 if last > sma20 and last > sma50 else 10 if last > sma20 or last > sma50 else 0
+    score += 35 if last > sma5 > sma20 else 20 if last > sma5 and last > sma20 else 10 if last > sma5 or last > sma20 else 0
     score += max(0, min(30, 15 + momentum20))
-    score += max(0, min(20, 10 + momentum60 / 2))
+    score += max(0, min(20, 10 + momentum5))
     score += max(0, min(15, 15 - (vol or 0) / 5))
     return {
         "session": session, "date_jalali": latest.get("date_jalali"),
-        "close_rial": last, "momentum20_pct": momentum20, "momentum60_pct": momentum60,
-        "sma20_rial": sma20, "sma50_rial": sma50, "annualized_volatility_pct": vol,
+        "close_rial": last, "momentum5_pct": momentum5, "momentum20_pct": momentum20,
+        "sma5_rial": sma5, "sma20_rial": sma20, "annualized_volatility_pct": vol,
         "individual_net_flow_rial": latest.get("individual_net_flow_rial"),
         "value_rial": latest.get("value_rial"), "score": round(score),
     }
@@ -100,35 +99,50 @@ def main() -> int:
     now = datetime.now(TEHRAN).isoformat(timespec="seconds")
     print(f"گزارش پایش سهام ایران | زمان اجرا: {now} Asia/Tehran")
     print("منبع نامزد: FundAI API؛ قیمت‌ها و ارزش معاملات به ریال. تحلیل پژوهشی است، نه توصیه شخصی خرید/فروش.")
+    # Iran's main exchanges trade Saturday through Wednesday (Tehran time).
+    if datetime.now(TEHRAN).weekday() in {3, 4}:
+        print("بازار ایران امروز تعطیل هفتگی است؛ برای جلوگیری از هزینه، هیچ درخواست داده‌ای ارسال نشد.")
+        return 0
     if not token:
         print("وضعیت: بدون سیگنال؛ FUNDAI_API_KEY در فایل محلی .env تنظیم نشده است.")
         return 2
     if not symbols:
         print("وضعیت: بدون سیگنال؛ فهرست نمادهای IRAN_EQUITY_SYMBOLS خالی است. پوشش کل بازار فعال نیست.")
         return 2
-    estimate = estimate_credits(len(symbols))
+    estimate = estimate_credits(len(symbols), sessions=30)
     if max_credits < estimate:
         print(f"وضعیت: بدون فراخوانی پولی؛ سقف روزانه {max_credits} اعتبار است و برآورد این اجرا {estimate} اعتبار است.")
         return 2
+    state_path = ROOT / ".last_paid_scan.json"
+    today_tehran = datetime.now(TEHRAN).date().isoformat()
+    if state_path.exists():
+        try:
+            previous = json.loads(state_path.read_text(encoding="utf-8"))
+            if previous.get("date_tehran") == today_tehran:
+                print("وضعیت: اسکن اعتباردار امروز قبلاً انجام شده؛ برای جلوگیری از مصرف تکراری، درخواست دیگری ارسال نشد.")
+                return 0
+        except (ValueError, OSError):
+            pass
     try:
         account = request("/me/", token)
         if account.get("data", {}).get("key", {}).get("sandbox"):
             print("وضعیت: کلید Sandbox است؛ داده نمونه برای سیگنال روزانه پذیرفته نمی‌شود.")
             return 2
+        state_path.write_text(json.dumps({"date_tehran": today_tehran, "estimated_credits": estimate}), encoding="utf-8")
         flow_payload = request("/market/money-flow/", token, {"limit": "1"})
         flow_rows = valid_rows(flow_payload)
         candidates = []
         errors = []
         for symbol in symbols:
             try:
-                payload = request(f"/companies/{urllib.parse.quote(symbol, safe='')}/prices/", token, {"limit": "60", "adjusted": "true"})
+                payload = request(f"/companies/{urllib.parse.quote(symbol, safe='')}/prices/", token, {"limit": "30", "adjusted": "true"})
                 rows = valid_rows(payload)
                 result = score_history(rows, int(os.getenv("IRAN_MAX_SESSION_AGE_DAYS", "5")))
                 if result:
                     result.update({"symbol": symbol, "source_updated_at": payload.get("meta", {}).get("updated_at")})
                     candidates.append(result)
                 else:
-                    errors.append(f"{symbol}: تاریخچه کمتر از ۶۰ جلسه، کهنه، متوقف یا نامعتبر")
+                    errors.append(f"{symbol}: تاریخچه کمتر از ۳۰ جلسه، کهنه، متوقف یا نامعتبر")
             except (urllib.error.URLError, TimeoutError, ValueError, KeyError, TypeError) as exc:
                 errors.append(f"{symbol}: خطای منبع/داده ({type(exc).__name__})")
         candidates.sort(key=lambda row: row["score"], reverse=True)
@@ -140,11 +154,11 @@ def main() -> int:
         if not qualified:
             print("هیچ نامزد واجد آستانه پایش تکنیکال نیست؛ این مدل به تنهایی فرصت سرمایه‌گذاری را تأیید نمی‌کند.")
         for rank, row in enumerate(qualified[:5], 1):
-            print(f"{rank}. {row['symbol']} | امتیاز آزمایشی {row['score']}/100 | پایانی {row['close_rial']:,.0f} ریال | ۲۰جلسه {row['momentum20_pct']:+.1f}% | ۶۰جلسه {row['momentum60_pct']:+.1f}% | داده {row['session']} ({row.get('date_jalali')}) | منبع‌به‌روزرسانی {row.get('source_updated_at')}")
-            print("   شرط بازبینی: شکست روند SMA20/SMA50 یا تغییر معنادار جریان/عرض بازار؛ قیمت هدف تعیین نشده.")
+            print(f"{rank}. {row['symbol']} | امتیاز آزمایشی {row['score']}/100 | پایانی {row['close_rial']:,.0f} ریال | ۵جلسه {row['momentum5_pct']:+.1f}% | ۲۰جلسه {row['momentum20_pct']:+.1f}% | داده {row['session']} ({row.get('date_jalali')}) | منبع‌به‌روزرسانی {row.get('source_updated_at')}")
+            print("   شرط بازبینی: شکست روند SMA5/SMA20 یا تغییر معنادار جریان/عرض بازار؛ قیمت هدف تعیین نشده.")
         if errors:
             print("موارد کنارگذاشته‌شده: " + "; ".join(errors[:10]))
-        print("محدودیت: امتیاز صرفاً غربال تکنیکال آزمایشی است؛ صورت‌های مالی، اطلاعیه‌های Codal، ارزش‌گذاری و بک‌تست در این نسخه وارد نشده‌اند.")
+        print("محدودیت: امتیاز غربال تکنیکال آزمایشی با ۳۰ جلسه تاریخچه است؛ صورت‌های مالی، اطلاعیه‌های Codal، ارزش‌گذاری و بک‌تست در این نسخه وارد نشده‌اند.")
         return 0
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError, KeyError, TypeError) as exc:
         print(f"وضعیت: بدون سیگنال؛ فراخوانی FundAI موفق/قابل‌اعتبارسنجی نبود ({type(exc).__name__}).")
