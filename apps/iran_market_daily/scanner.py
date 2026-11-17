@@ -49,6 +49,19 @@ def valid_rows(payload: dict) -> list[dict]:
     return rows
 
 
+def fresh_provider_timestamp(value: object, max_age_days: int) -> bool:
+    if not isinstance(value, str) or not value.strip():
+        return False
+    try:
+        stamp = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        if stamp.tzinfo is None:
+            stamp = stamp.replace(tzinfo=TEHRAN)
+        age_seconds = (datetime.now(timezone.utc) - stamp.astimezone(timezone.utc)).total_seconds()
+        return 0 <= age_seconds <= max_age_days * 86400
+    except ValueError:
+        return False
+
+
 def estimate_credits(symbol_count: int, sessions: int = 30) -> int:
     # Screener: 25 credits per 20 results; adjusted daily prices: 6 per 30 sessions;
     # market money flow: 15 per 30 sessions.
@@ -141,6 +154,10 @@ def main() -> int:
         })
         screen_rows = valid_rows(screen_payload)
         screen_updated_at = screen_payload.get("meta", {}).get("updated_at")
+        max_age_days = int(os.getenv("IRAN_MAX_SESSION_AGE_DAYS", "5"))
+        if not fresh_provider_timestamp(screen_updated_at, max_age_days):
+            print("وضعیت: بدون سیگنال؛ زمان به‌روزرسانی غربال‌گر موجود، معتبر یا تازه نیست.")
+            return 2
         # Include distinct symbols only; the API's screener universe is broad but
         # the paid 20-result page is not claimed to be an exhaustive ranking.
         shortlist = []
@@ -156,6 +173,10 @@ def main() -> int:
         shortlist = shortlist[:validation_count]
         flow_payload = request("/market/money-flow/", token, {"limit": "1"})
         flow_rows = valid_rows(flow_payload)
+        flow_updated_at = flow_payload.get("meta", {}).get("updated_at")
+        if not fresh_provider_timestamp(flow_updated_at, max_age_days):
+            print("وضعیت: بدون سیگنال؛ زمان به‌روزرسانی جریان/عرض بازار موجود، معتبر یا تازه نیست.")
+            return 2
         candidates = []
         errors = []
         for item in shortlist:
@@ -164,12 +185,16 @@ def main() -> int:
                 company = urllib.parse.quote(item["slug"], safe="")
                 payload = request(f"/companies/{company}/prices/", token, {"limit": "30", "adjusted": "true"})
                 rows = valid_rows(payload)
-                result = score_history(rows, int(os.getenv("IRAN_MAX_SESSION_AGE_DAYS", "5")))
+                result = score_history(rows, max_age_days)
                 if result:
+                    price_updated_at = payload.get("meta", {}).get("updated_at")
+                    if not fresh_provider_timestamp(price_updated_at, max_age_days):
+                        errors.append(f"{symbol}: زمان به‌روزرسانی قیمت ناموجود یا کهنه")
+                        continue
                     result.update({"symbol": symbol, "slug": item["slug"], "board": item.get("board"),
                                    "screen_net_flow_billion_toman": item["figures"].get("step_1_value", item["figures"].get("real_cash_flow")),
                                    "screen_updated_at": screen_updated_at,
-                                   "source_updated_at": payload.get("meta", {}).get("updated_at")})
+                                   "source_updated_at": price_updated_at})
                     candidates.append(result)
                 else:
                     errors.append(f"{symbol}: تاریخچه کمتر از ۳۰ جلسه، کهنه، متوقف یا نامعتبر")
@@ -178,7 +203,7 @@ def main() -> int:
         candidates.sort(key=lambda row: row["score"], reverse=True)
         flow = flow_rows[0] if flow_rows else None
         print(f"غربال اولیه‌ی کل بازار: {len(screen_rows)} نتیجه از غربال ورود پول حقیقی مثبت؛ زمان منبع {screen_updated_at}؛ تأیید تاریخچه برای {len(shortlist)} نامزد")
-        print(f"آخرین به‌روزرسانی جریان بازار: {flow_payload.get('meta', {}).get('updated_at')}")
+        print(f"آخرین به‌روزرسانی جریان بازار: {flow_updated_at}")
         if flow:
             print(f"عرض بازار: صعودی {flow.get('advancers')} | نزولی {flow.get('decliners')} | خالص جریان حقیقی {flow.get('individual_net_flow_rial')} ریال | جلسه {flow.get('date')} / {flow.get('date_jalali')}")
         qualified = [row for row in candidates if row["score"] >= 65]
