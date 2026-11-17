@@ -142,6 +142,10 @@ def main() -> int:
         if account.get("data", {}).get("key", {}).get("sandbox"):
             print("وضعیت: کلید Sandbox است؛ داده نمونه برای سیگنال روزانه پذیرفته نمی‌شود.")
             return 2
+        balance = account.get("data", {}).get("credits")
+        if not isinstance(balance, (int, float)) or balance < estimate:
+            print(f"وضعیت: بدون درخواست پولی؛ اعتبار باقی‌مانده برای سقف برآوردی {estimate} کافی نیست.")
+            return 2
         state_path.write_text(json.dumps({"date_tehran": today_tehran, "estimated_credits": estimate}), encoding="utf-8")
         # Broad-market first pass: positive latest-session net real-money flow.
         # This private-use screener costs 25 credits for its 20-result page.
