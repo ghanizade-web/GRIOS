@@ -1,32 +1,45 @@
 # Iran Market Data Operating Addendum
 
-Reviewed 2026-11-17 against the user-supplied iran-mcp v2.3 archive and current provider API documentation. This is source research, not proof of a live connection.
+Reviewed 2026-11-17 against the user-supplied `iran-mcp` v2.3 archive.
 
-## Sources and practical fit
+## Verified from archive catalog (not live-tested)
 
-| Source | Coverage | Access and limits | Use |
+The catalog lists read-only tools for:
+
+- **TGJU:** free-market FX, gold, coins, summary tables and daily history (`tj_market_summary`, `tj_get_prices`, `tj_price_history`).
+- **TSETMC:** symbols/quotes/history, movers, order book, indices and real/legal flows (`ts_search_symbols`, `ts_get_quote`, `ts_price_history`, `ts_market_movers`, `ts_indices`, `ts_real_legal`).
+- **CBI:** official FX references in Rial per currency unit, inflation, liquidity, policy rates and bond auction results.
+- **Complementary context:** Fara Bourse bonds/yields/market summaries, FIPIRAN fund NAV/returns/flows and indices, IME commodity trading/supply, and Codal company disclosures.
+
+The archive is a catalog and documentation package; it does not include the server source implementations/submodules. The documented package servers are generally unofficial Python stdio MCP servers that call undocumented site APIs. Some sites answer only from Iranian IPs and document optional per-server proxy settings. A tool's presence in this archive does not demonstrate that it is installed, reachable, fresh, entitled for redistribution, or connected to GRIOS. No dedicated NIMA/transactional FX source is identified in the catalog.
+
+## Source options checked 2026-11-17
+
+| Source | Useful coverage | Access and cost | Suitability / limits |
 | --- | --- | --- | --- |
-| [FundAI API](https://fundai.ir/developers) | TSETMC company list, daily prices, technical series, indices, breadth, market flows, trading status, book, trades, Codal statements and monthly sales. | Bearer API key; credit billing; docs list 100 trial credits with a verified account. OpenAPI documents Rial units, ISO and Jalali dates, per-response meta.updated_at, and endpoint costs. Daily prices, technicals, index history, market flows, trading state, depth/history and trades are marked commercially usable without contract. Other datasets are noncommercial absent written approval. | Best documented candidate for a scheduled scan. Before public dissemination, confirm with FundAI in writing whether attribution, transformations, excerpts and derived public research are allowed for each endpoint used. Never store the key in Git or a client. |
-| [Tindex API](https://tindex.app/en/developers/) | Equities, indicators, currency rates, news, inflation and macro data. | Token required; free tier documented at 3 requests/minute and 300/day. The developer docs reviewed here do not establish rights to redistribute raw or derived data. | Useful low-volume alternative or cross-check after written permission and live validation. |
-| [TSETMC API](https://cdn.tsetmc.com/api) | Broad exchange-native quotes, history, order books, indices and individual/legal statistics. | Reverse-engineered endpoints, no stable public API contract or redistribution entitlement verified; sources report non-Iran IP blocking. | Potential fallback/validation source if operated from a permitted Iranian host. Not a public feed until written permission, stability and access are established. |
-| [Codal](https://www.codal.ir/) | Official issuer statements, monthly reports, material events and filings. | Public portal; no documented public API confirmed in this review. codal-mcp is an unofficial stdio wrapper around undocumented site endpoints and may need Iranian network access. | Primary-source fundamentals and catalysts. Link the original filing and publication date; use a licensed data provider for automated parsing where required. |
-| iran-mcp v2.3 | MCP wrappers for TSETMC, Codal, FIPIRAN, Fara Bourse, CBI, IME, TGJU and other Iranian services. | Mostly unofficial Python stdio packages over undocumented site APIs; some require Iranian IP/proxy. The supplied archive is a catalog, not implementation or proof of connectivity. No dedicated NIMA source was found. | Analyst-assisted access, not a deployed GRIOS ingestion service or redistribution license. |
+| [TSETMC CDN](https://cdn.tsetmc.com/api) | Broad market watch, quotes, order books, history, indices and individual/legal flows. | Public endpoints are described by reverse-engineered clients; no stable public API contract or redistribution license was verified. May block non-Iranian IPs. | Strongest breadth and native exchange identity, but operationally brittle. Do not build a public commercial feed on it without written permission and a robust locally hosted collector. |
+| [Tindex API](https://tindex.app/en/developers/) | Tehran equities, market indicators, FX, news, inflation and broader indicators. | Vendor currently documents a free account/token, Bearer authentication, 3 requests/minute and 300/day on free tier. | Good low-volume evaluation candidate. Public docs do not establish freshness per every dataset or permission to redistribute raw/derived data to followers; obtain written confirmation before public posts. |
+| [FundAI API](https://fundai.ir/developers) | Market-wide watch, quote/history, depth, trading state, flows, screeners, Codal statements/monthly sales, company ratios and commodity trades. | Account API key, credit-based; docs provide 100 trial credits with first key, endpoint costs and rate limits. | Most complete single API surfaced in this check. Its docs explicitly say API is for noncommercial use, but list daily prices/indicators/indexes/market flows/trading state/depth/trades as commercial-use exceptions without a contract. That does not automatically grant redistribution rights for a monetized social channel; clarify in writing which fields and derived recommendations may be published. |
+| [Codal](https://www.codal.ir/) | Official issuer disclosures, financial statements, monthly activity, material events. | Public website; the Codal MCP docs describe an unofficial client over undocumented search endpoints, no API key, with regional access and rate limits. | Primary source for company disclosures, not quotes/history. Link/cite original filing and publication date; do not republish whole reports without rights. |
+| `iran-mcp` package set | MCP wrappers for TSETMC, Codal, FIPIRAN, IFB, CBI, IME, TGJU. | Mostly `uvx` stdio packages, unofficial, undocumented source APIs, sometimes Iranian IP/proxy required. | Useful for analyst-assisted research; does not by itself give the scheduled scanner a persistent service or a public redistribution license. |
 
-FundAI documentation says the API's commercial-use exception covers only listed market datasets; it does not automatically settle rights for a monetized public channel, attribution, or publication of derived recommendations. Confirm intended use with the provider. No account, key or live API call has been configured in GRIOS as of this review.
+The Tindex and FundAI terms, quotas, endpoint availability, vendor identity, and permissions must be rechecked at onboarding. This review used their developer documentation; no account/token was configured and no live API response was fetched. A website's statement that rates update “live” is not proof of exchange-grade timestamps or delivery latency.
 
-## Data and daily report rules
+## Daily report and opportunity rules
 
-- Keep Iranian listed shares in a distinct Iran-market section; do not add conventional equities to the global trade universe.
-- Preserve ticker, provider company slug, TSETMC id/ISIN when supplied, board, trading state, original Rial units, session date in Gregorian and Jalali where available, provider meta.updated_at, and retrieval time.
-- Use adjusted daily prices for long-history return calculations; retain unadjusted traded prices separately. Do not mistake market close for a live quote.
-- Market breadth and individual/legal flows are observed aggregate context, not proof of insider or institutional intent. A price-only snapshot is not a candidate thesis.
-- For every candidate include source timestamp, history window, liquidity context, relevant Codal filing dates, counter-evidence, risks, and an invalidation condition. Exclude halted, stale, future-dated, malformed or unmapped records. If data are insufficient, report no qualified opportunity.
-- Daily reports may suggest research candidates and scenarios, not personalized buy/sell instructions or guaranteed returns.
-- Public social publication to Telegram, Instagram, X, LinkedIn, Medium or Substack requires provider permission that clearly covers redistribution/display and derived analysis. Until confirmed, keep reports private or link to original sources without republishing licensed feed data.
-- Keep CBI official FX, explicitly identified transactional/NIMA rates, and TGJU free-market rates as different series. Never infer one from another.
+- Keep conventional listed shares outside the global trade universe. Iranian listed shares may be considered only in a distinct **Iran market** section.
+- Preserve TSETMC ticker and ISIN when available, market/board, session, quote currency/unit (TSETMC prices are cataloged as Rial), source timestamp, retrieval timestamp and freshness. Retain the native Jalali date and a validated Gregorian equivalent where available.
+- Show market breadth and real/legal flow as observed aggregates with their date and methodology; they do not prove insider or institutional intent. A price-only snapshot is data context, not an opportunity.
+- Never merge exchange rates: CBI official reference (Rial/currency unit), explicitly sourced transactional/NIMA rate, and TGJU free-market quote must be separate series. If a source does not name the rate type, label it unknown and do not substitute it for another series.
+- Gold/coin opportunities require exact product (18k gram, ounce, or named coin), native unit, provider timestamp, history and, where available, spread/fees. Keep quote-only observations as DATA_ONLY.
+- Macro and flows (CBI inflation/liquidity/policy rates, government auction yields, IME commodity volumes, FIPIRAN flows, Codal disclosures) require publication/observation date and release lag. Do not use publication time as observation time or imply real-time availability.
+- No candidate is ranked if source identity, symbol mapping, unit, timestamp, freshness or required history is missing. On timeout, RPC/HTTP error, region block, malformed response, stale/future timestamp or unknown unit, print the Iran section as unavailable and do not fall back silently.
+- Public social publication (Telegram, Instagram, X/Twitter, LinkedIn, Medium, Substack) requires a provider entitlement that explicitly allows the relevant redistribution/display and derived analyses. The report must identify source and as-of time, distinguish facts from analysis, include key risks/invalidation, and must not say “buy” as a personalized instruction or imply guaranteed returns. If permission is unclear, keep the report private and link to the original source rather than republishing a feed.
 
-## Automation and status
+## Integration status
 
-A daily 09:00 Asia/Tehran report automation is configured in Codex for this conversation. It checks whether evidence is available and returns no signal when source connection or freshness gates fail. It is a report in this chat; it does not post to social platforms.
+The `apps/iran_market_daily/` FundAI adapter is configured locally with a three-symbol pilot basket (`فولاد`, `فملی`, `شپنا`), 30 adjusted daily sessions, a 33-credit ceiling per Tehran trading day, and a local once-per-day spend guard. It skips Thursday/Friday. The API credential and `.last_paid_scan.json` state are ignored by Git; never commit them.
 
-Live Iranian equity ingestion is not yet operational: the GRIOS runtime has no FundAI token or tested API adapter, and public redistribution rights are not fully verified. Do not describe ingestion as live until real responses pass schema, freshness, units, symbol-mapping and failure-behavior checks.
+Live verification on 2026-11-17: FundAI `/me/` returned HTTP 200 and a non-Sandbox account. A market-flow request returned dated market breadth and net individual flow. All three pilot price series were rejected by the configured history/freshness/halted-data gate, so no candidate was ranked. The run consumed 33 credits; this one run does not validate repeat-day reliability or score quality. The script now refuses a second paid run on the same Tehran date. Use only the successful actual fields; do not treat the rejected price rows as opportunities.
+
+The daily Codex report is scheduled for 09:00 Asia/Tehran in this conversation. It produces a private research watchlist only; it does not publish to Telegram, Instagram, X, LinkedIn, Medium or Substack. The scanner's short-horizon technical score is experimental and has no Codal fundamental join or backtest. Public redistribution rights for derived recommendations still need written confirmation. The automation must say no qualified candidates when price data fail quality gates.
