@@ -9,7 +9,7 @@ Local research-only pilot using the documented FundAI API. It keeps Iranian shar
 3. The pilot uses three representative symbols and 30 adjusted sessions. FundAI documents 6 credits per symbol plus 15 credits for market flow: 33 credits per run. The local cap is set to 33, and a Tehran-date state file prevents a second paid scan on the same day. Thursday and Friday skip the data calls because the exchange is closed.
 4. Run `python3 scanner.py` from this folder.
 
-The script checks `/me/`, refuses sample Sandbox data, retains dates/units and provider update times, excludes stale/halted/malformed symbols, and fails closed. It only emits a technical watchlist; it does not claim fundamental validation or an actionable buy/sell signal. FundAI's public OpenAPI docs identify endpoint costs and commercial-use exceptions for daily prices, flows and technicals. Confirm permission for publishing derived analysis through monetized channels before public release. This pilot does not fetch Codal fundamentals or authorize social posting.
+The script checks `/me/`, refuses sample Sandbox data, retains dates/units and provider update times, excludes stale/halted/malformed symbols, and fails closed. A live first run exposed and a local synthetic check verified a fixed mismatch between the 30-session pilot and its old 60-close filter; the next trading-day run is needed to validate live candidate parsing. It only emits an experimental technical watchlist, not a validated or actionable buy/sell signal. Confirm permission for publishing derived analysis through monetized channels before public release. This pilot does not fetch Codal fundamentals or authorize social posting.
 
 ## Daily Codex report
 
