@@ -1,3 +1,4 @@
 .env
 .evn
 FUNDAI_API_KEY
+.last_paid_scan.json
