@@ -43,6 +43,12 @@ FEEDS: tuple[dict[str, str], ...] = (
     {"name": "Reuters — Crypto (Google News index)", "url": "https://news.google.com/rss/search?q=when:3d+site:reuters.com+bitcoin+OR+cryptocurrency&hl=en-US&gl=US&ceid=US:en", "tier": "TIER_2", "kind": "news_index", "focus": "crypto"},
     {"name": "The Block — Digital Assets", "url": "https://www.theblock.co/rss.xml", "tier": "TIER_3", "kind": "specialist", "focus": "crypto"},
     {"name": "CoinDesk — Digital Assets", "url": "https://www.coindesk.com/arc/outboundfeeds/rss/", "tier": "TIER_3", "kind": "specialist", "focus": "crypto"},
+    {"name": "ForexR — Market Analysis", "url": "https://news.google.com/rss/search?q=when:3d+site:forexr.com/analysis+OR+site:forexr.com/news&hl=en-US&gl=US&ceid=US:en", "tier": "TIER_3", "kind": "news_index", "focus": "markets"},
+    {"name": "Finfab — Market News", "url": "https://news.google.com/rss/search?q=when:3d+site:finfab.pro/channelnews+OR+site:finfab.pro/blog&hl=en-US&gl=US&ceid=US:en", "tier": "TIER_3", "kind": "news_index", "focus": "markets"},
+    {"name": "Yahoo Finance — Markets", "url": "https://news.google.com/rss/search?q=when:3d+site:finance.yahoo.com/news&hl=en-US&gl=US&ceid=US:en", "tier": "TIER_2", "kind": "news_index", "focus": "markets"},
+    {"name": "Crypto Economy — Digital Assets", "url": "https://crypto-economy.com/feed/", "tier": "TIER_3", "kind": "specialist", "focus": "crypto"},
+    {"name": "InvestingLive — Markets", "url": "https://news.google.com/rss/search?q=when:3d+site:investinglive.com/news+OR+site:investinglive.com/analysis&hl=en-US&gl=US&ceid=US:en", "tier": "TIER_2", "kind": "news_index", "focus": "markets"},
+    {"name": "SoSoValue — Research and News", "url": "https://news.google.com/rss/search?q=when:3d+site:sosovalue.com/news+OR+site:sosovalue.com/analysis&hl=en-US&gl=US&ceid=US:en", "tier": "TIER_3", "kind": "news_index", "focus": "crypto"},
 )
 
 TOPIC_RULES: dict[str, tuple[str, ...]] = {
