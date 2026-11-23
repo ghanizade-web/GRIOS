@@ -10,8 +10,9 @@ The owner's broader operating blueprint is recorded in [GRIOS_OPERATING_MANUAL_v
 - Keep machine-readable JSON, API schemas, provider names, tickers, CIKs, CUSIPs and source URLs unchanged; localize the human-facing explanation and labels.
 - Use explicit Persian labels for data freshness, reporting period, publication time, confidence, caveats, data coverage and pipeline status. Never translate a status in a way that changes its technical meaning.
 - Exclude Iran's stock market. Cover global equities (especially US, and relevant Asia/Europe), FX, crypto, and commodities (energy, precious/base metals, and agriculture) only where a current catalyst or meaningful signal exists.
-- Prioritize a small set of differentiated, evidence-backed asset theses over quote boards and headline lists. Include prices only as useful anchors, with source and observation time.
-- The reader should receive a useful daily and weekly decision-support signal: conditional directional bias, expected horizon, the asset-specific catalyst, causal transmission, confirmation trigger, invalidation condition, opposing scenario, and confidence. This is research, not a personalized trade instruction.
+- The report has no fixed number of assets. Include only the assets materially affected by important, source-confirmed news or data from the day/week. The count may vary from zero to several; never add assets just to fill a quota. Explain the specific beneficiary/loser channel for every included asset.
+- Prioritize differentiated, evidence-backed asset theses over quote boards and headline lists. Include prices only as useful anchors, with source and observation time.
+- The reader should receive useful daily and weekly decision-support signals: conditional directional bias, expected horizon, asset-specific catalyst, causal transmission, confirmation trigger, invalidation condition, opposing scenario, and confidence. This is research, not a personalized trade instruction.
 - Separate reported facts, market expectations, and GRIOS inference. Cross-check important claims when feasible. Mark delayed, indicative, conflicting, or non-independent data. Never invent prices, targets, news, flows, institutional accumulation, technical levels, consensus, or certainty.
 - Do not issue personal buy/sell instructions, execute orders, allocate capital, or guarantee returns. A signal is a conditional scenario, never a command to trade.
 - If quality evidence is absent, explicitly say «سیگنال معتبر نداریم» for that asset or horizon instead of filling space.
@@ -31,7 +32,7 @@ Do not force every headline into a signal. News without a plausible transmission
 ## Daily report order
 1. Reporting timestamp, timezone, freshness and coverage caveat.
 2. One-line cross-asset regime and the main verified catalyst(s).
-3. At most 3 strongest daily/weekly asset signals, each using the causal-analysis fields above. Include relevant global equities, FX, crypto and commodities only when evidence supports them.
+3. A variable number of the strongest daily/weekly asset signals, selected according to the importance, novelty and asset-level transmission of verified news. Each signal uses the causal-analysis fields above. There is no minimum or fixed target count.
 4. Brief “مهم اما بدون سیگنال” notes when a major headline cannot be linked reliably to an asset.
 5. Upcoming source-confirmed catalysts with exact verified date/time precision; no inferred times or consensus.
 6. Concise overall takeaway distinguishing the daily tactical view from the weekly view.
