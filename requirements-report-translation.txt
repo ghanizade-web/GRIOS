@@ -1,0 +1,2 @@
+# Free offline English-to-Persian translation used by the daily report workflow.
+argostranslate==1.11.0
