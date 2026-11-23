@@ -45,6 +45,8 @@ def ensure_model() -> None:
         for item in installed
     ):
         return
+
+    package.update_package_index()
     available = package.get_available_packages()
     model = next(
         (
@@ -61,7 +63,7 @@ def ensure_model() -> None:
     package.install_from_path(model.download())
 
 
-def prepare_report(text: str) -> str:
+def prepare_report(text: str) -> tuple[str, dict[str, str]]:
     # The appended source appendix repeats stories already present in the report body.
     appendix = "\n## خبرهای اثرگذار و مسیر اثر بر دارایی‌ها"
     if appendix in text:
@@ -69,15 +71,19 @@ def prepare_report(text: str) -> str:
 
     # Keep only official profile links in Telegram. Story links remain in the
     # source JSON and workflow artifact for verification.
+    saved_links: dict[str, str] = {}
     for index, link in enumerate(SOCIAL_LINKS):
-        text = text.replace(link, f"ZXQSOCIAL{index:02d}XZQ")
+        token = f"ZXQSOCIAL{index:02d}XZQ"
+        if link in text:
+            text = text.replace(link, token)
+            saved_links[token] = link
 
     cleaned: list[str] = []
     for line in text.splitlines():
         if "لینک راستی‌آزمایی" in line:
             continue
         cleaned.append(URL.sub("", line))
-    return "\n".join(cleaned)
+    return "\n".join(cleaned), saved_links
 
 
 def translate_segmented(text: str) -> str:
@@ -102,7 +108,7 @@ def translate_segmented(text: str) -> str:
 
 
 def translate_report(text: str) -> tuple[str, int]:
-    prepared = prepare_report(text)
+    prepared, saved_links = prepare_report(text)
     translated_lines: list[str] = []
     dropped = 0
 
@@ -123,12 +129,15 @@ def translate_report(text: str) -> tuple[str, int]:
                 "OPEC", "FED",
             }
         ]
-        if len(residual) >= 4:
+        if len(residual) >= 3:
             translated = "خبر انگلیسی به‌دلیل اطمینان پایین از ترجمهٔ ماشینی از نسخهٔ تلگرام حذف شد."
             dropped += 1
         translated_lines.append(translated)
 
     result = "\n".join(translated_lines).strip()
+    for token, link in saved_links.items():
+        result = result.replace(token, link)
+
     if dropped:
         result += (
             "\n\n⚠️ بخشی از گزیده‌های انگلیسی به‌دلیل اطمینان پایین از ترجمه حذف شد؛ "
