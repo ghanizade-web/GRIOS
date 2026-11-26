@@ -4,7 +4,7 @@ import json
 from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 
-from daily_narrative_report import render_daily_narrative_report
+from daily_narrative_report import _jalali_label, render_daily_narrative_report
 
 
 def _series(symbol, asset_class, closes, *, extra=None, data_as_of=None):
@@ -63,14 +63,14 @@ def test_risk_off_label_requires_cross_asset_confirmation():
 def test_official_calendar_events_are_included_without_inventing_consensus(tmp_path):
     calendar = tmp_path / "calendar.json"
     calendar.write_text(json.dumps({"events": [{
-        "event_date": "2026-11-10",
+        "event_date": (date.today() + timedelta(days=2)).isoformat(),
         "official_release_name": "Consumer Price Index",
         "release_id": 10,
     }]}), encoding="utf-8")
     report = render_daily_narrative_report([], [], {}, macro_calendar_path=calendar)
     assert "رویدادی که می‌تواند معامله را تغییر دهد" in report
     assert "شاخص قیمت مصرف‌کننده (CPI)" in report
-    assert "۱۹ آبان ۱۴۰۵" in report
+    assert _jalali_label((date.today() + timedelta(days=2)).isoformat()) in report
     assert "Consumer Price Index" not in report
 
 
