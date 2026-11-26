@@ -1,0 +1,36 @@
+name: GRIOS Daily Pipeline Contract Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "telegram_publisher.py"
+      - "scripts/build_daily_outputs.py"
+      - "tests/test_daily_outputs.py"
+      - "tests/test_telegram_publisher.py"
+      - "tests/test_daily_narrative_report.py"
+      - "pytest.ini"
+      - ".github/workflows/grios-pr-tests.yml"
+  push:
+    branches: ["fix/grios-dual-report-pipeline"]
+
+permissions:
+  contents: read
+
+jobs:
+  daily-pipeline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test runner
+        run: python -m pip install --upgrade pytest httpx python-dotenv
+      - name: Compile changed Python modules
+        run: |
+          python -m py_compile telegram_publisher.py scripts/build_daily_outputs.py
+      - name: Run focused regression tests
+        run: |
+          python -m pytest -q

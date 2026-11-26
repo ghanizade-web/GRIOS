@@ -1,5 +1,7 @@
 # GRIOS Opportunity Scanner — MVP
 
+> **Daily pipeline contract — 2026-11-26:** The scheduled publication pipeline is governed by [GRIOS_V15_DAILY_OPERATING_CONTRACT.md](GRIOS_V15_DAILY_OPERATING_CONTRACT.md). It produces separate catalyst-driven trading and strategic-capital/megatrend reports. This README describes scanner capabilities and must not be used as the daily publication contract.
+
 Small, research-only Python scanner using direct CoinGecko and CoinMarketCap REST adapters for crypto, plus OpenBB provider connectors for listed equities/ETFs, ECB FX reference data, EIA energy series, and FRED macro context. It writes a Persian, Telegram-friendly text report, a machine-readable crypto audit JSON, and local SQLite snapshots/idea outcomes. Normalized market observations are written directly to the GRIOS Supabase Data Hub (`public.grios_market_observations`) through the Supabase REST API using server-side credentials; Cloudflare Worker/Data Hub is not part of the active architecture. A separate `market-pulse` repository contains a Twelve Data adapter that writes to the same Supabase table. The scanner itself does not place orders and does not claim validated alpha.
 
 ## Actual MVP coverage
