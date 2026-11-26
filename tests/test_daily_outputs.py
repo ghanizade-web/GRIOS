@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from scripts.build_daily_outputs import build_capital_flows_report, build_trading_brief, validate_candidate
 
 def candidate(**changes):
-    item={"instrument":"BTC/USD","asset_class":"crypto","direction":"WATCH","price":90000,"price_type":"spot","provider":"test","timestamp":datetime.now(timezone.utc).isoformat(),"catalyst":"Official protocol event","catalyst_date":"2026-11-26","transmission":"Changes supply expectations","trigger":"Wait for confirmed daily close","invalidation":"Event cancellation","horizon":"1-5 sessions","risk":"high","evidence_grade":"B","sources":["https://example.com/source"]}
+    item={"instrument":"BTC/USD","asset_class":"crypto","direction":"WATCH","price":90000,"price_type":"spot","provider":"test","timestamp":datetime.now(timezone.utc).isoformat(),"catalyst":"Official protocol event","catalyst_published_at":datetime.now(timezone.utc).isoformat(),"catalyst_date":datetime.now(timezone.utc).date().isoformat(),"transmission":"Changes supply expectations","trigger":"Wait for confirmed daily close","invalidation":"Event cancellation","horizon":"1-5 sessions","risk":"high","evidence_grade":"B","sources":["https://example.com/source"]}
     return {**item,**changes}
 
 def test_candidate_contract_rejects_equities_and_weak_directional_claims():
@@ -71,3 +71,23 @@ def test_13f_cik_is_resolved_to_watchlist_institution_name(tmp_path):
     )
     assert "BlackRock, Inc." in report
     assert evidence["sec_13f_reports"][0]["filer_cik"]=="0001364742"
+
+
+def test_candidate_freshness_rejects_stale_quotes_and_stale_catalysts():
+    now=datetime(2026,11,26,12,0,tzinfo=timezone.utc)
+    fresh=candidate(timestamp=now.isoformat(),catalyst_published_at=now.isoformat())
+    assert validate_candidate(fresh,now=now)==(True,"valid")
+    stale_quote=candidate(timestamp=(now-timedelta(hours=2)).isoformat(),catalyst_published_at=now.isoformat())
+    assert validate_candidate(stale_quote,now=now)[1]=="stale_quote"
+    stale_catalyst=candidate(timestamp=now.isoformat(),catalyst_published_at=(now-timedelta(days=4)).isoformat())
+    assert validate_candidate(stale_catalyst,now=now)[1]=="stale_catalyst"
+    future_quote=candidate(timestamp=(now+timedelta(hours=1)).isoformat(),catalyst_published_at=now.isoformat())
+    assert validate_candidate(future_quote,now=now)[1]=="future_quote_timestamp"
+
+
+def test_fx_and_commodity_quotes_use_daily_freshness_window():
+    now=datetime(2026,11,26,12,0,tzinfo=timezone.utc)
+    fx=candidate(asset_class="fx",timestamp=(now-timedelta(hours=20)).isoformat(),catalyst_published_at=now.isoformat())
+    commodity=candidate(asset_class="commodity",timestamp=(now-timedelta(hours=23)).isoformat(),catalyst_published_at=now.isoformat())
+    assert validate_candidate(fx,now=now)==(True,"valid")
+    assert validate_candidate(commodity,now=now)==(True,"valid")
