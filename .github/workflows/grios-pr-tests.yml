@@ -8,6 +8,8 @@ on:
       - "scripts/build_daily_outputs.py"
       - "tests/test_daily_outputs.py"
       - "tests/test_telegram_publisher.py"
+      - "tests/test_daily_narrative_report.py"
+      - "pytest.ini"
       - ".github/workflows/grios-pr-tests.yml"
   push:
     branches: ["fix/grios-dual-report-pipeline"]
