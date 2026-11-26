@@ -193,6 +193,11 @@ def build_capital_flows_report(news_path,sec13f_dir,report_date,now=None,sec13f_
             for h in r["top_holdings"]:
                 value=f"USD {float(h['value_usd']):,.0f}" if h.get("value_usd") is not None else "ارزش ارائه نشده"
                 lines.append(f"  موقعیت افشاشده: {h.get('issuer') or 'نام ناشر ارائه نشده'} — {value}.")
+            if r["source_urls"]:
+                for source_url in r["source_urls"][:3]:
+                    lines.append(f"  سند اصلی SEC: {source_url}")
+            else:
+                lines.append("  پیوند سند اصلی SEC در دادهٔ این اجرا موجود نیست.")
     elif sec_state=="NOT_CONFIGURED":
         lines.append(f"- گردآوری 13F در این اجرا انجام نشد؛ پیکربندی SEC یا Supabase ناقص است. جزئیات وضعیت: {sec_reason or 'علت دقیق در فایل وضعیت ثبت نشده'}.")
     elif sec_state in {"FAILED_OR_NOT_RUN","PARTIAL_FAILURE"}:

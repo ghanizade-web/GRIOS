@@ -50,6 +50,7 @@ def test_13f_is_reported_as_holdings_snapshot_not_recent_buy(tmp_path):
     assert "Example Manager" in report
     assert "موقعیت افشاشده" in report
     assert "تاریخ معامله را مشخص نمی‌کند" in report
+    assert "سند اصلی SEC: https://www.sec.gov/Archives/edgar/data/example" in report
     assert evidence["sec_13f_reports"][0]["source_urls"]==["https://www.sec.gov/Archives/edgar/data/example"]
 
 
