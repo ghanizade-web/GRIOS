@@ -38,7 +38,7 @@ def test_capital_flow_report_filters_stale_items_and_labels_reported_claims(tmp_
       {"title":"Old lithium mine expansion","summary":"Historical announcement.","url":"https://example.com/old","publisher":"Example","published_at":"2026-11-20T00:00:00+00:00","evidence_tier":"TIER_2"}]}),encoding="utf-8")
     report,evidence=build_capital_flows_report(news,tmp_path/"none","2026-11-26",now=now)
     assert "Copper mine expansion" in report
-    assert "execution not independently established" in report
+    assert "اجرای معامله مستقلاً احراز نشده" in report
     assert "Old lithium mine expansion" not in report
     assert len(evidence["selected_news"])==1
 
@@ -47,7 +47,7 @@ def test_13f_is_reported_as_holdings_snapshot_not_recent_buy(tmp_path):
     (d/"manager.json").write_text(json.dumps({"filer_name":"Example Manager","report_period":"2026-09-30","latest_filed_at":"2026-11-14","holdings_count":10,"holdings":[{"issuer":"Example Issuer","value_usd":123456}],"applied_filings":[{"source_url":"https://www.sec.gov/Archives/edgar/data/example"}]}),encoding="utf-8")
     report,evidence=build_capital_flows_report(tmp_path/"missing-news.json",d,"2026-11-26",now=datetime(2026,11,26,tzinfo=timezone.utc))
     assert "Example Manager" in report
-    assert "Top disclosed position" in report
+    assert "موقعیت افشاشده" in report
     assert "تاریخ معامله را مشخص نمی‌کند" in report
     assert evidence["sec_13f_reports"][0]["source_urls"]==["https://www.sec.gov/Archives/edgar/data/example"]
 
