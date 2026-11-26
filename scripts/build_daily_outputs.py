@@ -101,6 +101,7 @@ def build_trading_brief(candidate_path, report_date, now=None):
             lines += [f"{n}. **{x['instrument']} — {str(x['direction']).upper()}**",
                       f"قیمت: {x['price']} | نوع مظنه: {x['price_type']} | ارائه‌دهنده: {x['provider']} | زمان: {x['timestamp']}",
                       f"کاتالیزور ({x['catalyst_date']}): {x['catalyst']}",
+                      f"زمان انتشار محرک: {x['catalyst_published_at']}",
                       f"مسیر اثر: {x['transmission']}",
                       f"محرک فعال‌سازی: {x['trigger']}",
                       f"شرط ابطال: {x['invalidation']}",
