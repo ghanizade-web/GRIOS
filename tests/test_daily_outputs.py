@@ -11,7 +11,7 @@ def test_candidate_contract_rejects_equities_and_weak_directional_claims():
     assert validate_candidate(candidate())==(True,"valid")
     assert validate_candidate(candidate(asset_class="equity"))[1]=="ineligible_asset_class"
     assert validate_candidate(candidate(evidence_grade="C",direction="LONG"))[1]=="grade_c_must_be_watch"
-    assert validate_candidate(candidate(sources=["http://example.com"))[1]=="sources_must_be_https"
+    assert validate_candidate(candidate(sources=["http://example.com"])[1]=="sources_must_be_https"
 
 def test_trading_brief_fails_closed_without_validated_candidate_file(tmp_path):
     report,audit=build_trading_brief(tmp_path/"missing.json","2026-11-26")
