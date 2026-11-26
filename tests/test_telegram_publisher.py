@@ -33,7 +33,7 @@ def test_send_uses_chat_and_plain_text(monkeypatch):
         def __exit__(self, *args):
             return False
         def read(self):
-            return b'{"ok": true}'
+            return b'{"ok": true, "result": {"message_id": 123}}'
 
     def fake_urlopen(request, timeout):
         seen["payload"] = json.loads(request.data.decode("utf-8"))
@@ -59,7 +59,7 @@ def test_send_retries_rate_limit(monkeypatch):
         def __exit__(self, *args):
             return False
         def read(self):
-            return b'{"ok": true}'
+            return b'{"ok": true, "result": {"message_id": 123}}'
 
     def fake_urlopen(request, timeout):
         calls["count"] += 1
@@ -135,3 +135,23 @@ def test_publish_report_converts_bold_markup_and_escapes_html(tmp_path, monkeypa
     monkeypatch.setattr(publisher, "_send", lambda token, chat_id, text: sent.append(text))
     assert publisher.publish_report(report, "dummy", "@grios") == 1
     assert "<b>نمای بازار</b> &amp; BTC: 100" in sent[0]
+
+
+def test_send_returns_telegram_message_id(monkeypatch):
+    class Response:
+        status = 200
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def read(self): return b'{"ok": true, "result": {"message_id": 9876}}'
+    monkeypatch.setattr(publisher.urllib.request, "urlopen", lambda request, timeout: Response())
+    assert publisher._send("dummy", "@grios", "report") == 9876
+
+
+def test_publish_report_with_ids_returns_one_id_per_chunk(tmp_path, monkeypatch):
+    report = tmp_path / "report.txt"
+    report.write_text("first\\nsecond", encoding="utf-8")
+    sent = []
+    monkeypatch.setattr(publisher, "_send", lambda token, chat_id, text: sent.append(text) or (100 + len(sent)))
+    ids = publisher.publish_report_with_ids(report, "dummy", "@grios")
+    assert ids == [101]
+    assert len(sent) == 1
