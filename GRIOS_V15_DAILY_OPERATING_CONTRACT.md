@@ -22,7 +22,9 @@ Target coverage is at least 10 independent qualified candidates, but this is not
 Every LONG, SHORT or WATCH candidate must include:
 - Instrument, asset class and direction.
 - Latest price, quote type, provider/venue and timezone-aware timestamp.
-- Fresh catalyst with publication date and event date.
+- Fresh catalyst with publication timestamp and event date.
+- Quote freshness gate: maximum age 30 minutes for crypto and 24 hours for FX/commodities; future-dated quotes are rejected.
+- Catalyst publication must be timezone-aware, not future-dated beyond tolerance, and no older than 72 hours.
 - Causal transmission from catalyst to instrument.
 - Observable activation trigger.
 - Explicit invalidation.

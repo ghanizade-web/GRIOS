@@ -12,7 +12,7 @@ SOCIAL = [
     "گیت‌هاب: https://github.com/ghanizade-web",
 ]
 ELIGIBLE = {"crypto", "fx", "commodity"}
-REQUIRED = {"instrument","asset_class","direction","price","price_type","provider","timestamp","catalyst","catalyst_date","transmission","trigger","invalidation","horizon","risk","evidence_grade","sources"}
+REQUIRED = {"instrument","asset_class","direction","price","price_type","provider","timestamp","catalyst","catalyst_published_at","catalyst_date","transmission","trigger","invalidation","horizon","risk","evidence_grade","sources"}
 THEMES = {
  "critical_materials": ("copper","lithium","uranium","rare earth","gallium","germanium","antimony","tungsten","platinum","palladium","rhodium","graphite","nickel","cobalt","critical mineral"),
  "ai_compute": ("artificial intelligence","data center","datacenter","hyperscaler","gpu","semiconductor","chip","high-bandwidth memory","hbm","advanced packaging","optical interconnect"),
@@ -44,17 +44,27 @@ def https(value):
     except ValueError:
         return False
 
-def validate_candidate(item):
+def validate_candidate(item, now=None):
     if not isinstance(item,dict): return False,"candidate_not_object"
     missing=REQUIRED-set(item)
     if missing: return False,"missing:"+",".join(sorted(missing))
-    if str(item["asset_class"]).lower() not in ELIGIBLE: return False,"ineligible_asset_class"
+    asset_class=str(item["asset_class"]).lower()
+    if asset_class not in ELIGIBLE: return False,"ineligible_asset_class"
     direction=str(item["direction"]).upper()
     if direction not in {"LONG","SHORT","WATCH"}: return False,"invalid_direction"
     try:
         if float(item["price"])<=0: return False,"invalid_price"
     except (TypeError,ValueError): return False,"invalid_price"
-    if parse_time(item["timestamp"]) is None: return False,"timestamp_must_be_timezone_aware"
+    now=(now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    quote_time=parse_time(item["timestamp"])
+    if quote_time is None: return False,"timestamp_must_be_timezone_aware"
+    if quote_time>now+timedelta(minutes=5): return False,"future_quote_timestamp"
+    quote_max_age=timedelta(minutes=30) if asset_class=="crypto" else timedelta(hours=24)
+    if now-quote_time>quote_max_age: return False,"stale_quote"
+    catalyst_time=parse_time(item["catalyst_published_at"])
+    if catalyst_time is None: return False,"catalyst_timestamp_must_be_timezone_aware"
+    if catalyst_time>now+timedelta(minutes=10): return False,"future_catalyst_timestamp"
+    if now-catalyst_time>timedelta(hours=72): return False,"stale_catalyst"
     try: date.fromisoformat(str(item["catalyst_date"]))
     except ValueError: return False,"invalid_catalyst_date"
     grade=str(item["evidence_grade"]).upper()
@@ -65,7 +75,7 @@ def validate_candidate(item):
         if not str(item.get(key,"")).strip(): return False,"empty:"+key
     return True,"valid"
 
-def build_trading_brief(candidate_path, report_date):
+def build_trading_brief(candidate_path, report_date, now=None):
     candidate_path=Path(candidate_path)
     input_present=candidate_path.is_file()
     payload=read_json(candidate_path)
@@ -73,7 +83,7 @@ def build_trading_brief(candidate_path, report_date):
     if not isinstance(raw,list): raw=[]
     accepted=[]; rejected=[]
     for item in raw:
-        ok,reason=validate_candidate(item)
+        ok,reason=validate_candidate(item,now=now)
         (accepted if ok else rejected).append(item if ok else {"instrument":item.get("instrument") if isinstance(item,dict) else None,"reason":reason})
     lines=[f"GRIOS v15 — گزارش روزانه فرصت‌های معاملاتی | {report_date}",
            "محدوده مجاز معاملات: رمزارزها، جفت‌ارزها و کالاها. سهام و ETFهای سهامی از فهرست نامزدهای معامله حذف شده‌اند.",""]
@@ -91,6 +101,7 @@ def build_trading_brief(candidate_path, report_date):
             lines += [f"{n}. **{x['instrument']} — {str(x['direction']).upper()}**",
                       f"قیمت: {x['price']} | نوع مظنه: {x['price_type']} | ارائه‌دهنده: {x['provider']} | زمان: {x['timestamp']}",
                       f"کاتالیزور ({x['catalyst_date']}): {x['catalyst']}",
+                      f"زمان انتشار محرک: {x['catalyst_published_at']}",
                       f"مسیر اثر: {x['transmission']}",
                       f"محرک فعال‌سازی: {x['trigger']}",
                       f"شرط ابطال: {x['invalidation']}",
@@ -100,7 +111,7 @@ def build_trading_brief(candidate_path, report_date):
         lines.append(f"یادداشت پوشش: {len(accepted)} نامزد واجد شرایط؛ کمتر از هدف ۱۰ موردی. هیچ ایدهٔ ضعیف یا تکراری اضافه نشده است.")
     if rejected: lines.append(f"تعداد رکوردهای ردشده: {len(rejected)}؛ علت‌ها در فایل ممیزی ثبت شده‌اند.")
     lines += ["","پیوندهای شبکه‌های اجتماعی:",*SOCIAL]
-    audit={"schema_version":"1.1","report_type":"catalyst_driven_trading_brief","report_date":report_date,
+    audit={"schema_version":"1.2","report_type":"catalyst_driven_trading_brief","report_date":report_date,
            "candidate_input_present":input_present,
            "candidate_input_status":"PRESENT" if input_present else "UPSTREAM_NOT_INTEGRATED",
            "accepted_count":len(accepted),"accepted_candidates":accepted,"rejected":rejected,
