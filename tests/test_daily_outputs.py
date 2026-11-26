@@ -38,6 +38,7 @@ def test_capital_flow_report_filters_stale_items_and_labels_reported_claims(tmp_
       {"title":"Old lithium mine expansion","summary":"Historical announcement.","url":"https://example.com/old","publisher":"Example","published_at":"2026-11-20T00:00:00+00:00","evidence_tier":"TIER_2"}]}),encoding="utf-8")
     report,evidence=build_capital_flows_report(news,tmp_path/"none","2026-11-26",now=now)
     assert "Copper mine expansion" in report
+    assert "پیوند منبع: https://example.com/copper" in report
     assert "اجرای معامله مستقلاً احراز نشده" in report
     assert "Old lithium mine expansion" not in report
     assert len(evidence["selected_news"])==1
