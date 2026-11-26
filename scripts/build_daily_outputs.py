@@ -1,5 +1,5 @@
 from __future__ import annotations
-import argparse, json, re
+import argparse, json, math, re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlparse
@@ -53,7 +53,8 @@ def validate_candidate(item, now=None):
     direction=str(item["direction"]).upper()
     if direction not in {"LONG","SHORT","WATCH"}: return False,"invalid_direction"
     try:
-        if float(item["price"])<=0: return False,"invalid_price"
+        price=float(item["price"])
+        if not math.isfinite(price) or price<=0: return False,"invalid_price"
     except (TypeError,ValueError): return False,"invalid_price"
     now=(now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     quote_time=parse_time(item["timestamp"])
@@ -162,10 +163,29 @@ def build_capital_flows_report(news_path,sec13f_dir,report_date,now=None,sec13f_
     sec_status=read_json(sec13f_summary) if sec13f_summary else {}
     sec_state=sec_status.get("status","UNAVAILABLE")
     sec_reason=sec_status.get("reason")
+    feed_health=news.get("feed_health")
+    feed_health=feed_health if isinstance(feed_health,list) else []
+    failed_feeds=[x for x in feed_health if not isinstance(x,dict) or x.get("status")!="OK"]
+    if feed_health:
+        news_status="PARTIAL" if failed_feeds else news.get("status","FULL")
+    else:
+        news_status="COVERAGE_UNVERIFIED" if news.get("status") not in {None,"UNAVAILABLE"} else "UNAVAILABLE"
+    if failed_feeds:
+        feed_lines=[
+            f"- فید ناموفق: {x.get('feed','نامشخص')} | خطا: {x.get('error_type') or x.get('status','نامشخص')}"
+            if isinstance(x,dict) else "- رکورد سلامت فید نامعتبر است."
+            for x in failed_feeds
+        ]
+    elif feed_health:
+        feed_lines=["- همهٔ فیدهای ثبت‌شده وضعیت OK دارند."]
+    else:
+        feed_lines=["- فهرست سلامت فیدها ثبت نشده؛ پوشش کامل قابل تأیید نیست."]
     lines=[f"GRIOS v15 — گزارش جریان سرمایه راهبردی و مگاترندها | {report_date}","",
            "هدف: ردیابی سرمایهٔ نهادی، مواد راهبردی، تقاضای صنعتی، خریدهای بزرگ، CapEx و گلوگاه‌های زنجیرهٔ تأمین.",
            "برای جلوگیری از تحریف، عنوان و گزیدهٔ خبرها به زبان اصلی منبع درج شده‌اند؛ ارزیابی و طبقه‌بندی GRIOS فارسی است.",
-           "اصل راستی‌آزمایی: تیتر خبر اثبات خرید تکمیل‌شده نیست. اعلام، امضا، تعهد، اجرا و تکمیل معامله وضعیت‌های متفاوت‌اند. مبلغ نامشخص، نامشخص باقی می‌ماند.","",
+           "اصل راستی‌آزمایی: تیتر خبر اثبات خرید تکمیل‌شده نیست. اعلام، امضا، تعهد، اجرا و تکمیل معامله وضعیت‌های متفاوت‌اند. مبلغ نامشخص، نامشخص باقی می‌ماند.",
+           f"وضعیت پوشش منابع: {len(feed_health)-len(failed_feeds)}/{len(feed_health)} فید سالم | وضعیت داده: {news_status}.",
+           *feed_lines,"",
            "۱) افشاهای نهادی در SEC Form 13F"]
     if reports:
         for r in reports:
@@ -208,8 +228,8 @@ def build_capital_flows_report(news_path,sec13f_dir,report_date,now=None,sec13f_
               "نبود داده یا خبر، اثبات نبود فعالیت نیست. هیچ شرکتی صرفاً به‌دلیل تطابق واژه‌ای به‌عنوان ذی‌نفع معرفی نمی‌شود.","",
               "پیوندهای شبکه‌های اجتماعی:",*SOCIAL]
     evidence={"schema_version":"1.1","report_type":"strategic_capital_flows_megatrends","report_date":report_date,
-              "news_status":news.get("status","UNAVAILABLE"),"news_retrieved_at":news.get("retrieved_at"),
-              "news_window_hours":news.get("window_hours",72),"feed_health":news.get("feed_health"),
+              "news_status":news_status,"news_retrieved_at":news.get("retrieved_at"),
+              "news_window_hours":news.get("window_hours",72),"feed_health":feed_health,
               "selected_news":[{k:v for k,v in x.items() if not k.startswith("_")} for x in selected],
               "sec_13f_collection_status":sec_state,"sec_13f_collection_reason":sec_reason,
               "sec_13f_reports":reports,

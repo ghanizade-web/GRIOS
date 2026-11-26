@@ -91,3 +91,37 @@ def test_fx_and_commodity_quotes_use_daily_freshness_window():
     commodity=candidate(asset_class="commodity",timestamp=(now-timedelta(hours=23)).isoformat(),catalyst_published_at=now.isoformat())
     assert validate_candidate(fx,now=now)==(True,"valid")
     assert validate_candidate(commodity,now=now)==(True,"valid")
+
+
+def test_candidate_rejects_non_finite_prices():
+    assert validate_candidate(candidate(price=float("nan")))[1] == "invalid_price"
+    assert validate_candidate(candidate(price=float("inf")))[1] == "invalid_price"
+
+
+def test_capital_flow_report_discloses_failed_feed_coverage(tmp_path):
+    now=datetime(2026,11,26,tzinfo=timezone.utc)
+    news=tmp_path/"news.json"
+    news.write_text(json.dumps({
+        "status":"FULL",
+        "retrieved_at":now.isoformat(),
+        "window_hours":72,
+        "feed_health":[
+            {"feed":"Official feed A","status":"OK"},
+            {"feed":"Official feed B","status":"ERROR","error_type":"HTTPStatusError"}
+        ],
+        "items":[]
+    }),encoding="utf-8")
+    report,evidence=build_capital_flows_report(news,tmp_path/"none","2026-11-26",now=now)
+    assert "وضعیت داده: PARTIAL" in report
+    assert "Official feed B" in report
+    assert evidence["news_status"]=="PARTIAL"
+    assert len(evidence["feed_health"])==2
+
+
+def test_capital_flow_report_marks_missing_feed_health_as_unverified(tmp_path):
+    now=datetime(2026,11,26,tzinfo=timezone.utc)
+    news=tmp_path/"news.json"
+    news.write_text(json.dumps({"status":"FULL","retrieved_at":now.isoformat(),"items":[]}),encoding="utf-8")
+    report,evidence=build_capital_flows_report(news,tmp_path/"none","2026-11-26",now=now)
+    assert "وضعیت داده: COVERAGE_UNVERIFIED" in report
+    assert evidence["news_status"]=="COVERAGE_UNVERIFIED"
