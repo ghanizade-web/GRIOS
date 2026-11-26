@@ -79,7 +79,7 @@ def apply_rtl_direction(message: str) -> str:
     return "\n".join(rendered)
 
 
-def _send(token: str, chat_id: str, text: str, timeout: int = 20) -> None:
+def _send(token: str, chat_id: str, text: str, timeout: int = 20) -> int:
     body = json.dumps({
         "chat_id": chat_id,
         "text": text,
@@ -98,7 +98,10 @@ def _send(token: str, chat_id: str, text: str, timeout: int = 20) -> None:
                 result = json.loads(response.read().decode("utf-8"))
                 if response.status != 200 or not result.get("ok"):
                     raise RuntimeError("TELEGRAM_API_REJECTED")
-                return
+                message_id = result.get("result", {}).get("message_id")
+                if not isinstance(message_id, int):
+                    raise RuntimeError("TELEGRAM_MESSAGE_ID_MISSING")
+                return message_id
         except urllib.error.HTTPError as exc:
             if (exc.code == 429 or 500 <= exc.code < 600) and attempt < 2:
                 delay = 1
@@ -120,20 +123,39 @@ def _send(token: str, chat_id: str, text: str, timeout: int = 20) -> None:
     raise RuntimeError("TELEGRAM_DELIVERY_FAILED")
 
 
-def publish_report(report_path: str | Path, token: str, chat_id: str) -> int:
+def _render_chunks(report_path: str | Path) -> list[str]:
     report = Path(report_path).read_text(encoding="utf-8")
-    # Add RTL isolates before measuring length; they count toward Telegram's limit.
     rendered = apply_rtl_direction(format_telegram_html(report))
-    chunks = chunk_message(rendered)
+    return chunk_message(rendered)
+
+
+def publish_report(report_path: str | Path, token: str, chat_id: str) -> int:
+    # Backward-compatible count-only API used by existing callers and tests.
+    chunks = _render_chunks(report_path)
     for chunk in chunks:
         _send(token, chat_id, chunk)
     return len(chunks)
 
 
+def publish_report_with_ids(report_path: str | Path, token: str, chat_id: str) -> list[int]:
+    chunks = _render_chunks(report_path)
+    message_ids = []
+    for chunk in chunks:
+        message_id = _send(token, chat_id, chunk)
+        if not isinstance(message_id, int):
+            raise RuntimeError("TELEGRAM_MESSAGE_ID_MISSING")
+        message_ids.append(message_id)
+    return message_ids
+
+
 def main() -> int:
     token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
-    report_path = Path(os.getenv("GRIOS_REPORT_PATH", "reports/latest.txt"))
+    raw_paths = os.getenv("GRIOS_REPORT_PATHS", "").strip()
+    if raw_paths:
+        report_paths = [Path(item) for item in raw_paths.split(os.pathsep) if item.strip()]
+    else:
+        report_paths = [Path(os.getenv("GRIOS_REPORT_PATH", "reports/latest.txt"))]
 
     if not token and not chat_id:
         print("TELEGRAM_PUBLISH: SKIPPED_NOT_CONFIGURED")
@@ -141,17 +163,20 @@ def main() -> int:
     if not token or not chat_id:
         print("TELEGRAM_PUBLISH: CONFIGURATION_INCOMPLETE")
         return 2
-    if not report_path.is_file():
+    if not report_paths or any(not path.is_file() for path in report_paths):
         print("TELEGRAM_PUBLISH: REPORT_NOT_FOUND")
         return 2
     try:
-        count = publish_report(report_path, token, chat_id)
+        all_ids = []
+        for report_path in report_paths:
+            ids = publish_report_with_ids(report_path, token, chat_id)
+            all_ids.extend(ids)
+            print(f"TELEGRAM_REPORT_SENT: {report_path.name} MESSAGE_IDS={','.join(map(str, ids))}")
     except (OSError, RuntimeError, ValueError) as exc:
         print(f"TELEGRAM_PUBLISH: FAILED ({exc})")
         return 1
-    print(f"TELEGRAM_PUBLISH: SENT ({count} message(s))")
+    print(f"TELEGRAM_PUBLISH: SENT ({len(report_paths)} reports; {len(all_ids)} message(s)); MESSAGE_IDS={','.join(map(str, all_ids))}")
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
