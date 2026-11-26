@@ -5,11 +5,11 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 SOCIAL = [
-    "Instagram: https://www.instagram.com/dr.ghanizade",
-    "X: https://x.com/DrGhanizadeh",
-    "LinkedIn: https://www.linkedin.com/in/drghanizade",
-    "Farcaster: https://farcaster.xyz/drghanizade",
-    "GitHub: https://github.com/ghanizade-web",
+    "اینستاگرام: https://www.instagram.com/dr.ghanizade",
+    "ایکس: https://x.com/DrGhanizadeh",
+    "لینکدین: https://www.linkedin.com/in/drghanizade",
+    "فارکستر: https://farcaster.xyz/drghanizade",
+    "گیت‌هاب: https://github.com/ghanizade-web",
 ]
 ELIGIBLE = {"crypto", "fx", "commodity"}
 REQUIRED = {"instrument","asset_class","direction","price","price_type","provider","timestamp","catalyst","catalyst_date","transmission","trigger","invalidation","horizon","risk","evidence_grade","sources"}
@@ -22,7 +22,7 @@ THEMES = {
  "industrial_capex": ("capex","capital expenditure","procurement","purchase order","supply agreement","offtake","long-term contract","factory","mine development","processing plant","production capacity","construction contract","government award"),
  "institutional_capital": ("institutional investor","asset manager","sovereign wealth","13f","fund flow","etf flow","portfolio holding","stake","acquisition","investment","funding round"),
 }
-CAPITAL_WORDS = ("capex","capital expenditure","procurement","purchase order","supply agreement","offtake","contract","acquisition","investment","funding","financing","stake","award","factory","mine development","production capacity","order book")
+CAPITAL_WORDS = ("capex","capital expenditure","procurement","purchase order","supply agreement","offtake","contract","acquisition","investment","funding","financing","stake","award","factory","mine development","production capacity","order book","expand","expansion","loan","loans","credit facility","facility","construction","build","new plant","capacity expansion")
 
 def read_json(path):
     try:
@@ -116,6 +116,7 @@ def _fresh_items(payload, now):
         if not isinstance(item,dict) or not https(item.get("url")) or not str(item.get("title","")).strip(): continue
         published=parse_time(item.get("published_at"))
         if published is None or published<cutoff or published>now+timedelta(hours=6): continue
+        if item.get("evidence_tier") not in {"TIER_1","TIER_2","TIER_3"}: continue
         url=str(item["url"]).strip()
         if url in seen_urls: continue
         text=f"{item.get('title','')} {item.get('summary','')}".casefold()
