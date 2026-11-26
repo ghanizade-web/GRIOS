@@ -155,3 +155,36 @@ def test_publish_report_with_ids_returns_one_id_per_chunk(tmp_path, monkeypatch)
     ids = publisher.publish_report_with_ids(report, "dummy", "@grios")
     assert ids == [101]
     assert len(sent) == 1
+
+
+def test_publish_report_with_ids_logs_each_chunk_immediately(tmp_path, monkeypatch, capsys):
+    report = tmp_path / "capital-flows.txt"
+    report.write_text("report", encoding="utf-8")
+    monkeypatch.setattr(publisher, "_render_chunks", lambda path: ["part one", "part two"])
+    sent = []
+    monkeypatch.setattr(publisher, "_send", lambda token, chat_id, text: sent.append(text) or (200 + len(sent)))
+
+    assert publisher.publish_report_with_ids(report, "dummy", "@grios") == [201, 202]
+    output = capsys.readouterr().out
+    assert "TELEGRAM_CHUNK_SENT: capital-flows.txt CHUNK=1/2 MESSAGE_ID=201" in output
+    assert "TELEGRAM_CHUNK_SENT: capital-flows.txt CHUNK=2/2 MESSAGE_ID=202" in output
+
+
+def test_partial_report_failure_keeps_already_sent_chunk_id_in_log(tmp_path, monkeypatch, capsys):
+    report = tmp_path / "trading-brief.txt"
+    report.write_text("report", encoding="utf-8")
+    monkeypatch.setattr(publisher, "_render_chunks", lambda path: ["part one", "part two"])
+    calls = {"count": 0}
+
+    def send(token, chat_id, text):
+        calls["count"] += 1
+        if calls["count"] == 2:
+            raise RuntimeError("TELEGRAM_NETWORK_ERROR")
+        return 301
+
+    monkeypatch.setattr(publisher, "_send", send)
+    with pytest.raises(RuntimeError, match="TELEGRAM_NETWORK_ERROR"):
+        publisher.publish_report_with_ids(report, "dummy", "@grios")
+    output = capsys.readouterr().out
+    assert "TELEGRAM_CHUNK_SENT: trading-brief.txt CHUNK=1/2 MESSAGE_ID=301" in output
+    assert "CHUNK=2/2" not in output

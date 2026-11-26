@@ -140,11 +140,16 @@ def publish_report(report_path: str | Path, token: str, chat_id: str) -> int:
 def publish_report_with_ids(report_path: str | Path, token: str, chat_id: str) -> list[int]:
     chunks = _render_chunks(report_path)
     message_ids = []
-    for chunk in chunks:
+    for index, chunk in enumerate(chunks, start=1):
         message_id = _send(token, chat_id, chunk)
         if not isinstance(message_id, int):
             raise RuntimeError("TELEGRAM_MESSAGE_ID_MISSING")
         message_ids.append(message_id)
+        print(
+            f"TELEGRAM_CHUNK_SENT: {Path(report_path).name} "
+            f"CHUNK={index}/{len(chunks)} MESSAGE_ID={message_id}",
+            flush=True,
+        )
     return message_ids
 
 
