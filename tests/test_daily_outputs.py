@@ -23,7 +23,9 @@ def test_trading_brief_fails_closed_without_validated_candidate_file(tmp_path):
     assert audit["status"]=="NO_CONFIRMED_TRADE"
 
 def test_capital_flow_report_is_honest_when_no_sources_exist(tmp_path):
-    report,evidence=build_capital_flows_report(tmp_path/"missing.json",tmp_path/"no-13f","2026-11-26",now=datetime(2026,11,26,tzinfo=timezone.utc))
+    summary=tmp_path/"sec-summary.json"
+    summary.write_text(json.dumps({"status":"NOT_CONFIGURED","reason":"SEC_USER_AGENT missing"}),encoding="utf-8")
+    report,evidence=build_capital_flows_report(tmp_path/"missing.json",tmp_path/"no-13f","2026-11-26",now=datetime(2026,11,26,tzinfo=timezone.utc),sec13f_summary=summary)
     assert "گردآوری 13F در این اجرا انجام نشد" in report
     assert "تصویر فصلی و با تأخیر" in report
     assert "این موضوع اثبات نمی‌کند که هیچ فعالیتی رخ نداده است." in report
