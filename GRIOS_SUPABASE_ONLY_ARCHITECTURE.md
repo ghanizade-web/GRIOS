@@ -7,7 +7,7 @@
 
 Supabase is the only GRIOS Data Hub and persistent backend. Cloudflare Worker, Wrangler deployment, Worker bearer tokens, and Worker URLs are deprecated and must not be used by any active workflow.
 
-GitHub Actions remains the scheduled compute/orchestration layer. It runs the Python collectors and report generation, then writes normalized observations directly to Supabase. The existing daily schedule remains unchanged (12:00 UTC / 15:30 Asia/Tehran).
+GitHub Actions remains the scheduled compute/orchestration layer. It runs the Python collectors and report generation, then writes normalized observations directly to Supabase. The canonical daily reporting workflow in the private `market-pulse` repository runs at 07:30 UTC (08:30 Netherlands winter time / 09:30 summer time), uses Europe/Amsterdam for report dates, and builds two independent outputs. Scheduled runs archive only; Telegram publication is manual-only pending user approval and end-to-end acceptance. This schedule supersedes the former 12:00 UTC / 15:30 Asia/Tehran reference.
 
 ## Verified Supabase project
 
