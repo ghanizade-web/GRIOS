@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+# Contract tests for the independent v15 daily report outputs.
 import json
 from datetime import datetime, timezone
 from scripts.build_daily_outputs import build_capital_flows_report, build_trading_brief, validate_candidate
