@@ -102,8 +102,10 @@ def _fresh_items(payload, now):
     out.sort(key=lambda x:(x["_capital"],x.get("evidence_tier")=="TIER_1",x["_published"]),reverse=True)
     return out
 
-def _load_13f(directory):
+def _load_13f(directory, watchlist_path=None):
     reports=[]
+    watchlist=read_json(watchlist_path) if watchlist_path else {}
+    manager_names={str(item.get("cik","")).zfill(10):item.get("name") for item in watchlist.get("watchlist",[]) if isinstance(item,dict) and item.get("cik") and item.get("name")}
     for path in sorted(Path(directory).glob("*.json")) if Path(directory).is_dir() else []:
         p=read_json(path)
         if not p or not p.get("report_period"): continue
@@ -111,12 +113,13 @@ def _load_13f(directory):
         urls=[x.get("source_url") for x in filings if isinstance(x,dict) and https(x.get("source_url"))] if isinstance(filings,list) else []
         holdings=[x for x in holdings if isinstance(x,dict)] if isinstance(holdings,list) else []
         holdings.sort(key=lambda x:float(x.get("value_usd") or 0),reverse=True)
-        reports.append({"manager":p.get("filer_name") or p.get("manager_name") or p.get("name") or path.stem,"report_period":p["report_period"],"filed_at":p.get("latest_filed_at"),"holdings_count":p.get("holdings_count",len(holdings)),"top_holdings":[{"issuer":x.get("issuer"),"value_usd":x.get("value_usd")} for x in holdings[:3]],"source_urls":urls})
+        cik=str(p.get("filer_cik") or path.stem.split("_")[0]).zfill(10)
+        reports.append({"filer_cik":cik,"manager":p.get("filer_name") or p.get("manager_name") or p.get("name") or manager_names.get(cik) or path.stem,"report_period":p["report_period"],"filed_at":p.get("latest_filed_at"),"holdings_count":p.get("holdings_count",len(holdings)),"top_holdings":[{"issuer":x.get("issuer"),"value_usd":x.get("value_usd")} for x in holdings[:3]],"source_urls":urls})
     return reports
 
-def build_capital_flows_report(news_path,sec13f_dir,report_date,now=None):
+def build_capital_flows_report(news_path,sec13f_dir,report_date,now=None,sec13f_watchlist=None):
     now=(now or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    news=read_json(news_path); stories=_fresh_items(news,now); reports=_load_13f(sec13f_dir)
+    news=read_json(news_path); stories=_fresh_items(news,now); reports=_load_13f(sec13f_dir,sec13f_watchlist)
     lines=[f"GRIOS v15 — گزارش جریان سرمایه راهبردی و مگاترندها | {report_date}","","هدف: ردیابی سرمایه نهادی، خریدهای بزرگ، CapEx، مواد راهبردی و گلوگاه‌های زنجیره تأمین.","","Objective: detect structural demand, supply bottlenecks and disclosed capital allocation before they become consensus narratives.","","اصل راستی‌آزمایی: تیتر خبر اثبات خرید تکمیل‌شده نیست؛ اعلام، امضا، تعهد، اجرا و تکمیل معامله وضعیت‌های متفاوت‌اند.","Evidence discipline: a headline is not proof of a completed purchase. Announced, signed, committed, in-progress and completed activity are distinct. Unknown amounts remain undisclosed.","","1) SEC Form 13F institutional disclosures"]
     if reports:
         for r in reports:
@@ -141,11 +144,12 @@ def main():
     p.add_argument("--news",default="reports/news-intelligence-latest.json")
     p.add_argument("--trading-candidates",default="reports/trading-candidates-latest.json")
     p.add_argument("--sec13f-dir",default="reports/sec-13f-watchlist/reports")
+    p.add_argument("--sec13f-watchlist",default="config/sec_13f_watchlist.json")
     p.add_argument("--output-dir",default="reports")
     p.add_argument("--date",default=None)
     a=p.parse_args(); day=a.date or datetime.now(timezone.utc).date().isoformat(); out=Path(a.output_dir); out.mkdir(parents=True,exist_ok=True)
     trading,ta=build_trading_brief(Path(a.trading_candidates),day)
-    capital,ce=build_capital_flows_report(Path(a.news),Path(a.sec13f_dir),day)
+    capital,ce=build_capital_flows_report(Path(a.news),Path(a.sec13f_dir),day,sec13f_watchlist=Path(a.sec13f_watchlist))
     (out/"trading-brief-en.txt").write_text(trading,encoding="utf-8")
     (out/"capital-flows-en.txt").write_text(capital,encoding="utf-8")
     (out/"trading-brief-audit.json").write_text(json.dumps(ta,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
