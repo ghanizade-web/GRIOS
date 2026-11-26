@@ -66,10 +66,14 @@ Publish a concise Persian, decision-first intelligence briefing that identifies 
 - Keep megatrends separate from today's directional symbol radar unless a current catalyst and market evidence support inclusion.
 - If no market has a defensible directional bias, explicitly say that no high-conviction direction is identified and waiting is appropriate.
 
-## Technical implementation
+## Historical technical implementation — deprecated
 
-- market_news.py: curated RSS retrieval, topic classification, publisher attribution and evidence metadata.
-- daily_narrative_report.py: Persian synthesis, market-specific news grouping and concise symbol radar.
-- cftc_context.py: read-only, validated CFTC Futures Only positioning context.
-- scanner.py: passes market observations, calendar, news and positioning to the renderer.
-- market-pulse/.github/workflows/grios-data-hub-scan.yml: builds contexts and publishes the integrated report once.
+The following component list describes the former single-integrated-report pipeline. It is retained only as historical context and must not be used to infer the current publication path:
+
+- `market_news.py`: curated RSS retrieval, topic classification, publisher attribution and evidence metadata.
+- `daily_narrative_report.py`: former Persian synthesis and integrated market recap.
+- `cftc_context.py`: read-only, validated CFTC Futures Only positioning context.
+- `scanner.py`: legacy market-observation scan; its `reports/latest.txt` output is not the canonical daily Telegram payload.
+- The old integrated-report publication step is retired.
+
+The active publication contract is [`GRIOS_V15_DAILY_OPERATING_CONTRACT.md`](GRIOS_V15_DAILY_OPERATING_CONTRACT.md). The private `market-pulse` workflow calls `scripts/build_daily_outputs.py` to create two independent reports and their evidence files. Its canonical schedule is 07:30 UTC, archive dates use Europe/Amsterdam, scheduled runs do not publish to Telegram, and manual publication requires explicit approval.
