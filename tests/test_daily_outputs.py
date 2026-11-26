@@ -47,3 +47,23 @@ def test_13f_is_reported_as_holdings_snapshot_not_recent_buy(tmp_path):
     assert "Top disclosed position" in report
     assert "do not identify trade dates" in report
     assert evidence["sec_13f_reports"][0]["source_urls"]==["https://www.sec.gov/Archives/edgar/data/example"]
+
+
+def test_13f_cik_is_resolved_to_watchlist_institution_name(tmp_path):
+    reports=tmp_path/"13f"; reports.mkdir()
+    (reports/"0001364742_2026-09-30.json").write_text(json.dumps({
+        "filer_cik":"0001364742",
+        "report_period":"2026-09-30",
+        "latest_filed_at":"2026-11-14",
+        "holdings_count":1,
+        "holdings":[{"issuer":"Example Issuer","value_usd":1000}],
+        "applied_filings":[{"source_url":"https://www.sec.gov/Archives/edgar/data/example"}],
+    }),encoding="utf-8")
+    watchlist=tmp_path/"watchlist.json"
+    watchlist.write_text(json.dumps({"watchlist":[{"cik":"0001364742","name":"BlackRock, Inc."}]}),encoding="utf-8")
+    report,evidence=build_capital_flows_report(
+        tmp_path/"missing-news.json",reports,"2026-11-26",
+        now=datetime(2026,11,26,tzinfo=timezone.utc),sec13f_watchlist=watchlist
+    )
+    assert "BlackRock, Inc." in report
+    assert evidence["sec_13f_reports"][0]["filer_cik"]=="0001364742"
