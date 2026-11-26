@@ -17,15 +17,16 @@ def test_candidate_contract_rejects_equities_and_weak_directional_claims():
 
 def test_trading_brief_fails_closed_without_validated_candidate_file(tmp_path):
     report,audit=build_trading_brief(tmp_path/"missing.json","2026-11-26")
-    assert "No confirmed trade; monitor only." in report
+    assert "هیچ معاملهٔ تأییدشده‌ای برای انتشار وجود ندارد." in report
+    assert "فایل نامزدهای معاملاتی ساختاریافته از اسکنر هنوز تولید نشده است" in report
     assert audit["accepted_count"]==0
     assert audit["status"]=="NO_CONFIRMED_TRADE"
 
 def test_capital_flow_report_is_honest_when_no_sources_exist(tmp_path):
     report,evidence=build_capital_flows_report(tmp_path/"missing.json",tmp_path/"no-13f","2026-11-26",now=datetime(2026,11,26,tzinfo=timezone.utc))
-    assert "No SEC 13F watchlist snapshot" in report
-    assert "quarterly, delayed holdings snapshots" in report
-    assert "This is not proof that no activity occurred." in report
+    assert "گردآوری 13F در این اجرا انجام نشد" in report
+    assert "تصویر فصلی و با تأخیر" in report
+    assert "این موضوع اثبات نمی‌کند که هیچ فعالیتی رخ نداده است." in report
     assert evidence["sec_13f_reports"]==[]
 
 def test_capital_flow_report_filters_stale_items_and_labels_reported_claims(tmp_path):
@@ -45,7 +46,7 @@ def test_13f_is_reported_as_holdings_snapshot_not_recent_buy(tmp_path):
     report,evidence=build_capital_flows_report(tmp_path/"missing-news.json",d,"2026-11-26",now=datetime(2026,11,26,tzinfo=timezone.utc))
     assert "Example Manager" in report
     assert "Top disclosed position" in report
-    assert "do not identify trade dates" in report
+    assert "تاریخ معامله را مشخص نمی‌کند" in report
     assert evidence["sec_13f_reports"][0]["source_urls"]==["https://www.sec.gov/Archives/edgar/data/example"]
 
 
