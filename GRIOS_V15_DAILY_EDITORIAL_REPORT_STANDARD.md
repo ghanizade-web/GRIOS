@@ -1,5 +1,7 @@
 # GRIOS v15 — Daily Editorial Intelligence Standard
 
+> **Status: historical/context reference for the daily pipeline.** Its single integrated report structure and inclusion of US equities as a daily market section are not the active publication contract. The current scheduled outputs are governed by [GRIOS_V15_DAILY_OPERATING_CONTRACT.md](GRIOS_V15_DAILY_OPERATING_CONTRACT.md), which separates the crypto/FX/commodities trading brief from strategic capital-flow and megatrend intelligence.
+
 ## Mission
 
 Publish a concise Persian, decision-first intelligence briefing that identifies the most relevant daily market directions and explains the political, economic, monetary, corporate and geopolitical news affecting each asset class.
