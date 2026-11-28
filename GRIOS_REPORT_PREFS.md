@@ -1,5 +1,8 @@
 # GRIOS market report preferences
 
+> **Daily Telegram report override — 2026-11-28:** This file is historical preference context, not the active daily publication contract. For the scheduled Telegram report, the sole authority is [GRIOS_DAILY_REPORT_MASTER_PROMPT_FA.md](GRIOS_DAILY_REPORT_MASTER_PROMPT_FA.md) and [GRIOS_V15_DAILY_OPERATING_CONTRACT.md](GRIOS_V15_DAILY_OPERATING_CONTRACT.md). Those instructions supersede conflicting legacy lines below, including excluding Tehran stocks, limiting markets, avoiding structured tables, and allowing variable report formats. Exactly one report is authorized: «گزارش فرصت‌های معاملاتی» across all seven required markets. No separate megatrends/capital-flows or RSS-only report may be generated or published.
+
+
 Use this as the durable editorial brief for GRIOS market reports.
 
 The owner's broader operating blueprint is recorded in [GRIOS_OPERATING_MANUAL_v1.md](GRIOS_OPERATING_MANUAL_v1.md). Treat its agent organization, G-Score labels, and roadmap as intended design unless implementation and validation are explicitly verified. This report brief and `GRIOS/docs/COMMANDS.md` describe current evidence and command limits.
