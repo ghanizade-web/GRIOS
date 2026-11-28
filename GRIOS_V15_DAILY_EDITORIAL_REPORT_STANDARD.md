@@ -1,79 +1,15 @@
-# GRIOS v15 — Daily Editorial Intelligence Standard
+# GRIOS v15 — Retired Daily Editorial Standard
 
-> **Status: historical/context reference for the daily pipeline.** Its single integrated report structure and inclusion of US equities as a daily market section are not the active publication contract. The current scheduled outputs are governed by [GRIOS_V15_DAILY_OPERATING_CONTRACT.md](GRIOS_V15_DAILY_OPERATING_CONTRACT.md), which separates the crypto/FX/commodities trading brief from strategic capital-flow and megatrend intelligence.
+**Status: DEPRECATED — DO NOT USE FOR DAILY REPORT GENERATION OR TELEGRAM PUBLICATION.**
 
-## Mission
+This document contains historical editorial rules that conflict with the current owner-approved reporting brief. It is retained only as an archive and is not an active instruction source.
 
-Publish a concise Persian, decision-first intelligence briefing that identifies the most relevant daily market directions and explains the political, economic, monetary, corporate and geopolitical news affecting each asset class.
+The only authorized daily report is **گزارش فرصت‌های معاملاتی**, following:
+- [GRIOS_V15_DAILY_OPERATING_CONTRACT.md](GRIOS_V15_DAILY_OPERATING_CONTRACT.md)
+- [GRIOS_DAILY_REPORT_MASTER_PROMPT_FA.md](GRIOS_DAILY_REPORT_MASTER_PROMPT_FA.md)
 
-## Required daily structure
+The current report covers seven markets in the required order: Forex, Crypto, Gold & Silver, Oil, US Stocks, Tehran Stocks and Iran Free Market. It requires 14–16 targeted web searches, fresh sourced figures, a catalyst calendar, data/mechanism/scenarios/focus for each market, a seven-market focus table, risk/correlation analysis, source evidence and Telegram-mode output.
 
-1. Market regime and one-sentence global capital-flow read.
-2. **Daily symbol radar:** a compact list of symbols with directional bias only (bullish / bearish / neutral / wait). No per-symbol entry checklist, trigger, invalidation, stop, target, timeframe or trade-management card.
-3. **Market-specific news intelligence**, grouped separately for:
-   - FX: central banks, interest-rate expectations, inflation, employment, fiscal policy, elections, currency policy and geopolitical developments affecting currencies.
-   - Commodities and energy: supply disruptions, sanctions, OPEC, inventories, production, shipping routes, industrial demand, China and critical-mineral policy.
-   - US equities: earnings, guidance, AI/semiconductor capex and monetization, regulation, antitrust, fiscal/tax policy, trade restrictions and sector developments.
-   - Crypto: regulation, ETF/market-structure developments, institutional adoption, exchange/custody risks, monetary/liquidity conditions and geopolitical risk.
-   - Bonds and rates: central-bank decisions, inflation, labor data, Treasury issuance/auctions, fiscal policy and credit conditions.
-4. Cross-market synthesis: explain how material headlines may transmit through rates, USD, liquidity, energy, earnings and risk appetite.
-5. Institutional positioning and capital flows only where verified, with publication lag and data limitations disclosed.
-6. Megatrends and strategic capital themes as a separate long-horizon watchlist.
-7. Economic calendar and key upcoming political, monetary and corporate events.
-8. Concise final assessment: where attention should focus and whether the evidence supports action or waiting.
+Do not generate or publish any separate Daily Megatrends & Smart Money, strategic capital-flow, institutional-flow, critical-materials or RSS-only report. Do not reuse the previously rejected Telegram report.
 
-## News selection and editorial discipline
-
-- Prioritize news with a plausible, material transmission channel to a covered market; do not fill sections with generic headlines.
-- Cover political, economic, monetary, geopolitical, regulatory and company-specific catalysts when relevant.
-- Attribute each item to its publisher and link to the original source.
-- Prefer official primary sources for policy, regulation, macro releases and supply data; use established financial journalism for reported developments.
-- Distinguish confirmed facts, reported claims and GRIOS interpretation.
-- For every selected story, print the actual RSS summary/excerpt as the news brief; never replace the story with a bare URL or generic placeholder.
-- Follow each story with a market-specific transmission analysis: what variable changes, which instruments/sectors are exposed, likely positive/negative/conditional pathways, and what market evidence would confirm the interpretation.
-- A URL is a verification link only; it is not the news content or the analysis.
-- Preserve numeric facts in headlines when they are material; do not suppress a headline merely because it contains prices, percentages or dates.
-- Do not classify generic political stories as relevant to every market. Require a direct transmission channel or explicit market relevance.
-- Group the same story under more than one market only when its transmission is genuinely cross-asset.
-- If a market has no sufficiently relevant verified news, say so instead of inventing coverage.
-- News headlines and RSS excerpts are not represented as full-article research.
-
-## Signal presentation
-
-- Show the symbol and directional bias only, for example: EUR/USD — صعودی, XAU/USD — نزولی, BTC/USD — خنثی.
-- Do not publish per-symbol entry conditions, breakout/retest instructions, invalidation levels, targets, stop-losses, risk/reward ratios or timeframe labels.
-- Do not fabricate directional signals when market data is stale, incomplete or contradictory.
-- A neutral / wait / no-trade outcome is valid and should be explicit.
-- Avoid duplicated correlated exposures dominating the shortlist.
-- Keep the daily shortlist selective and cross-asset; rank by evidence quality rather than by the magnitude of the latest price move.
-
-## Data and source integrity
-
-- Do not publish routine prices, percentages, raw scores, factor tables or raw observation counts in the Telegram body.
-- Never infer institutional flows from price movement or weekly CFTC positioning.
-- Never call an ETF proxy an underlying spot or futures contract.
-- Do not fabricate consensus, earnings, valuation multiples, release times, ETF flows, order-book data or 13F holdings.
-- If data is missing, stale, contradictory or unavailable, disclose the limitation and suppress the related conclusion.
-- CFTC Futures Only is weekly positioning, not real-time flow.
-- SEC 13F holdings are delayed and partial disclosures, not real-time institutional activity.
-- The current synthesis is deterministic and rule-based; RSS summaries/excerpts are not represented as full-text article review. Each story must nevertheless include its available excerpt and an explicit market-specific impact analysis. If a source supplies no excerpt, label that limitation and do not fabricate article details. A future full-text research stage should retrieve permitted article text or official releases and preserve source-level evidence.
-
-## Output limits
-
-- Target 1,800–3,000 Persian characters where news volume permits; prioritize completeness of material market news over an artificial character cap.
-- Keep each market's news section to the most material items, normally one or two headlines.
-- Avoid market-by-market encyclopedic prose, repetitive explanations and generic bull/base/bear scenarios.
-- Keep megatrends separate from today's directional symbol radar unless a current catalyst and market evidence support inclusion.
-- If no market has a defensible directional bias, explicitly say that no high-conviction direction is identified and waiting is appropriate.
-
-## Historical technical implementation — deprecated
-
-The following component list describes the former single-integrated-report pipeline. It is retained only as historical context and must not be used to infer the current publication path:
-
-- `market_news.py`: curated RSS retrieval, topic classification, publisher attribution and evidence metadata.
-- `daily_narrative_report.py`: former Persian synthesis and integrated market recap.
-- `cftc_context.py`: read-only, validated CFTC Futures Only positioning context.
-- `scanner.py`: legacy market-observation scan; its `reports/latest.txt` output is not the canonical daily Telegram payload.
-- The old integrated-report publication step is retired.
-
-The active publication contract is [`GRIOS_V15_DAILY_OPERATING_CONTRACT.md`](GRIOS_V15_DAILY_OPERATING_CONTRACT.md). The private `market-pulse` workflow calls `scripts/build_daily_outputs.py` to create two independent reports and their evidence files. Its canonical schedule is 07:30 UTC, archive dates use Europe/Amsterdam, scheduled runs do not publish to Telegram, and manual publication requires explicit approval.
+For the actual scheduled generation and delivery workflow, see the private repository [ghanizade-web/market-pulse](https://github.com/ghanizade-web/market-pulse) and its DAILY_GRIOS_TELEGRAM_AUTOMATION.md.
